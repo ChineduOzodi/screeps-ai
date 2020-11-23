@@ -1,3 +1,5 @@
+import { ColonyExtras } from './prototypes/colony';
+import { SpawnExtras } from "prototypes/spawn";
 import { ErrorMapper } from "utils/ErrorMapper";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
@@ -10,5 +12,19 @@ export const loop = ErrorMapper.wrapLoop(() => {
     if (!(name in Game.creeps)) {
       delete Memory.creeps[name];
     }
+  }
+
+  if (!Memory.colonies) {
+    Memory.colonies = {}
+  }
+
+  for (const name in Memory.colonies) {
+    const colony = new ColonyExtras(Memory.colonies[name]);
+    colony.run();
+  }
+
+  for (const name in Game.spawns) {
+    const spawn = new SpawnExtras(Game.spawns[name]);
+    spawn.run();
   }
 });
