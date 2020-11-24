@@ -29,6 +29,9 @@ export class SpawnExtras {
             spawnQueue: [],
             stats: {
                 estimatedEnergyProductionRate: 0
+            },
+            energyManagement: {
+                sources: []
             }
         };
         Memory.colonies[colony.id] = colony;

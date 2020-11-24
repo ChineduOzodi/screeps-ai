@@ -12,6 +12,7 @@ export interface Colony {
     mainSpawnId: string;
     spawnQueue: SpawnRequest[];
     stats: ColonyStats;
+    energyManagement: ColonyEnergyManagement;
 }
 
 export class ColonyExtras {
@@ -27,6 +28,7 @@ export class ColonyExtras {
         }
 
         this.creepSpawnManager();
+        EnergySystem.run(this);
 
         for (const name in this.colony.rooms) {
             const room = this.colony.rooms[name];
@@ -85,7 +87,7 @@ export class ColonyExtras {
     }
 
     private powerManager(roomData: RoomData) {
-        const { name, sources } = roomData;
+        const { name } = roomData;
         const room = Game.rooms[name];
 
         // for (const source of sources) {
@@ -170,25 +172,22 @@ export class ColonyExtras {
         const room = this.getMainRoom();
         this.colony.rooms[room.name] = {
             name: room.name,
-            sources: [],
             isMain: true
         }
 
         //Find Sources
-        const screepRoom = this.getScreepRoom(room.name);
         const sources = room.find(FIND_SOURCES);
 
         sources.forEach(source => {
-            screepRoom.sources.push({
-                id: source.id,
+            this.colony.energyManagement.sources.push({
+                sourceId: source.id,
                 position: source.pos,
-                collectorIds: []
+                desiredCarriers: 0,
+                desiredHarvesters: 0,
+                harvesterNames: [],
+                carrierNames: []
             });
         });
-
-        //setup initial creeps
-
-        EnergySystem.calculateGathererCreeps(this,room);
         return true;
     }
 

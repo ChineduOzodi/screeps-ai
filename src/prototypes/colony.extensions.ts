@@ -9,6 +9,23 @@ interface Colony {
     mainSpawnId: string;
     spawnQueue: SpawnRequest[];
     stats: ColonyStats;
+    energyManagement: ColonyEnergyManagement;
+}
+
+interface ColonyEnergyManagement {
+    sources: ColonySources[];
+}
+
+interface ColonySources {
+    sourceId: string;
+    position: RoomPosition;
+    desiredHarvesters: number;
+    harvesterNames: string[];
+    harvesterMemoryBlueprint?: AddCreepToQueueOptions;
+    harvesterBodyBlueprint?: BodyPartConstant[];
+    minerName?: string;
+    desiredCarriers: number;
+    carrierNames: string[];
 }
 
 interface ColonyStats {
@@ -41,7 +58,6 @@ interface ScreepRooms {
 interface RoomData {
     name: string;
     isMain?: boolean;
-    sources: SourceData[];
 }
 
 interface SourceData {
