@@ -77,14 +77,7 @@ export class EnergySystem {
                 body.push(MOVE);
             }
 
-            const memory: CreepMemory = {
-                name: `${colony.colony.id}-harvester-${colony.colony.spawnIndex++}`,
-                colonyId: colony.colony.id,
-                sourceId: source.id,
-                role: 'harvester',
-                averageEnergyProductionPerTick: energyProductionPerTick
-            };
-            colony.addToSpawnCreepQueue(body,memory);
+            colony.addToSpawnCreepQueue(body, 'harvester', source.id);
         }
     }
 

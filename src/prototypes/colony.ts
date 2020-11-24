@@ -106,14 +106,8 @@ export class ColonyExtras {
             }
         }
 
-        const memory: CreepMemory = {
-            name: `${this.colony.id}-harvester-${this.colony.spawnIndex++}`,
-            colonyId: this.colony.id,
-            role: 'harvester',
-        };
-
-        this.addToSpawnCreepQueue(body, memory);
-        return memory.name;
+        const name = this.addToSpawnCreepQueue(body, 'harvester');
+        return name;
     }
 
     createMiner(sourceId: string, energy: number) {
@@ -133,23 +127,29 @@ export class ColonyExtras {
         body.push(MOVE);
         body.push(MOVE);
 
-        const memory: CreepMemory = {
-            name: `${this.colony.id}-miner-${this.colony.spawnIndex++}`,
-            colonyId: this.colony.id,
-            role: 'miner',
-            sourceId: sourceId
-        }
-
-        this.addToSpawnCreepQueue(body, memory);
-        return memory.name;
+        const name = this.addToSpawnCreepQueue(body, 'miner', sourceId);
+        return name;
     }
 
-    addToSpawnCreepQueue(body: BodyPartConstant[], memory: CreepMemory) {
+    addToSpawnCreepQueue(body: BodyPartConstant[], role: string, sourceId?: string) {
+        const memory: CreepMemory = {
+            name: `${this.colony.id}-${role}-${this.colony.spawnIndex++}`,
+            colonyId: this.colony.id,
+            role,
+            sourceId,
+            movementSystem: {
+                previousPos: this.getMainSpawn().pos,
+                idle: 0,
+                pathStuck: 0,
+                idleReserved: false,
+            }
+        }
         this.colony.creeps[memory.name] = {
             name: memory.name,
             status: CreepStatus.SPAWN_QUEUE
         }
         this.colony.spawnQueue.push({ body, memory });
+        return memory.name;
     }
 
     private initialSetup() {
@@ -195,7 +195,11 @@ export class ColonyExtras {
     }
 
     getMainSpawn() {
-        return Game.getObjectById<StructureSpawn>(this.colony.mainSpawnId);
+        const spawn = Game.getObjectById<StructureSpawn>(this.colony.mainSpawnId);
+        if (!spawn) {
+            throw new Error(`Could not find main spawn "${this.colony.mainSpawnId}" for ${this.colony.id}`);
+        }
+        return spawn;
     }
 
     getCreepData(name: string) {
