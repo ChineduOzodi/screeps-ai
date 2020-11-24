@@ -11,6 +11,7 @@ export interface Colony {
     rooms: ScreepRooms;
     mainSpawnId: string;
     spawnQueue: SpawnRequest[];
+    stats: ColonyStats;
 }
 
 export class ColonyExtras {
@@ -33,12 +34,50 @@ export class ColonyExtras {
         }
 
         this.creepManager();
+        this.calculateTotalEstimatedEnergyProductionRate();
+        this.visualizeStats();
+    }
+
+    visualizeStats() {
+        const room = this.getMainRoom();
+        room.visual.text(`Colony: ${this.colony.id}`,3,5, { color: 'white', font: 1, align: 'left'});
+        room.visual.text(`Energy Production: ${this.colony.stats.estimatedEnergyProductionRate.toFixed(2)}`,3,6, { color: 'white', font: 0.5 , align: 'left'});
+    }
+
+    calculateTotalEstimatedEnergyProductionRate() {
+        let totalEnergyProductionRate = 0;
+        const creeps = this.getCreeps();
+
+        creeps.forEach( creep => {
+            totalEnergyProductionRate += creep.memory.averageEnergyProductionPerTick? creep.memory.averageEnergyProductionPerTick : 0;
+        });
+
+        this.colony.stats.estimatedEnergyProductionRate = totalEnergyProductionRate;
+    }
+
+    getCreeps() {
+        const creeps: Creep[] = [];
+        for (const name in this.colony.creeps) {
+            const creepData = this.colony.creeps[name];
+            if (!creepData.id) {
+                continue
+            }
+            const creep = Game.getObjectById<Creep>(creepData.id);
+            if (creep) {
+                creeps.push(creep);
+            }
+        }
+        return creeps;
     }
 
     private creepManager() {
         for (const name in this.colony.creeps) {
-            const creep = this.colony.creeps[name];
-            if (creep.id && !(creep.id in Game.creeps)) {
+            const creepData = this.colony.creeps[name];
+            if (!creepData.id) {
+                continue
+            }
+            const creep = Game.getObjectById<Creep>(creepData.id);
+            if (!creep) {
                 delete this.colony.creeps[name];
                 continue;
             }
@@ -80,36 +119,6 @@ export class ColonyExtras {
         }
     }
 
-    createHarvester(energy: number) {
-        const attack = 80;
-        const move = 50;
-        const work = 100;
-        const tough = 10;
-        const carry = 50;
-        const claim = 600;
-        let numberOfParts = Math.floor((energy / (work + carry + carry + carry + move + move + move)));
-        const body: BodyPartConstant[] = [];
-        if (numberOfParts == 0) {
-            body.push(WORK);
-            body.push(CARRY);
-            body.push(MOVE);
-        }
-        else {
-            for (let i = 0; i < numberOfParts; i++) {
-                body.push(WORK);
-                body.push(CARRY);
-                body.push(CARRY);
-                body.push(CARRY);
-                body.push(MOVE);
-                body.push(MOVE);
-                body.push(MOVE);
-            }
-        }
-
-        const name = this.addToSpawnCreepQueue(body, 'harvester');
-        return name;
-    }
-
     createMiner(sourceId: string, energy: number) {
         let numberOfParts = Math.floor((energy / 100));
 
@@ -127,16 +136,17 @@ export class ColonyExtras {
         body.push(MOVE);
         body.push(MOVE);
 
-        const name = this.addToSpawnCreepQueue(body, 'miner', sourceId);
+        const name = this.addToSpawnCreepQueue(body, 'miner',  { sourceId });
         return name;
     }
 
-    addToSpawnCreepQueue(body: BodyPartConstant[], role: string, sourceId?: string) {
+    addToSpawnCreepQueue(body: BodyPartConstant[], role: string, additionalMemory?: AddCreepToQueueOptions) {
         const memory: CreepMemory = {
+            ...additionalMemory,
             name: `${this.colony.id}-${role}-${this.colony.spawnIndex++}`,
             colonyId: this.colony.id,
             role,
-            sourceId,
+            working: false,
             movementSystem: {
                 previousPos: this.getMainSpawn().pos,
                 idle: 0,

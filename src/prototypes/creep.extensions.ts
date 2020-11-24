@@ -6,7 +6,17 @@ interface CreepMemory {
     sourceId?: string;
     targetId?: string;
     targetRange?: number;
+    working: boolean;
     averageEnergyProductionPerTick?: number;
+    sourceHarvestDuration?: number;
+}
+
+interface AddCreepToQueueOptions {
+    averageEnergyProductionPerTick?: number;
+    sourceHarvestDuration?: number;
+    sourceId?: string;
+    targetId?: string;
+    targetRange?: number;
 }
 
 interface CreepMovementSystem {

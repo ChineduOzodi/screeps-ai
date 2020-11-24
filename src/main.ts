@@ -1,3 +1,5 @@
+import { RoomExtras } from './prototypes/room';
+import { CreepExtras } from './prototypes/creep';
 import { ColonyExtras } from './prototypes/colony';
 import { SpawnExtras } from "prototypes/spawn";
 import { ErrorMapper } from "utils/ErrorMapper";
@@ -26,5 +28,15 @@ export const loop = ErrorMapper.wrapLoop(() => {
   for (const name in Game.spawns) {
     const spawn = new SpawnExtras(Game.spawns[name]);
     spawn.run();
+  }
+
+  for (const name in Game.creeps) {
+    const creep = new CreepExtras(Game.creeps[name]);
+    creep.run();
+  }
+
+  for (const name in Game.rooms) {
+    const room = new RoomExtras(Game.rooms[name]);
+    room.run();
   }
 });

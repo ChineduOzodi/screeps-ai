@@ -8,6 +8,11 @@ interface Colony {
     rooms: ScreepRooms;
     mainSpawnId: string;
     spawnQueue: SpawnRequest[];
+    stats: ColonyStats;
+}
+
+interface ColonyStats {
+    estimatedEnergyProductionRate: number;
 }
 
 interface SpawnRequest {

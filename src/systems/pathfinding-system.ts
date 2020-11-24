@@ -99,7 +99,7 @@ export class PathfindingSystem {
         }
     }
     
-    static unreservePositions(room: Room, pos: RoomPosition) {
+    static unreservePositions(room: Room, pos: RoomPosition | PathStep) {
         this.checkRoomReservationSetup(room, pos);
         for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
             const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];
