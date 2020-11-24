@@ -1,3 +1,4 @@
+import { EnergySystem } from './../systems/energy-system';
 import { CreepStatus } from "./creep";
 
 export interface Colony {
@@ -143,7 +144,7 @@ export class ColonyExtras {
         return memory.name;
     }
 
-    private addToSpawnCreepQueue(body: BodyPartConstant[], memory: CreepMemory) {
+    addToSpawnCreepQueue(body: BodyPartConstant[], memory: CreepMemory) {
         this.colony.creeps[memory.name] = {
             name: memory.name,
             status: CreepStatus.SPAWN_QUEUE
@@ -177,8 +178,7 @@ export class ColonyExtras {
 
         //setup initial creeps
 
-        this.createHarvester(room.energyAvailable);
-        this.createHarvester(room.energyAvailable);
+        EnergySystem.calculateGathererCreeps(this,room);
         return true;
     }
 

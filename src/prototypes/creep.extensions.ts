@@ -3,6 +3,7 @@ interface CreepMemory {
     colonyId: string;
     role: string;
     sourceId?: string;
+    averageEnergyProductionPerTick?: number;
 }
 
 interface CreepData {
