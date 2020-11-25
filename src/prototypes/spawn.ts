@@ -6,7 +6,6 @@ export class SpawnExtras {
     }
 
     run() {
-        console.log('spawn running');
         if (!this.spawn.memory.colonyId) {
             this.initialRoomSetup();
         }

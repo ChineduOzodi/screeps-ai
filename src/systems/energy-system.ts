@@ -166,7 +166,7 @@ export class EnergySystem {
         const creepSpawnManagement: ColonyCreepSpawnManagement = {
             role: 'harvester',
             creepNames: [],
-            desiredAmount: Math.min(maxCreepCount,sourceEnergyProductionPerTick / energyProductionPerTick),
+            desiredAmount: Math.min(maxCreepCount, sourceEnergyProductionPerTick / energyProductionPerTick),
             bodyBlueprint: body,
             memoryBlueprint: memory
         }
@@ -181,63 +181,70 @@ export class EnergySystem {
     }
 
     static getEnergy(creep: Creep) {
-        // look for tombstones with energy
-        const target = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
-            filter: (stone) => {
-                return stone.store[RESOURCE_ENERGY] >= 25;
-            }
-        });
 
-        if (target) {
-            // move to tombstone
-            if (creep.pos.getRangeTo(target) <= 1) {
-                creep.withdraw(target, RESOURCE_ENERGY);
-            }
-            else {
-                MovementSystem.moveToWithReservation(creep, target, 2);
+        let target: Tombstone | AnyStructure | Resource<ResourceConstant> | Source | null = null;
+        if (creep.memory.targetId) {
+            target = Game.getObjectById<Tombstone | StructureExtension | StructureSpawn | StructureTower>(creep.memory.targetId);
+            if (!target) {
+                delete creep.memory.targetId;
+                delete creep.memory.movementSystem.path;
             }
         } else {
-
-            const target = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-                filter: (resource) => {
-                    return resource.amount >= 40 && resource.resourceType == RESOURCE_ENERGY;
+            target = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
+                filter: (stone) => {
+                    return stone.store[RESOURCE_ENERGY] >= 25;
                 }
             });
-            if (target) {
-                if (creep.pickup(target) === ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, target, 2);
-                }
-            } else {
-                // look for other energy sources
-                const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+
+            if (!target) {
+                target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_EXTENSION ||
+                            structure.structureType == STRUCTURE_SPAWN ||
+                            structure.structureType == STRUCTURE_TOWER)
+                            && structure.energy < structure.energyCapacity;
+                    }
+                });
+            }
+
+            if (!target) {
+                target = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+                    filter: (resource) => {
+                        return resource.amount >= 40 && resource.resourceType == RESOURCE_ENERGY;
+                    }
+                });
+            }
+
+            if (!target) {
+                target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return (structure.structureType == STRUCTURE_CONTAINER ||
                             structure.structureType == STRUCTURE_STORAGE) &&
                             structure.store[RESOURCE_ENERGY] >= 25;
                     }
                 });
+            }
 
-                if (target) {
+            if (!target) {
+                target = creep.pos.findClosestByPath(FIND_SOURCES, { filter: (s) => { return s.energy != 0; } });
+            }
 
-                    if (creep.pos.getRangeTo(target) <= 1) {
-                        creep.withdraw(target, RESOURCE_ENERGY);
-                    }
-                    else {
-                        MovementSystem.moveToWithReservation(creep, target, 2);
-                    }
-                }
-                else {
-                    const source = creep.pos.findClosestByPath(FIND_SOURCES, { filter: (s) => { return s.energy != 0; } });
-                    if (source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        let workDuration = creep.memory.workDuration;
-                        if (workDuration && creep.memory.role === 'upgrader') {
-                            workDuration *= 0.5;
-                        }
-                        MovementSystem.moveToWithReservation(creep, source, workDuration);
-                    }
-                }
+            creep.memory.targetId = target?.id;
+            delete creep.memory.movementSystem.path;
+        }
+
+        if (target) {
+
+            const targetAction = target as any;
+            if (creep.withdraw(targetAction, RESOURCE_ENERGY) !== 0 &&
+                creep.transfer(targetAction, RESOURCE_ENERGY) !== 0 &&
+                creep.pickup(targetAction) !== 0 &&
+                creep.harvest(targetAction) !== 0
+            ) {
+                MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration * 0.5);
             }
         }
+
     }
-    
+
 }

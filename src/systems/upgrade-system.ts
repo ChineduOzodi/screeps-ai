@@ -9,7 +9,7 @@ export class UpgradeSystem {
 
         let stage = 0;
         if (room.controller && room.controller.level > 1) {
-            stage = 1;
+            stage = 0;
         }
 
         switch (stage) {
@@ -58,10 +58,14 @@ export class UpgradeSystem {
     static runEnergyCreep(creep: Creep) {
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.working = false;
+            delete creep.memory.targetId;
+            delete creep.memory.movementSystem.path;
             creep.say('b_harvesting');
         }
         if (!creep.memory.working && creep.store[RESOURCE_ENERGY] == creep.store.getCapacity()) {
             creep.memory.working = true;
+            delete creep.memory.targetId;
+            delete creep.memory.movementSystem.path;
             creep.say('upgrading');
         }
         if (creep.memory.working) {
