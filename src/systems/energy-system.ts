@@ -197,17 +197,6 @@ export class EnergySystem {
             });
 
             if (!target) {
-                target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_EXTENSION ||
-                            structure.structureType == STRUCTURE_SPAWN ||
-                            structure.structureType == STRUCTURE_TOWER)
-                            && structure.energy < structure.energyCapacity;
-                    }
-                });
-            }
-
-            if (!target) {
                 target = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
                     filter: (resource) => {
                         return resource.amount >= 40 && resource.resourceType == RESOURCE_ENERGY;
