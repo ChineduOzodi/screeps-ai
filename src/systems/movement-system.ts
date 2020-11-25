@@ -119,7 +119,7 @@ export class MovementSystem {
 
     }
 
-    static moveToWithReservation(creep: Creep, target: Structure | Source | Tombstone | Resource, workDuration: number, range: number = 1) {
+    static moveToWithReservation(creep: Creep, target: Structure | Source | Tombstone | Resource | ConstructionSite, workDuration: number, range: number = 1) {
         if (creep.spawning) {
             console.log(`creep still spawning:`, creep.name);
             return;

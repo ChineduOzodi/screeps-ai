@@ -22,7 +22,7 @@ export class SpawnExtras {
             mainSpawnId: this.spawn.id,
             spawnEnergy: 200,
             screepCount: {},
-            rooms: {},
+            rooms: [],
             creeps: {},
             spawnIndex: 0,
             spawnQueue: [],
@@ -32,7 +32,10 @@ export class SpawnExtras {
             energyManagement: {
                 sources: []
             },
-            upgradeManagement: {}
+            upgradeManagement: {},
+            builderManagement: {
+                buildQueue: []
+            }
         };
         Memory.colonies[colony.id] = colony;
         this.spawn.memory.colonyId = colony.id;

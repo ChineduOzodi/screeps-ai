@@ -1,3 +1,4 @@
+import { BuilderSystem } from './../systems/builder-system';
 import { UpgradeSystem } from './../systems/upgrade-system';
 import { EnergySystem } from './../systems/energy-system';
 import { CreepStatus } from "./creep";
@@ -9,12 +10,13 @@ export interface Colony {
     spawnEnergy: number;
     screepCount: ScreepCount;
     creeps: ColonyCreeps;
-    rooms: ScreepRooms;
+    rooms: RoomData[];
     mainSpawnId: string;
     spawnQueue: SpawnRequest[];
     stats: ColonyStats;
     energyManagement: ColonyEnergyManagement;
     upgradeManagement: ColonyUpgradeManagement;
+    builderManagement: ColonyBuilderManagement;
 }
 
 export class ColonyExtras {
@@ -31,6 +33,7 @@ export class ColonyExtras {
         this.creepSpawnManager();
         EnergySystem.run(this);
         UpgradeSystem.run(this);
+        BuilderSystem.run(this);
 
         for (const name in this.colony.rooms) {
             const room = this.colony.rooms[name];
@@ -173,10 +176,10 @@ export class ColonyExtras {
         //setup main room
 
         const room = this.getMainRoom();
-        this.colony.rooms[room.name] = {
+        this.colony.rooms.push({
             name: room.name,
             isMain: true
-        }
+        });
 
         //Find Sources
         const sources = room.find(FIND_SOURCES);
@@ -187,11 +190,16 @@ export class ColonyExtras {
                 position: source.pos,
             });
         });
+
+        // create first container
+        const spawn = this.getMainSpawn();
+        const pos = new RoomPosition(spawn.pos.x + 2, spawn.pos.y, spawn.pos.roomName);
+        room.createConstructionSite(pos, STRUCTURE_CONTAINER);
         return true;
     }
 
     getScreepRoom(name: string) {
-        return this.colony.rooms[name];
+        return this.colony.rooms.find( x => x.name === name);
     }
 
     getMainRoom() {

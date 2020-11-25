@@ -5,12 +5,18 @@ interface Colony {
     spawnEnergy: number;
     screepCount: ScreepCount;
     creeps: ColonyCreeps;
-    rooms: ScreepRooms;
+    rooms: RoomData[];
     mainSpawnId: string;
     spawnQueue: SpawnRequest[];
     stats: ColonyStats;
     energyManagement: ColonyEnergyManagement;
     upgradeManagement: ColonyUpgradeManagement;
+    builderManagement: ColonyBuilderManagement;
+}
+
+interface ColonyBuilderManagement {
+    builders?: ColonyCreepSpawnManagement;
+    buildQueue: string[];
 }
 
 interface ColonyUpgradeManagement {
@@ -58,10 +64,6 @@ interface ScreepCountStats {
     spawning: number;
     count: number;
     desired: number;
-}
-
-interface ScreepRooms {
-    [name: string]: RoomData;
 }
 
 interface RoomData {

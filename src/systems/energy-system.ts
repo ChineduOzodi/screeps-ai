@@ -215,6 +215,15 @@ export class EnergySystem {
             }
 
             if (!target) {
+                target = creep.pos.findClosestByPath<StructureSpawn>(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_SPAWN)
+                            && structure.store.energy === structure.store.getCapacity(RESOURCE_ENERGY);
+                    }
+                });
+            }
+
+            if (!target) {
                 target = creep.pos.findClosestByPath(FIND_SOURCES, { filter: (s) => { return s.energy != 0; } });
             }
 

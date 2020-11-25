@@ -1,3 +1,4 @@
+import { BuilderSystem } from './../systems/builder-system';
 import { UpgradeSystem } from './../systems/upgrade-system';
 import { MovementSystem } from './../systems/movement-system';
 import { EnergySystem } from "systems/energy-system";
@@ -27,7 +28,11 @@ export class CreepExtras {
                 break;
 
             case 'upgrader':
-                UpgradeSystem.runEnergyCreep(this.creep);
+                UpgradeSystem.runUpgraderCreep(this.creep);
+                break;
+
+            case 'builder':
+                BuilderSystem.runBuilderCreep(this);
                 break;
         
             default:
@@ -35,7 +40,7 @@ export class CreepExtras {
         }
     }
 
-    private getColony() {
+    getColony() {
         return Memory.colonies[this.creep.memory.colonyId];
     }
 }

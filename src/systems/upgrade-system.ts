@@ -55,12 +55,12 @@ export class UpgradeSystem {
         return creepSpawnManagement;
     }
 
-    static runEnergyCreep(creep: Creep) {
+    static runUpgraderCreep(creep: Creep) {
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.working = false;
             delete creep.memory.targetId;
             delete creep.memory.movementSystem.path;
-            creep.say('b_harvesting');
+            creep.say('u_harvesting');
         }
         if (!creep.memory.working && creep.store[RESOURCE_ENERGY] == creep.store.getCapacity()) {
             creep.memory.working = true;
