@@ -1,3 +1,4 @@
+import { SpawningSystem } from './spawning-system';
 import { MovementSystem } from './movement-system';
 import { PathfindingSystem } from './pathfinding-system';
 import { ColonyExtras } from './../prototypes/colony';
@@ -6,8 +7,8 @@ export class EnergySystem {
 
     static runHarvesterCreep(creep: Creep) {
         //requirements
-        if (!creep.memory.sourceId || !creep.memory.sourceHarvestDuration) {
-            throw new Error(`creep does not have sourceId,sourceHarvestDuration in memory: ${creep.id}`);
+        if (!creep.memory.workTargetId) {
+            throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
         }
 
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] == creep.store.getCapacity()) {
@@ -20,13 +21,13 @@ export class EnergySystem {
         }
 
         if (creep.memory.working) {
-            const source = Game.getObjectById<Source>(creep.memory.sourceId);
+            const source = Game.getObjectById<Source>(creep.memory.workTargetId);
             //console.log(target);
             // moves to target
             // moves to source
             if (source) {
                 if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, source, creep.memory.sourceHarvestDuration)
+                    MovementSystem.moveToWithReservation(creep, source, creep.memory.workDuration)
                 }
             } else {
                 creep.say(`can't find source in room`);
@@ -76,31 +77,15 @@ export class EnergySystem {
 
     static manageHarvesters(colony: ColonyExtras) {
         for (const colonySource of colony.colony.energyManagement.sources) {
-            if (colonySource.desiredHarvesters === 0) {
-                this.createHarvesterProfile(colony, colonySource);
-            }
-            for (let i = colonySource.harvesterNames.length - 1; i >= 0; i--) {
-                const harvesterName = colonySource.harvesterNames[i];
-                if (!(harvesterName in colony.colony.creeps)) {
-                    colonySource.harvesterNames.splice(i,1);
-                }
+            if (!colonySource.harvesters) {
+                colonySource.harvesters = this.createHarvesterProfile(colony, colonySource.sourceId);
             }
 
-            if (colonySource.harvesterNames.length < colonySource.desiredHarvesters) {
-                if (!colonySource.harvesterBodyBlueprint) {
-                    throw new Error(`Missing harverster body blueprint for colony: ${colony.getId()}`);
-                }
-                
-                for (let i = 0; i < colonySource.desiredHarvesters; i++) {
-                    const harvesterName = colony.addToSpawnCreepQueue(colonySource.harvesterBodyBlueprint, 'harvester', colonySource.harvesterMemoryBlueprint);
-                    colonySource.harvesterNames.push(harvesterName);
-                }
-            }
+            SpawningSystem.run(colony, colonySource.harvesters);
         }
     }
 
-    static createHarvesterProfile(colony: ColonyExtras, colonySources: ColonySources) {
-        const { sourceId } = colonySources;
+    static createHarvesterProfile(colony: ColonyExtras, sourceId: string) {
         const source = Game.getObjectById<Source>(sourceId);
         if (!source) {
             throw new Error(`Source not found with given id: ${sourceId}`);
@@ -109,7 +94,7 @@ export class EnergySystem {
         const room = colony.getMainRoom();
         const path = target.pos.findPathTo(source, { 'ignoreCreeps': true, range: 1 });
 
-        const maxCreepCount = 10;
+        const maxCreepCount = 3;
         const sourceEnergyProductionPerTick = source.energyCapacity / 300; //how much energy produced per tick
         const travelTime = path.length * 2; //distance to source and back
 
@@ -173,13 +158,20 @@ export class EnergySystem {
 
         const sourceHarvestDuration = (carryPartCount * partCountMod * 50) / (workPartCount * partCountMod * 2);
 
-        colonySources.harvesterBodyBlueprint = body;
-        colonySources.harvesterMemoryBlueprint = {
-            sourceId: source.id,
+        const memory: AddCreepToQueueOptions = {
+            workTargetId: source.id,
             averageEnergyProductionPerTick: energyProductionPerTick,
-            sourceHarvestDuration
+            workDuration: sourceHarvestDuration
         }
-        colonySources.desiredHarvesters = 2;
+        const creepSpawnManagement: ColonyCreepSpawnManagement = {
+            role: 'harvester',
+            creepNames: [],
+            desiredAmount: Math.min(maxCreepCount,sourceEnergyProductionPerTick / energyProductionPerTick),
+            bodyBlueprint: body,
+            memoryBlueprint: memory
+        }
+
+        return creepSpawnManagement;
     }
 
     static getEnergyProductionPerTick(workPartCount: number, carryPartCount: number, distance: number) {
@@ -187,4 +179,65 @@ export class EnergySystem {
         const energyPerTick = energyCarried / (energyCarried / (workPartCount * CreepConstants.WORK_PART_ENERGY_HARVEST_PER_TICK) + distance + 1);
         return energyPerTick;
     }
+
+    static getEnergy(creep: Creep) {
+        // look for tombstones with energy
+        const target = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
+            filter: (stone) => {
+                return stone.store[RESOURCE_ENERGY] >= 25;
+            }
+        });
+
+        if (target) {
+            // move to tombstone
+            if (creep.pos.getRangeTo(target) <= 1) {
+                creep.withdraw(target, RESOURCE_ENERGY);
+            }
+            else {
+                MovementSystem.moveToWithReservation(creep, target, 2);
+            }
+        } else {
+
+            const target = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+                filter: (resource) => {
+                    return resource.amount >= 40 && resource.resourceType == RESOURCE_ENERGY;
+                }
+            });
+            if (target) {
+                if (creep.pickup(target) === ERR_NOT_IN_RANGE) {
+                    MovementSystem.moveToWithReservation(creep, target, 2);
+                }
+            } else {
+                // look for other energy sources
+                const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_CONTAINER ||
+                            structure.structureType == STRUCTURE_STORAGE) &&
+                            structure.store[RESOURCE_ENERGY] >= 25;
+                    }
+                });
+
+                if (target) {
+
+                    if (creep.pos.getRangeTo(target) <= 1) {
+                        creep.withdraw(target, RESOURCE_ENERGY);
+                    }
+                    else {
+                        MovementSystem.moveToWithReservation(creep, target, 2);
+                    }
+                }
+                else {
+                    const source = creep.pos.findClosestByPath(FIND_SOURCES, { filter: (s) => { return s.energy != 0; } });
+                    if (source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                        let workDuration = creep.memory.workDuration;
+                        if (workDuration && creep.memory.role === 'upgrader') {
+                            workDuration *= 0.5;
+                        }
+                        MovementSystem.moveToWithReservation(creep, source, workDuration);
+                    }
+                }
+            }
+        }
+    }
+    
 }

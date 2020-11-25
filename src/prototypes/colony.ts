@@ -1,3 +1,4 @@
+import { UpgradeSystem } from './../systems/upgrade-system';
 import { EnergySystem } from './../systems/energy-system';
 import { CreepStatus } from "./creep";
 
@@ -13,6 +14,7 @@ export interface Colony {
     spawnQueue: SpawnRequest[];
     stats: ColonyStats;
     energyManagement: ColonyEnergyManagement;
+    upgradeManagement: ColonyUpgradeManagement;
 }
 
 export class ColonyExtras {
@@ -22,13 +24,13 @@ export class ColonyExtras {
     }
 
     run() {
-        console.log('running colony');
         if (!this.colony.setupComplete) {
             this.colony.setupComplete = this.initialSetup();
         }
 
         this.creepSpawnManager();
         EnergySystem.run(this);
+        UpgradeSystem.run(this);
 
         for (const name in this.colony.rooms) {
             const room = this.colony.rooms[name];
@@ -138,7 +140,7 @@ export class ColonyExtras {
         body.push(MOVE);
         body.push(MOVE);
 
-        const name = this.addToSpawnCreepQueue(body, 'miner',  { sourceId });
+        const name = this.addToSpawnCreepQueue(body, 'miner',  { workTargetId: sourceId });
         return name;
     }
 
@@ -154,7 +156,8 @@ export class ColonyExtras {
                 idle: 0,
                 pathStuck: 0,
                 idleReserved: false,
-            }
+            },
+            workDuration: additionalMemory?.workDuration ? additionalMemory?.workDuration : 5
         }
         this.colony.creeps[memory.name] = {
             name: memory.name,
@@ -182,10 +185,6 @@ export class ColonyExtras {
             this.colony.energyManagement.sources.push({
                 sourceId: source.id,
                 position: source.pos,
-                desiredCarriers: 0,
-                desiredHarvesters: 0,
-                harvesterNames: [],
-                carrierNames: []
             });
         });
         return true;
@@ -193,10 +192,6 @@ export class ColonyExtras {
 
     getScreepRoom(name: string) {
         return this.colony.rooms[name];
-    }
-
-    private setupRoom(room: Room) {
-
     }
 
     getMainRoom() {

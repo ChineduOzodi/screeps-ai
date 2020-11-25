@@ -1,3 +1,4 @@
+import { UpgradeSystem } from './../systems/upgrade-system';
 import { MovementSystem } from './../systems/movement-system';
 import { EnergySystem } from "systems/energy-system";
 
@@ -23,6 +24,10 @@ export class CreepExtras {
         switch (this.creep.memory.role) {
             case 'harvester':
                 EnergySystem.runHarvesterCreep(this.creep);
+                break;
+
+            case 'upgrader':
+                UpgradeSystem.runEnergyCreep(this.creep);
                 break;
         
             default:

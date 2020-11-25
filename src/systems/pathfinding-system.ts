@@ -1,5 +1,5 @@
 export class PathfindingSystem {
-    static findPathWithReservation(creep: Creep, target: any, range: number, workDuration: number) {
+    static findPathWithReservation(creep: Creep, target: RoomPosition | _HasRoomPosition, range: number, workDuration: number) {
         const moveTime = creep.pos.findPathTo(target,
             {
                 range: range,

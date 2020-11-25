@@ -3,19 +3,18 @@ interface CreepMemory {
     colonyId: string;
     role: string;
     movementSystem: CreepMovementSystem 
-    sourceId?: string;
+    workTargetId?: string;
     targetId?: string;
     targetRange?: number;
     working: boolean;
     averageEnergyProductionPerTick?: number;
-    sourceHarvestDuration?: number;
+    workDuration: number;
 }
 
 interface AddCreepToQueueOptions {
     averageEnergyProductionPerTick?: number;
-    sourceHarvestDuration?: number;
-    sourceId?: string;
-    targetId?: string;
+    workDuration?: number;
+    workTargetId?: string;
     targetRange?: number;
 }
 

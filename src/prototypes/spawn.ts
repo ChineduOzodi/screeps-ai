@@ -32,7 +32,8 @@ export class SpawnExtras {
             },
             energyManagement: {
                 sources: []
-            }
+            },
+            upgradeManagement: {}
         };
         Memory.colonies[colony.id] = colony;
         this.spawn.memory.colonyId = colony.id;

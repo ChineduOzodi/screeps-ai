@@ -10,6 +10,11 @@ interface Colony {
     spawnQueue: SpawnRequest[];
     stats: ColonyStats;
     energyManagement: ColonyEnergyManagement;
+    upgradeManagement: ColonyUpgradeManagement;
+}
+
+interface ColonyUpgradeManagement {
+    upgraders?: ColonyCreepSpawnManagement;
 }
 
 interface ColonyEnergyManagement {
@@ -19,13 +24,17 @@ interface ColonyEnergyManagement {
 interface ColonySources {
     sourceId: string;
     position: RoomPosition;
-    desiredHarvesters: number;
-    harvesterNames: string[];
-    harvesterMemoryBlueprint?: AddCreepToQueueOptions;
-    harvesterBodyBlueprint?: BodyPartConstant[];
-    minerName?: string;
-    desiredCarriers: number;
-    carrierNames: string[];
+    harvesters?: ColonyCreepSpawnManagement;
+    miners?: ColonyCreepSpawnManagement;
+    carriers?: ColonyCreepSpawnManagement;
+}
+
+interface ColonyCreepSpawnManagement {
+    role: string;
+    desiredAmount: number;
+    creepNames: string[];
+    bodyBlueprint: BodyPartConstant[];
+    memoryBlueprint?: AddCreepToQueueOptions;
 }
 
 interface ColonyStats {
