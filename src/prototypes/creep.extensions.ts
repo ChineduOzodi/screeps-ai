@@ -7,12 +7,13 @@ interface CreepMemory {
     targetId?: string;
     targetRange?: number;
     working: boolean;
-    averageEnergyProductionPerTick?: number;
+    averageEnergyConsumptionProductionPerTick: number;
     workDuration: number;
 }
 
 interface AddCreepToQueueOptions {
-    averageEnergyProductionPerTick?: number;
+    averageEnergyConsumptionProductionPerTick: number;
+    role: string;
     workDuration?: number;
     workTargetId?: string;
     targetRange?: number;

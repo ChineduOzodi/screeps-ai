@@ -31,6 +31,8 @@ export class ColonyExtras {
         }
 
         this.creepSpawnManager();
+        this.manageEnergyProductionConsumption();
+
         EnergySystem.run(this);
         UpgradeSystem.run(this);
         BuilderSystem.run(this);
@@ -41,25 +43,85 @@ export class ColonyExtras {
         }
 
         this.creepManager();
-        this.calculateTotalEstimatedEnergyProductionRate();
         this.visualizeStats();
     }
 
     visualizeStats() {
         const room = this.getMainRoom();
-        room.visual.text(`Colony: ${this.colony.id}`,3,5, { color: 'white', font: 1, align: 'left'});
-        room.visual.text(`Energy Production: ${this.colony.stats.estimatedEnergyProductionRate.toFixed(2)}`,3,6, { color: 'white', font: 0.5 , align: 'left'});
+        room.visual.text(`Colony: ${this.colony.id}`, 3, 5, { color: 'white', font: 1, align: 'left' });
+
+        const textStyle: TextStyle = { color: 'white', font: 0.5, align: 'left' };
+        const { estimatedEnergyProductionRate, totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage } = this.colony.energyManagement;
+        room.visual.text(`Energy Production: ${estimatedEnergyProductionRate.toFixed(2)}, Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`, 3, 6, textStyle);
+
+        const visualizeSystems = this.getEnergyTrackingSystems();
+        this.visualizeSystems(visualizeSystems);
     }
 
-    calculateTotalEstimatedEnergyProductionRate() {
-        let totalEnergyProductionRate = 0;
-        const creeps = this.getCreeps();
+    getEnergyTrackingSystems() {
+        const systems: EnergyTrackingSystem[] = [
+            {
+                systemName: 'Upgrade System',
+                energyTracking: this.colony.upgradeManagement.upgraderEnergy
+            },
+            {
+                systemName: 'Builder System',
+                energyTracking: this.colony.builderManagement.builderEnergy
+            }
+        ];
+        return systems;
+    }
 
-        creeps.forEach( creep => {
-            totalEnergyProductionRate += creep.memory.averageEnergyProductionPerTick? creep.memory.averageEnergyProductionPerTick : 0;
+    visualizeSystems(options: EnergyTrackingSystem[]) {
+        const room = this.getMainRoom();
+        const textStyle: TextStyle = { color: 'white', font: 0.5, align: 'left' };
+        let offset = 7;
+
+        for (const option of options) {
+            const { estimatedEnergyWorkRate, requestedEnergyUsagePercentage, actualEnergyUsagePercentage, allowedEnergyWorkRate } = option.energyTracking;
+            if (estimatedEnergyWorkRate || requestedEnergyUsagePercentage || actualEnergyUsagePercentage) {
+                room.visual.text(`${option.systemName} - Energy Usage/Allowed: ${estimatedEnergyWorkRate.toFixed(2)}/${allowedEnergyWorkRate.toFixed(2)}, Actual/Requested Percent: ${actualEnergyUsagePercentage.toFixed(2)}/${requestedEnergyUsagePercentage.toFixed(2)}`, 3, offset, textStyle);
+                offset++;
+            }
+        }
+
+    }
+
+    manageEnergyProductionConsumption() {
+        this.colony.energyManagement.estimatedEnergyProductionRate = this.getTotalEstimatedEnergyconsumptionProductionRate('harvester');
+        this.colony.energyManagement.totalEnergyUsagePercentageAllowed = 0.8;
+        this.setEnergyUsageMod();
+        this.manageEnergySystem(this.colony.upgradeManagement.upgraderEnergy, 'upgrader');
+        this.manageEnergySystem(this.colony.builderManagement.builderEnergy, 'builder');
+    }
+
+    manageEnergySystem(energyTracking: EnergyUsageTracking, role: string) {
+        energyTracking.estimatedEnergyWorkRate = this.getTotalEstimatedEnergyconsumptionProductionRate(role);
+        energyTracking.actualEnergyUsagePercentage = energyTracking.requestedEnergyUsagePercentage * this.colony.energyManagement.energyUsageModifier;
+        energyTracking.allowedEnergyWorkRate = this.colony.energyManagement.estimatedEnergyProductionRate * energyTracking.actualEnergyUsagePercentage;
+    }
+
+    getTotalEstimatedEnergyconsumptionProductionRate(role: string) {
+        let totalEnergyConsumptionProductionRate = 0;
+        const creeps = this.getCreeps().filter(x => x.memory.role === role);
+
+        creeps.forEach(creep => {
+            totalEnergyConsumptionProductionRate += creep.memory.averageEnergyConsumptionProductionPerTick;
         });
 
-        this.colony.stats.estimatedEnergyProductionRate = totalEnergyProductionRate;
+        return totalEnergyConsumptionProductionRate;
+    }
+
+    setEnergyUsageMod() {
+        const systems = this.getEnergyTrackingSystems();
+        let totalPercentEnergyRequested = 0;
+        systems.forEach(x => {
+            totalPercentEnergyRequested += x.energyTracking.requestedEnergyUsagePercentage;
+        });
+        totalPercentEnergyRequested = totalPercentEnergyRequested === 0 ? 1 : totalPercentEnergyRequested;
+
+        let mod = this.colony.energyManagement.totalEnergyUsagePercentageAllowed / totalPercentEnergyRequested;
+        this.colony.energyManagement.energyUsageModifier = mod;
     }
 
     getCreeps() {
@@ -143,16 +205,19 @@ export class ColonyExtras {
         body.push(MOVE);
         body.push(MOVE);
 
-        const name = this.addToSpawnCreepQueue(body, 'miner',  { workTargetId: sourceId });
+        const name = this.addToSpawnCreepQueue(body, {
+            role: 'miner',
+            workTargetId: sourceId,
+            averageEnergyConsumptionProductionPerTick: 0
+        });
         return name;
     }
 
-    addToSpawnCreepQueue(body: BodyPartConstant[], role: string, additionalMemory?: AddCreepToQueueOptions) {
+    addToSpawnCreepQueue(body: BodyPartConstant[], additionalMemory: AddCreepToQueueOptions) {
         const memory: CreepMemory = {
             ...additionalMemory,
-            name: `${this.colony.id}-${role}-${this.colony.spawnIndex++}`,
+            name: `${this.colony.id}-${additionalMemory.role}-${this.colony.spawnIndex++}`,
             colonyId: this.colony.id,
-            role,
             working: false,
             movementSystem: {
                 previousPos: this.getMainSpawn().pos,
@@ -199,7 +264,7 @@ export class ColonyExtras {
     }
 
     getScreepRoom(name: string) {
-        return this.colony.rooms.find( x => x.name === name);
+        return this.colony.rooms.find(x => x.name === name);
     }
 
     getMainRoom() {
@@ -244,4 +309,9 @@ export class ColonyExtras {
 
 export interface ColonyCreeps {
     [name: string]: CreepData;
+}
+
+interface EnergyTrackingSystem {
+    systemName: string,
+    energyTracking: EnergyUsageTracking;
 }

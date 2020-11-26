@@ -17,14 +17,26 @@ interface Colony {
 interface ColonyBuilderManagement {
     builders?: ColonyCreepSpawnManagement;
     buildQueue: string[];
+    builderEnergy: EnergyUsageTracking;
 }
 
 interface ColonyUpgradeManagement {
     upgraders?: ColonyCreepSpawnManagement;
+    upgraderEnergy: EnergyUsageTracking;
 }
 
 interface ColonyEnergyManagement {
     sources: ColonySources[];
+    estimatedEnergyProductionRate: number;
+    totalEnergyUsagePercentageAllowed: number;
+    energyUsageModifier: number;
+}
+
+interface EnergyUsageTracking {
+    estimatedEnergyWorkRate: number;
+    allowedEnergyWorkRate: number;
+    requestedEnergyUsagePercentage: number;
+    actualEnergyUsagePercentage: number;
 }
 
 interface ColonySources {
@@ -36,15 +48,13 @@ interface ColonySources {
 }
 
 interface ColonyCreepSpawnManagement {
-    role: string;
     desiredAmount: number;
     creepNames: string[];
     bodyBlueprint: BodyPartConstant[];
-    memoryBlueprint?: AddCreepToQueueOptions;
+    memoryBlueprint: AddCreepToQueueOptions;
 }
 
 interface ColonyStats {
-    estimatedEnergyProductionRate: number;
 }
 
 interface SpawnRequest {

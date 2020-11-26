@@ -29,10 +29,16 @@ export class BuilderSystem {
         if (!colonyExtras.colony.builderManagement.builders) {
             colonyExtras.colony.builderManagement.builders = this.createBuilderProfile(colonyExtras);
         }
-
         colonyExtras.colony.builderManagement.buildQueue = this.getConstructionSites(colonyExtras.colony).map(x => x.id);
-
-        colonyExtras.colony.builderManagement.builders.desiredAmount = Math.min(3, colonyExtras.colony.builderManagement.buildQueue.length);
+        const { buildQueue, builderEnergy, builders } = colonyExtras.colony.builderManagement;
+        if (buildQueue.length > 0) {
+            builderEnergy.requestedEnergyUsagePercentage = 0.5;
+            const energyUsagePerCreep = builders.memoryBlueprint.averageEnergyConsumptionProductionPerTick;
+            builders.desiredAmount = Math.max(1, Math.floor(builderEnergy.allowedEnergyWorkRate / energyUsagePerCreep));
+        } else {
+            builderEnergy.requestedEnergyUsagePercentage = 0;
+            builders.desiredAmount = 0;
+        }
 
         SpawningSystem.run(colonyExtras, colonyExtras.colony.builderManagement.builders);
     }
@@ -54,12 +60,15 @@ export class BuilderSystem {
         body.push(MOVE);
         body.push(MOVE);
 
+        const energyUsePerTick = BUILD_POWER * 1;
+
         const memory: AddCreepToQueueOptions = {
             workTargetId: colony.getMainRoom().controller?.id,
-            workDuration: CARRY_CAPACITY * 2 / BUILD_POWER
+            workDuration: CARRY_CAPACITY * 2 / energyUsePerTick,
+            role: 'builder',
+            averageEnergyConsumptionProductionPerTick: energyUsePerTick
         }
         const creepSpawnManagement: ColonyCreepSpawnManagement = {
-            role: 'builder',
             creepNames: [],
             desiredAmount: 0,
             bodyBlueprint: body,
@@ -104,7 +113,7 @@ export class BuilderSystem {
 
             if (target) {
                 if (creep.build(target) == ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration);
+                    MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration, 3);
                 }
             }
         }

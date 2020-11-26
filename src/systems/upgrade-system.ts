@@ -1,7 +1,6 @@
+import { ColonyExtras } from 'prototypes/colony';
 import { EnergySystem } from 'systems/energy-system';
 import { MovementSystem } from './movement-system';
-import { CreepConstants } from 'constants/creep-constants';
-import { ColonyExtras } from './../prototypes/colony';
 import { SpawningSystem } from './spawning-system';
 export class UpgradeSystem {
     static run(colonyExtras: ColonyExtras) {
@@ -14,6 +13,7 @@ export class UpgradeSystem {
 
         switch (stage) {
             case 0:
+                colonyExtras.colony.upgradeManagement.upgraderEnergy.requestedEnergyUsagePercentage = 0.5;
                 this.manageUpgraders(colonyExtras);
                 break;
 
@@ -28,6 +28,11 @@ export class UpgradeSystem {
             colony.colony.upgradeManagement.upgraders = this.createUpgraderProfile(colony);
         }
 
+        const { upgraders, upgraderEnergy } = colony.colony.upgradeManagement;
+
+        const energyUsagePerCreep = upgraders.memoryBlueprint.averageEnergyConsumptionProductionPerTick;
+        upgraders.desiredAmount = Math.max(1, Math.floor(upgraderEnergy.allowedEnergyWorkRate / energyUsagePerCreep));
+
         SpawningSystem.run(colony, colony.colony.upgradeManagement.upgraders);
     }
 
@@ -40,14 +45,18 @@ export class UpgradeSystem {
         body.push(MOVE);
         body.push(MOVE);
 
+        const energyUsePerTick = UPGRADE_CONTROLLER_POWER * 1;
+
         const memory: AddCreepToQueueOptions = {
             workTargetId: colony.getMainRoom().controller?.id,
-            workDuration: CreepConstants.CARRY_PART_RESOURCE_AMOUNT * 2 / 1
+            workDuration: CARRY_CAPACITY * 2 / energyUsePerTick,
+            averageEnergyConsumptionProductionPerTick: energyUsePerTick,
+            role: 'upgrader'
         }
+
         const creepSpawnManagement: ColonyCreepSpawnManagement = {
-            role: 'upgrader',
             creepNames: [],
-            desiredAmount: 2,
+            desiredAmount: 1,
             bodyBlueprint: body,
             memoryBlueprint: memory
         }

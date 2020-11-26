@@ -1,61 +1,8 @@
 import { SpawningSystem } from './spawning-system';
 import { MovementSystem } from './movement-system';
-import { PathfindingSystem } from './pathfinding-system';
 import { ColonyExtras } from './../prototypes/colony';
 import { CreepConstants } from './../constants/creep-constants';
 export class EnergySystem {
-
-    static runHarvesterCreep(creep: Creep) {
-        //requirements
-        if (!creep.memory.workTargetId) {
-            throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
-        }
-
-        if (creep.memory.working && creep.store[RESOURCE_ENERGY] == creep.store.getCapacity()) {
-            creep.memory.working = false;
-            creep.say('delivering');
-        }
-        if (!creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
-            creep.memory.working = true;
-            creep.say('harvesting');
-        }
-
-        if (creep.memory.working) {
-            const source = Game.getObjectById<Source>(creep.memory.workTargetId);
-            //console.log(target);
-            // moves to target
-            // moves to source
-            if (source) {
-                if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, source, creep.memory.workDuration)
-                }
-            } else {
-                creep.say(`can't find source in room`);
-            }
-        }
-        else {
-            // finds closest storage / spawn to store energy
-            let target: StructureExtension | StructureSpawn | StructureTower | null = null;
-            if (creep.memory.targetId) {
-                target = Game.getObjectById<StructureExtension | StructureSpawn | StructureTower>(creep.memory.targetId);
-            } else {
-                target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_EXTENSION ||
-                            structure.structureType == STRUCTURE_SPAWN ||
-                            structure.structureType == STRUCTURE_TOWER)
-                            && structure.energy < structure.energyCapacity;
-                    }
-                });
-            }
-            //console.log(target.id);
-            if (target) {
-                if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, target, 2);
-                }
-            }
-        }
-    }
 
     static run(colony: ColonyExtras) {
         const room = colony.getMainRoom();
@@ -160,11 +107,12 @@ export class EnergySystem {
 
         const memory: AddCreepToQueueOptions = {
             workTargetId: source.id,
-            averageEnergyProductionPerTick: energyProductionPerTick,
-            workDuration: sourceHarvestDuration
+            averageEnergyConsumptionProductionPerTick: energyProductionPerTick,
+            workDuration: sourceHarvestDuration,
+            role: 'harvester',
+
         }
         const creepSpawnManagement: ColonyCreepSpawnManagement = {
-            role: 'harvester',
             creepNames: [],
             desiredAmount: Math.min(maxCreepCount, sourceEnergyProductionPerTick / energyProductionPerTick),
             bodyBlueprint: body,
@@ -243,6 +191,58 @@ export class EnergySystem {
             }
         }
 
+    }
+
+    static runHarvesterCreep(creep: Creep) {
+        //requirements
+        if (!creep.memory.workTargetId) {
+            throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
+        }
+
+        if (creep.memory.working && creep.store[RESOURCE_ENERGY] == creep.store.getCapacity()) {
+            creep.memory.working = false;
+            creep.say('delivering');
+        }
+        if (!creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
+            creep.memory.working = true;
+            creep.say('harvesting');
+        }
+
+        if (creep.memory.working) {
+            const source = Game.getObjectById<Source>(creep.memory.workTargetId);
+            //console.log(target);
+            // moves to target
+            // moves to source
+            if (source) {
+                if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                    MovementSystem.moveToWithReservation(creep, source, creep.memory.workDuration)
+                }
+            } else {
+                creep.say(`can't find source in room`);
+            }
+        }
+        else {
+            // finds closest storage / spawn to store energy
+            let target: StructureExtension | StructureSpawn | StructureTower | null = null;
+            if (creep.memory.targetId) {
+                target = Game.getObjectById<StructureExtension | StructureSpawn | StructureTower>(creep.memory.targetId);
+            } else {
+                target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_EXTENSION ||
+                            structure.structureType == STRUCTURE_SPAWN ||
+                            structure.structureType == STRUCTURE_TOWER)
+                            && structure.energy < structure.energyCapacity;
+                    }
+                });
+            }
+            //console.log(target.id);
+            if (target) {
+                if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    MovementSystem.moveToWithReservation(creep, target, 2);
+                }
+            }
+        }
     }
 
 }

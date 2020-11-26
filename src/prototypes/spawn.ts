@@ -1,4 +1,3 @@
-import { ColonyExtras } from './colony';
 export class SpawnExtras {
     spawn: StructureSpawn;
     constructor(spawn: StructureSpawn) {
@@ -30,11 +29,29 @@ export class SpawnExtras {
                 estimatedEnergyProductionRate: 0
             },
             energyManagement: {
-                sources: []
+                sources: [],
+                energyUsageModifier: 1,
+                estimatedEnergyProductionRate: 0,
+                totalEnergyUsagePercentageAllowed: 0,
             },
-            upgradeManagement: {},
+            upgradeManagement: {
+                upgraderEnergy: {
+                    actualEnergyUsagePercentage: 0,
+                    estimatedEnergyWorkRate: 0,
+                    requestedEnergyUsagePercentage: 0,
+                    allowedEnergyWorkRate: 0
+                }
+                
+            },
             builderManagement: {
-                buildQueue: []
+                buildQueue: [],
+                builderEnergy: {
+                    actualEnergyUsagePercentage: 0,
+                    estimatedEnergyWorkRate: 0,
+                    requestedEnergyUsagePercentage: 0,
+                    allowedEnergyWorkRate: 0
+                }
+                
             }
         };
         Memory.colonies[colony.id] = colony;
