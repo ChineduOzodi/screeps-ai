@@ -1,3 +1,4 @@
+import { random } from 'lodash';
 import { PathfindingSystem } from './pathfinding-system';
 export class MovementSystem {
     static run(creep: Creep) {
@@ -16,7 +17,7 @@ export class MovementSystem {
             creep.memory.movementSystem.previousPos = creep.pos;
         }
 
-        if (creep.memory.movementSystem.idle >= 10 && !creep.memory.movementSystem.idleReserved) {
+        if (creep.memory.movementSystem.idle >= 10 && PathfindingSystem.checkReservationAvailable(creep.room, creep.pos, Game.time, Game.time + 1)) {
             PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
             creep.memory.movementSystem.idleReserved = true;
         }
@@ -27,38 +28,46 @@ export class MovementSystem {
             const target = Game.getObjectById<Structure>(creep.memory.targetId);
             if (!target) {
                 console.log(`${creep.name}: target no longer exists`);
-            }
-            if (target && creep.pos.getRangeTo(target.pos) <= creep.memory.targetRange) {
-                // console.log('reached target: ' + creep.memory.spawnId);
-                // sMovementPathfinding.unreservePosition(creep,creep.room,creep.memory.path[creep.memory.path.length - 1]);
                 delete creep.memory.movementSystem.path;
                 delete creep.memory.targetId;
-                creep.memory.movementSystem.idleReserved = true;
-                creep.memory.movementSystem.previousPos = creep.pos;
             } else {
-                // console.log('running movement for creep: ' + creep.memory.spawnId);
-                const status = creep.moveByPath(creep.memory.movementSystem.path);
-                const lastPathStep = creep.memory.movementSystem.path[creep.memory.movementSystem.path.length - 1];
-
-                if (status != 0 && status != -11 && status != -4) {
-                    console.log(`${creep.name}: reseting path due to error`);
-                    console.log(status);
-                    PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
+                if (target && creep.pos.getRangeTo(target.pos) <= creep.memory.targetRange) {
+                    // console.log('reached target: ' + creep.memory.spawnId);
+                    // sMovementPathfinding.unreservePosition(creep,creep.room,creep.memory.path[creep.memory.path.length - 1]);
                     delete creep.memory.movementSystem.path;
                     delete creep.memory.targetId;
-                    creep.memory.movementSystem.pathStuck = 0;
-                }
+                    creep.memory.movementSystem.idleReserved = true;
+                    creep.memory.movementSystem.previousPos = creep.pos;
+                } else {
+                    // console.log('running movement for creep: ' + creep.memory.spawnId);
+                    const status = creep.moveByPath(creep.memory.movementSystem.path);
+                    const lastPathStep = creep.memory.movementSystem.path[creep.memory.movementSystem.path.length - 1];
 
-                if (creep.memory.movementSystem.pathStuck >= 6 || ticksToLive === 1) {
-                    creep.say('path stuck');
-                    PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
-                    creep.memory.movementSystem.idleReserved = false;
-                    delete creep.memory.movementSystem.path;
-                    delete creep.memory.targetId;
-                    creep.memory.movementSystem.pathStuck = 0;
-                }
+                    if (status != OK && status != ERR_TIRED && status != ERR_BUSY) {
+                        console.log(`${creep.name}: reseting path due to error: ${status}`);
+                        PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
+                        delete creep.memory.movementSystem.path;
+                        delete creep.memory.targetId;
+                        creep.memory.movementSystem.pathStuck = 0;
+                        //reserve current location
+                        PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
+                        creep.memory.movementSystem.idleReserved = true;
+                    }
 
+                    if ((creep.memory.movementSystem.pathStuck >= 10 || ticksToLive === 1) && creep.memory.movementSystem.path) {
+                        creep.say('path stuck');
+                        PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
+                        delete creep.memory.movementSystem.path;
+                        delete creep.memory.targetId;
+                        creep.memory.movementSystem.pathStuck = Math.random() * 3;
+                        //reserve current location
+                        PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
+                        creep.memory.movementSystem.idleReserved = true;
+                    }
+
+                }
             }
+
 
         }
     }

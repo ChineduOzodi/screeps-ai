@@ -223,16 +223,22 @@ export class EnergySystem {
         }
         else {
             // finds closest storage / spawn to store energy
-            let target: StructureExtension | StructureSpawn | StructureTower | null = null;
-            if (creep.memory.targetId) {
-                target = Game.getObjectById<StructureExtension | StructureSpawn | StructureTower>(creep.memory.targetId);
-            } else {
-                target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(FIND_STRUCTURES, {
+            let target: Structure | null = null;
+            target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_SPAWN ||
+                        structure.structureType == STRUCTURE_TOWER)
+                        && structure.energy < structure.energyCapacity;
+                }
+            });
+
+            if (!target) {
+                target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_EXTENSION ||
-                            structure.structureType == STRUCTURE_SPAWN ||
-                            structure.structureType == STRUCTURE_TOWER)
-                            && structure.energy < structure.energyCapacity;
+                        return (structure.structureType == STRUCTURE_CONTAINER ||
+                            structure.structureType == STRUCTURE_STORAGE) &&
+                            structure.store.getFreeCapacity() > 0;
                     }
                 });
             }
