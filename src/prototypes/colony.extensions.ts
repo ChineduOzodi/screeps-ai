@@ -12,6 +12,11 @@ interface Colony {
     energyManagement: ColonyEnergyManagement;
     upgradeManagement: ColonyUpgradeManagement;
     builderManagement: ColonyBuilderManagement;
+    defenceManagement: ColonyDefenceManagement;
+}
+
+interface ColonyDefenceManagement {
+
 }
 
 interface ColonyBuilderManagement {
@@ -52,6 +57,7 @@ interface ColonyCreepSpawnManagement {
     creepNames: string[];
     bodyBlueprint: BodyPartConstant[];
     memoryBlueprint: AddCreepToQueueOptions;
+    important?: boolean;
 }
 
 interface ColonyStats {
@@ -79,6 +85,8 @@ interface ScreepCountStats {
 interface RoomData {
     name: string;
     isMain?: boolean;
+    defenders?: ColonyCreepSpawnManagement;
+    alertLevel: number;
 }
 
 interface SourceData {

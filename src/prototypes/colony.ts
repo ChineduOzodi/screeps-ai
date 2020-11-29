@@ -1,3 +1,4 @@
+import { DefenceSystem } from './../systems/defence-system';
 import { BuilderSystem } from './../systems/builder-system';
 import { UpgradeSystem } from './../systems/upgrade-system';
 import { EnergySystem } from './../systems/energy-system';
@@ -17,6 +18,7 @@ export interface Colony {
     energyManagement: ColonyEnergyManagement;
     upgradeManagement: ColonyUpgradeManagement;
     builderManagement: ColonyBuilderManagement;
+    defenceManagement: ColonyDefenceManagement;
 }
 
 export class ColonyExtras {
@@ -33,14 +35,10 @@ export class ColonyExtras {
         this.creepSpawnManager();
         this.manageEnergyProductionConsumption();
 
+        DefenceSystem.run(this);
         EnergySystem.run(this);
         UpgradeSystem.run(this);
         BuilderSystem.run(this);
-
-        for (const name in this.colony.rooms) {
-            const room = this.colony.rooms[name];
-            this.powerManager(room);
-        }
 
         this.creepManager();
         this.visualizeStats();
@@ -153,17 +151,6 @@ export class ColonyExtras {
         }
     }
 
-    private powerManager(roomData: RoomData) {
-        const { name } = roomData;
-        const room = Game.rooms[name];
-
-        // for (const source of sources) {
-        //     if (!source.minerId) {
-        //         source.minerId = this.createMiner(source.id, room.energyCapacityAvailable)
-        //     }
-        // }
-    }
-
     private creepSpawnManager() {
         const spawn = this.getMainSpawn();
         if (!spawn || spawn.spawning) {
@@ -243,7 +230,8 @@ export class ColonyExtras {
         const room = this.getMainRoom();
         this.colony.rooms.push({
             name: room.name,
-            isMain: true
+            isMain: true,
+            alertLevel: 0
         });
 
         //Find Sources

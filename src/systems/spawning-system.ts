@@ -14,7 +14,11 @@ export class SpawningSystem {
         if (creepSpawnManagement.creepNames.length < creepSpawnManagement.desiredAmount) {
             const { bodyBlueprint, memoryBlueprint } = creepSpawnManagement;
             const creepName = colony.addToSpawnCreepQueue(bodyBlueprint, memoryBlueprint);
-            creepSpawnManagement.creepNames.push(creepName);
+            if (creepSpawnManagement.important) {
+                creepSpawnManagement.creepNames.unshift(creepName);
+            } else {
+                creepSpawnManagement.creepNames.push(creepName);
+            }
         }
     }
 

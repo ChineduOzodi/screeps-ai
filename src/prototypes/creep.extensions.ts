@@ -6,6 +6,7 @@ interface CreepMemory {
     workTargetId?: string;
     targetId?: string;
     targetRange?: number;
+    homeRoomName?: string;
     working: boolean;
     averageEnergyConsumptionProductionPerTick: number;
     workDuration: number;
@@ -16,6 +17,7 @@ interface AddCreepToQueueOptions {
     role: string;
     workDuration?: number;
     workTargetId?: string;
+    homeRoomName?: string;
     targetRange?: number;
 }
 

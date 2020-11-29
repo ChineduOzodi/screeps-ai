@@ -1,3 +1,4 @@
+import { DefenceSystem } from './../systems/defence-system';
 import { BuilderSystem } from './../systems/builder-system';
 import { UpgradeSystem } from './../systems/upgrade-system';
 import { MovementSystem } from './../systems/movement-system';
@@ -34,7 +35,10 @@ export class CreepExtras {
             case 'builder':
                 BuilderSystem.runBuilderCreep(this);
                 break;
-        
+
+            case 'defender':
+                DefenceSystem.runDefenderCreep(this);
+                break;
             default:
                 break;
         }

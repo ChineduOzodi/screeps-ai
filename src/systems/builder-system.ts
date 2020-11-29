@@ -103,7 +103,7 @@ export class BuilderSystem {
                 }
             } else {
                 const buildQueue = creepExtras.getColony().builderManagement.buildQueue;
-                if (buildQueue.length == 0) {
+                if (buildQueue.length === 0) {
                     return;
                 }
 
@@ -112,7 +112,7 @@ export class BuilderSystem {
             }
 
             if (target) {
-                if (creep.build(target) == ERR_NOT_IN_RANGE) {
+                if (creep.build(target) === ERR_NOT_IN_RANGE) {
                     MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration, 3);
                 }
             }

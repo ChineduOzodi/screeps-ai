@@ -52,7 +52,8 @@ export class SpawnExtras {
                     allowedEnergyWorkRate: 0
                 }
                 
-            }
+            },
+            defenceManagement: {}
         };
         Memory.colonies[colony.id] = colony;
         this.spawn.memory.colonyId = colony.id;
