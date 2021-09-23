@@ -18,13 +18,6 @@ export class HarvesterCreep extends CreepExtras {
         const { creep, memory } = this;
         const colonySource = this.getColonySource();
 
-        if (colonySource) {
-            if (!colonySource.cumulativeHarvestingTime) {
-                colonySource.cumulativeHarvestingTime = 0;
-            }
-            colonySource.cumulativeHarvestingTime += 1;
-        }
-
         if (!memory.workTargetId) {
             throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
         }

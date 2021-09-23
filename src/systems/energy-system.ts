@@ -62,6 +62,10 @@ export class EnergySystem {
             } else if (this.shouldUpdate) {
                 colonySource.harvesters = this.updateHarvesterProfile(colonySource.harvesters, colonySource.sourceId);
             }
+            if (!colonySource.cumulativeHarvestingTime) {
+                colonySource.cumulativeHarvestingTime = 0;
+            }
+            colonySource.cumulativeHarvestingTime += 1;
             SpawningSystem.run(this.colony, colonySource.harvesters);
         }
         this.calculateHarvestersProductionEfficiency();
