@@ -1,20 +1,17 @@
-interface CreepMemory {
+interface CreepMemory extends AddCreepToQueueOptions {
     name: string;
     colonyId: string;
-    role: string;
-    movementSystem: CreepMovementSystem 
-    workTargetId?: string;
+    movementSystem?: CreepMovementSystem;
     targetId?: string;
-    targetRange?: number;
-    homeRoomName?: string;
     working: boolean;
-    averageEnergyConsumptionProductionPerTick: number;
     workDuration: number;
+    cumulativeWork?: number;
 }
 
 interface AddCreepToQueueOptions {
     averageEnergyConsumptionProductionPerTick: number;
     role: string;
+    workAmount?: number;
     workDuration?: number;
     workTargetId?: string;
     homeRoomName?: string;
@@ -38,8 +35,8 @@ interface CreepData {
 }
 
 enum CreepStatus {
-    WORKING = 'working',
-    IDLE = 'idle',
-    SPAWN_QUEUE = 'spawn queue',
-    SPAWNING = 'spawning'
+    WORKING = "working",
+    IDLE = "idle",
+    SPAWN_QUEUE = "spawn queue",
+    SPAWNING = "spawning"
 }

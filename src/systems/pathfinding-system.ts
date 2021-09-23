@@ -1,11 +1,19 @@
 export class PathfindingSystem {
-    static findPathWithReservation(creep: Creep, target: RoomPosition | _HasRoomPosition, range: number, workDuration: number) {
-        const moveTime = creep.pos.findPathTo(target,
-            {
-                range,
-                ignoreCreeps: true
-            }).length;
-        
+    public static findPathWithReservation(
+        creep: Creep,
+        target: RoomPosition | _HasRoomPosition,
+        range: number,
+        workDuration: number
+    ): {
+        path: PathStep[];
+        startTime: number;
+        endTime: number;
+    } {
+        const moveTime = creep.pos.findPathTo(target, {
+            range,
+            ignoreCreeps: true
+        }).length;
+
         if (!creep.ticksToLive || (moveTime >= creep.ticksToLive && !workDuration)) {
             workDuration = 1;
         } else if (!workDuration) {
@@ -15,11 +23,10 @@ export class PathfindingSystem {
         const endTime = Game.time + moveTime + workDuration;
 
         const path = creep.pos.findPathTo(target, {
-            range: range,
+            range,
             ignoreCreeps: true,
-            costCallback: function (roomName, costMatrix) {
-
-                let room = Game.rooms[roomName];
+            costCallback(roomName, costMatrix) {
+                const room = Game.rooms[roomName];
                 if (!room) return;
 
                 PathfindingSystem.checkRoomReservationSetup(room);
@@ -31,7 +38,9 @@ export class PathfindingSystem {
                         const reservation = creep.room.memory.positionReservations[key];
 
                         if (reservation.reservations) {
-                            if (!PathfindingSystem.checkReservationAvailable(room, reservation.pos, startTime, endTime)) {
+                            if (
+                                !PathfindingSystem.checkReservationAvailable(room, reservation.pos, startTime, endTime)
+                            ) {
                                 // console.log(`${reservation.pos.x}, ${reservation.pos.y} not available`);
                                 costMatrix.set(reservation.pos.x, reservation.pos.y, 255);
                             }
@@ -45,7 +54,12 @@ export class PathfindingSystem {
         return { path, startTime, endTime };
     }
 
-    static checkReservationAvailable(room: Room, pos: RoomPosition | PathStep, startTime: number, endTime?: number) {
+    public static checkReservationAvailable(
+        room: Room,
+        pos: RoomPosition | PathStep,
+        startTime: number,
+        endTime?: number
+    ): boolean {
         this.checkRoomReservationSetup(room, pos);
         for (const reservation of room.memory.positionReservations[`${pos.x},${pos.y}`].reservations) {
             if (startTime <= reservation.endTime) {
@@ -60,21 +74,24 @@ export class PathfindingSystem {
         return true;
     }
 
-    static reserveLocation(creep: Creep, pos: RoomPosition | PathStep, startTime: number, endTime: number) {
+    public static reserveLocation(
+        creep: Creep,
+        pos: RoomPosition | PathStep,
+        startTime: number,
+        endTime: number
+    ): void {
         this.checkRoomReservationSetup(creep.room, pos);
         this.deletePastReservations(creep.room, pos);
-        creep.room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.push(
-            {
-                creepId: creep.id,
-                startTime,
-                endTime
-            }
-        );
+        creep.room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.push({
+            creepId: creep.id,
+            startTime,
+            endTime
+        });
     }
 
-    static checkRoomReservationSetup(room: Room, pos?: RoomPosition | PathStep) {
+    public static checkRoomReservationSetup(room: Room, pos?: RoomPosition | PathStep): void {
         if (!room.memory.positionReservations) {
-            room.memory.positionReservations = {}
+            room.memory.positionReservations = {};
         }
         if (pos && !room.memory.positionReservations[`${pos.x},${pos.y}`]) {
             room.memory.positionReservations[`${pos.x},${pos.y}`] = {
@@ -84,23 +101,23 @@ export class PathfindingSystem {
         }
     }
 
-    static unreservePosition(creep: Creep, room: Room, pos: RoomPosition | PathStep) {
+    public static unreservePosition(creep: Creep, room: Room, pos: RoomPosition | PathStep): void {
         this.checkRoomReservationSetup(room, pos);
         for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
             const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];
             if (reservation.creepId === creep.id) {
                 room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.splice(i, 1);
-                delete creep.memory.movementSystem.reservationStartTime;
-                delete creep.memory.movementSystem.reservationEndTime;
+                delete creep.memory.movementSystem?.reservationStartTime;
+                delete creep.memory.movementSystem?.reservationEndTime;
             }
         }
 
-        if (room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length == 0) {
+        if (room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length === 0) {
             delete room.memory.positionReservations[`${pos.x},${pos.y}`];
         }
     }
-    
-    static unreservePositions(room: Room, pos: RoomPosition | PathStep) {
+
+    public static unreservePositions(room: Room, pos: RoomPosition | PathStep): void {
         this.checkRoomReservationSetup(room, pos);
         for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
             const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];
@@ -108,12 +125,12 @@ export class PathfindingSystem {
                 room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.splice(i, 1);
             }
         }
-        if (room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length == 0) {
+        if (room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length === 0) {
             delete room.memory.positionReservations[`${pos.x},${pos.y}`];
         }
     }
 
-    static deletePastReservations(room: Room, pos: RoomPosition | PathStep) {
+    public static deletePastReservations(room: Room, pos: RoomPosition | PathStep): void {
         this.checkRoomReservationSetup(room, pos);
         for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
             const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];

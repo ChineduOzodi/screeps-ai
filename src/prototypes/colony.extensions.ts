@@ -4,10 +4,10 @@ interface Colony {
     setupComplete?: boolean;
     spawnEnergy: number;
     screepCount: ScreepCount;
-    creeps: ColonyCreeps;
+    creeps: ColonyCreeps | undefined;
     rooms: RoomData[];
     mainSpawnId: string;
-    spawnQueue: SpawnRequest[];
+    spawnQueue: SpawnRequest[] | undefined;
     stats: ColonyStats;
     energyManagement: ColonyEnergyManagement;
     upgradeManagement: ColonyUpgradeManagement;
@@ -15,9 +15,8 @@ interface Colony {
     defenceManagement: ColonyDefenceManagement;
 }
 
-interface ColonyDefenceManagement {
-
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface ColonyDefenceManagement {}
 
 interface ColonyBuilderManagement {
     builders?: ColonyCreepSpawnManagement;
@@ -31,7 +30,9 @@ interface ColonyUpgradeManagement {
 }
 
 interface ColonyEnergyManagement {
-    sources: ColonySources[];
+    stage: number;
+    nextUpdate: number;
+    sources: ColonySource[];
     estimatedEnergyProductionRate: number;
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
@@ -44,9 +45,11 @@ interface EnergyUsageTracking {
     actualEnergyUsagePercentage: number;
 }
 
-interface ColonySources {
+interface ColonySource {
     sourceId: string;
     position: RoomPosition;
+    cumulativeHarvestingTime?: number;
+    cumulativeHarvestedEnergy?: number;
     harvesters?: ColonyCreepSpawnManagement;
     miners?: ColonyCreepSpawnManagement;
     carriers?: ColonyCreepSpawnManagement;
@@ -60,12 +63,12 @@ interface ColonyCreepSpawnManagement {
     important?: boolean;
 }
 
-interface ColonyStats {
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface ColonyStats {}
 
 interface SpawnRequest {
-    body: BodyPartConstant[],
-    memory: CreepMemory
+    body: BodyPartConstant[];
+    memory: CreepMemory;
 }
 
 interface ColonyCreeps {
@@ -91,9 +94,8 @@ interface RoomData {
 
 interface SourceData {
     id: string;
-    position: RoomPosition,
+    position: RoomPosition;
     containerId?: string;
     minerId?: string;
     collectorIds: string[];
 }
-

@@ -24,5 +24,13 @@
         "typings/**": true
     },
     "typescript.tsdk": "./node_modules/typescript/lib",
-    "eslint.enable": true
+    "eslint.enable": true,
+    "cSpell.words": [
+        "BODYPART",
+        "Buildable",
+        "Pathfinding",
+        "REGEN",
+        "Screep",
+        "upgrader"
+    ]
 }

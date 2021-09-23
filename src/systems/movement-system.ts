@@ -1,10 +1,16 @@
-import { random } from 'lodash';
-import { PathfindingSystem } from './pathfinding-system';
-export class MovementSystem {
-    static run(creep: Creep) {
-        const ticksToLive = creep.ticksToLive ? creep.ticksToLive : 0;
+import { PathfindingSystem } from "./pathfinding-system";
 
-        if (creep.memory.movementSystem.previousPos.x == creep.pos.x && creep.memory.movementSystem.previousPos.y == creep.pos.y) {
+export class MovementSystem {
+    public static run(creep: Creep): void {
+        const ticksToLive = creep.ticksToLive ? creep.ticksToLive : 0;
+        if (!creep.memory.movementSystem) {
+            creep.memory.movementSystem = MovementSystem.createMovementSystem(creep.pos);
+        }
+
+        if (
+            creep.memory.movementSystem.previousPos.x === creep.pos.x &&
+            creep.memory.movementSystem.previousPos.y === creep.pos.y
+        ) {
             creep.memory.movementSystem.idle++;
             creep.memory.movementSystem.pathStuck++;
         } else {
@@ -17,14 +23,20 @@ export class MovementSystem {
             creep.memory.movementSystem.previousPos = creep.pos;
         }
 
-        if (creep.memory.movementSystem.idle >= 10 && PathfindingSystem.checkReservationAvailable(creep.room, creep.pos, Game.time, Game.time + 1)) {
+        if (
+            creep.memory.movementSystem.idle >= 10 &&
+            PathfindingSystem.checkReservationAvailable(creep.room, creep.pos, Game.time, Game.time + 1)
+        ) {
             PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
             creep.memory.movementSystem.idleReserved = true;
         }
 
-
-        //requirements
-        if (creep.memory.movementSystem.path && creep.memory.targetId && (creep.memory.targetRange != null || creep.memory.targetRange != undefined)) {
+        // requirements
+        if (
+            creep.memory.movementSystem.path &&
+            creep.memory.targetId &&
+            (creep.memory.targetRange != null || creep.memory.targetRange !== undefined)
+        ) {
             const target = Game.getObjectById<Structure>(creep.memory.targetId);
             if (!target) {
                 console.log(`${creep.name}: target no longer exists`);
@@ -43,65 +55,88 @@ export class MovementSystem {
                     const status = creep.moveByPath(creep.memory.movementSystem.path);
                     const lastPathStep = creep.memory.movementSystem.path[creep.memory.movementSystem.path.length - 1];
 
-                    if (status != OK && status != ERR_TIRED && status != ERR_BUSY) {
-                        console.log(`${creep.name}: reseting path due to error: ${status}`);
+                    if (status !== OK && status !== ERR_TIRED && status !== ERR_BUSY) {
+                        console.log(`${creep.name}: resetting path due to error: ${status}`);
                         PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
                         creep.memory.movementSystem.pathStuck = 0;
-                        //reserve current location
+                        // reserve current location
                         PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
                         creep.memory.movementSystem.idleReserved = true;
                     }
 
-                    if ((creep.memory.movementSystem.pathStuck >= 10 || ticksToLive === 1) && creep.memory.movementSystem.path) {
-                        creep.say('path stuck');
+                    if (
+                        (creep.memory.movementSystem.pathStuck >= 10 || ticksToLive === 1) &&
+                        creep.memory.movementSystem.path
+                    ) {
+                        creep.say("path stuck");
                         PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
                         creep.memory.movementSystem.pathStuck = Math.random() * 3;
-                        //reserve current location
+                        // reserve current location
                         PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
                         creep.memory.movementSystem.idleReserved = true;
                     }
-
                 }
             }
-
-
         }
     }
 
-    static moveToTargetByPath(creep: Creep, targetId: string, targetRange: number, path: PathStep[]) {
-        creep.memory.movementSystem.path = path;
-        creep.memory.targetId = targetId;
-        creep.memory.targetRange = targetRange;
-        creep.memory.movementSystem.pathStuck = 0;
+    public static createMovementSystem(previousPos: RoomPosition): CreepMovementSystem {
+        return {
+            previousPos,
+            idle: 0,
+            pathStuck: 0,
+            idleReserved: false
+        };
     }
 
-    static moveToTargetByPathWithReservation(creep: Creep, targetId: string, targetRange: number, path: PathStep[], startTime: number, endTime: number) {
-        creep.memory.movementSystem.path = path;
-        creep.memory.targetId = targetId;
-        creep.memory.targetRange = targetRange;
-        creep.memory.movementSystem.pathStuck = 0;
-        creep.memory.movementSystem.reservationStartTime = startTime;
-        creep.memory.movementSystem.reservationEndTime = endTime;
-
-        PathfindingSystem.reserveLocation(creep, path[path.length - 1], startTime, endTime);
+    public static moveToTargetByPath(creep: Creep, targetId: string, targetRange: number, path: PathStep[]): void {
+        if (creep.memory.movementSystem) {
+            creep.memory.movementSystem.path = path;
+            creep.memory.targetId = targetId;
+            creep.memory.targetRange = targetRange;
+            creep.memory.movementSystem.pathStuck = 0;
+        } else {
+            console.error(`movement-system | creep ${creep.id} could not move because no movement system`);
+        }
     }
 
-    static moveTo(creep: Creep, target: Structure, range: number = 1) {
-        if (creep.spawning || creep.memory.movementSystem.path) {
+    public static moveToTargetByPathWithReservation(
+        creep: Creep,
+        targetId: string,
+        targetRange: number,
+        path: PathStep[],
+        startTime: number,
+        endTime: number
+    ): void {
+        if (creep.memory.movementSystem) {
+            creep.memory.movementSystem.path = path;
+            creep.memory.targetId = targetId;
+            creep.memory.targetRange = targetRange;
+            creep.memory.movementSystem.pathStuck = 0;
+            creep.memory.movementSystem.reservationStartTime = startTime;
+            creep.memory.movementSystem.reservationEndTime = endTime;
+
+            PathfindingSystem.reserveLocation(creep, path[path.length - 1], startTime, endTime);
+        } else {
+            console.error(`movement-system | creep ${creep.id} could not move because no movement system`);
+        }
+    }
+
+    public static moveTo(creep: Creep, target: Structure, range = 1): void {
+        if (creep.spawning || creep.memory.movementSystem?.path) {
             return;
         }
 
         PathfindingSystem.unreservePosition(creep, creep.room, creep.pos);
         const path = creep.pos.findPathTo(target, {
-            range: range,
+            range,
             ignoreCreeps: true,
-            costCallback: function (roomName, costMatrix) {
-
-                let room = Game.rooms[roomName];
+            costCallback(roomName, costMatrix) {
+                const room = Game.rooms[roomName];
                 if (!room) return;
 
                 if (creep.room.memory.positionReservations) {
@@ -112,7 +147,14 @@ export class MovementSystem {
 
                         if (reservation.reservations) {
                             const ticksToLive = creep.ticksToLive ? creep.ticksToLive : 0;
-                            if (!PathfindingSystem.checkReservationAvailable(room, reservation.pos, Game.time, Game.time + ticksToLive)) {
+                            if (
+                                !PathfindingSystem.checkReservationAvailable(
+                                    room,
+                                    reservation.pos,
+                                    Game.time,
+                                    Game.time + ticksToLive
+                                )
+                            ) {
                                 costMatrix.set(reservation.pos.x, reservation.pos.y, 255);
                             }
                         }
@@ -125,16 +167,20 @@ export class MovementSystem {
             this.moveToTargetByPath(creep, target.id, range, path);
         }
         // console.log(path);
-
     }
 
-    static moveToWithReservation(creep: Creep, target: Structure | Source | Tombstone | Resource | ConstructionSite | Creep, workDuration: number, range: number = 1) {
+    public static moveToWithReservation(
+        creep: Creep,
+        target: Structure | Source | Tombstone | Resource | ConstructionSite | Creep,
+        workDuration: number,
+        range = 1
+    ): void {
         if (creep.spawning) {
             console.log(`creep still spawning:`, creep.name);
             return;
         }
 
-        if (creep.memory.movementSystem.path) {
+        if (creep.memory.movementSystem?.path) {
             return;
         }
 
@@ -142,7 +188,14 @@ export class MovementSystem {
         const pathInfo = PathfindingSystem.findPathWithReservation(creep, target, range, workDuration);
 
         if (pathInfo.path && pathInfo.path.length > 0) {
-            this.moveToTargetByPathWithReservation(creep, target.id, range, pathInfo.path, pathInfo.startTime, pathInfo.endTime);
+            this.moveToTargetByPathWithReservation(
+                creep,
+                target.id,
+                range,
+                pathInfo.path,
+                pathInfo.startTime,
+                pathInfo.endTime
+            );
         } else {
             console.log(`${creep.name}: did not found path`);
         }

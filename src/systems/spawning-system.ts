@@ -1,12 +1,11 @@
 import { ColonyExtras } from "prototypes/colony";
 
 export class SpawningSystem {
-
-    static run(colony: ColonyExtras, creepSpawnManagement: ColonyCreepSpawnManagement) {
-
+    public static run(colony: ColonyExtras, creepSpawnManagement: ColonyCreepSpawnManagement): void {
         for (let i = creepSpawnManagement.creepNames.length - 1; i >= 0; i--) {
             const creepName = creepSpawnManagement.creepNames[i];
-            if (!(creepName in colony.colony.creeps)) {
+            const colonyCreeps = colony.getColonyCreeps();
+            if (!(creepName in colonyCreeps)) {
                 creepSpawnManagement.creepNames.splice(i, 1);
             }
         }
@@ -21,6 +20,4 @@ export class SpawningSystem {
             }
         }
     }
-
-
 }

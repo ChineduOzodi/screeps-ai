@@ -1,42 +1,46 @@
-import { DefenceSystem } from './../systems/defence-system';
-import { BuilderSystem } from './../systems/builder-system';
-import { UpgradeSystem } from './../systems/upgrade-system';
-import { MovementSystem } from './../systems/movement-system';
-import { EnergySystem } from "systems/energy-system";
+import { BuilderSystem } from "./../systems/builder-system";
+import { DefenceSystem } from "./../systems/defence-system";
+import { MovementSystem } from "./../systems/movement-system";
+import { UpgradeSystem } from "./../systems/upgrade-system";
 
 export class CreepExtras {
-    creep: Creep;
+    public creep: Creep;
+    protected memory: CreepMemory;
 
-    constructor(creep: Creep) {
+    public constructor(creep: Creep) {
         this.creep = creep;
+        this.memory = creep.memory;
     }
 
-    run() {
+    public getColony(): Colony | undefined {
+        let colony = Memory.colonies[this.creep.memory.colonyId];
+        if (colony) {
+            return colony;
+        }
+        this.creep.memory.colonyId = this.creep.room.name;
+        colony = Memory.colonies[this.creep.memory.colonyId];
+        if (!colony) {
+            console.error(`creep: ${this.creep.id} does not have colony at ${this.creep.memory.colonyId}`);
+        }
+        return colony;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    public run(): void {
         if (this.creep.spawning) {
             return;
         }
 
-        const colony = this.getColony();
-        if (this.creep.name in colony.creeps) {
-            colony.creeps[this.creep.name].id = this.creep.id;
-        }
-        
-        MovementSystem.run(this.creep);
-        
         switch (this.creep.memory.role) {
-            case 'harvester':
-                EnergySystem.runHarvesterCreep(this.creep);
-                break;
-
-            case 'upgrader':
+            case "upgrader":
                 UpgradeSystem.runUpgraderCreep(this.creep);
                 break;
 
-            case 'builder':
+            case "builder":
                 BuilderSystem.runBuilderCreep(this);
                 break;
 
-            case 'defender':
+            case "defender":
                 DefenceSystem.runDefenderCreep(this);
                 break;
             default:
@@ -44,14 +48,17 @@ export class CreepExtras {
         }
     }
 
-    getColony() {
-        return Memory.colonies[this.creep.memory.colonyId];
+    public getMovementSystem(): CreepMovementSystem {
+        if (!this.creep.memory.movementSystem) {
+            this.creep.memory.movementSystem = MovementSystem.createMovementSystem(this.creep.pos);
+        }
+        return this.creep.memory.movementSystem;
     }
 }
 
 export enum CreepStatus {
-    WORKING = 'working',
-    IDLE = 'idle',
-    SPAWN_QUEUE = 'spawn queue',
-    SPAWNING = 'spawning'
+    WORKING = "working",
+    IDLE = "idle",
+    SPAWN_QUEUE = "spawn queue",
+    SPAWNING = "spawning"
 }

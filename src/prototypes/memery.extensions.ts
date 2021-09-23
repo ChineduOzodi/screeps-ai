@@ -1,5 +1,5 @@
 interface Memory {
     colonies: {
-        [colonyId: string]: Colony;
-    }
+        [colonyId: string]: Colony | undefined;
+    };
 }

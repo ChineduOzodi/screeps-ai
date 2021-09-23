@@ -1,18 +1,18 @@
 export class SpawnExtras {
-    spawn: StructureSpawn;
-    constructor(spawn: StructureSpawn) {
+    public spawn: StructureSpawn;
+    public constructor(spawn: StructureSpawn) {
         this.spawn = spawn;
     }
 
-    run() {
+    public run(): void {
         if (!this.spawn.memory.colonyId) {
             this.initialRoomSetup();
         }
     }
 
-    initialRoomSetup() {
+    public initialRoomSetup(): void {
         if (this.spawn.memory.colonyId) {
-            console.error('room already setup, colony id:', this.spawn.memory.colonyId);
+            console.error("room already setup, colony id:", this.spawn.memory.colonyId);
             return;
         }
         console.log("Creating initial colony");
@@ -29,10 +29,12 @@ export class SpawnExtras {
                 estimatedEnergyProductionRate: 0
             },
             energyManagement: {
+                stage: 0,
+                nextUpdate: Game.time,
                 sources: [],
                 energyUsageModifier: 1,
                 estimatedEnergyProductionRate: 0,
-                totalEnergyUsagePercentageAllowed: 0,
+                totalEnergyUsagePercentageAllowed: 0
             },
             upgradeManagement: {
                 upgraderEnergy: {
@@ -41,7 +43,6 @@ export class SpawnExtras {
                     requestedEnergyUsagePercentage: 0,
                     allowedEnergyWorkRate: 0
                 }
-                
             },
             builderManagement: {
                 buildQueue: [],
@@ -51,7 +52,6 @@ export class SpawnExtras {
                     requestedEnergyUsagePercentage: 0,
                     allowedEnergyWorkRate: 0
                 }
-                
             },
             defenceManagement: {}
         };

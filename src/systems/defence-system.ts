@@ -4,7 +4,7 @@ import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
 
 export class DefenceSystem {
-    static run(colonyExtras: ColonyExtras) {
+    public static run(colonyExtras: ColonyExtras): void {
         const room = colonyExtras.getMainRoom();
 
         let stage = 0;
@@ -20,10 +20,9 @@ export class DefenceSystem {
             default:
                 break;
         }
-
     }
 
-    static manageDefenders(colonyExtras: ColonyExtras) {
+    public static manageDefenders(colonyExtras: ColonyExtras): void {
         const rooms = colonyExtras.colony.rooms;
 
         for (const room of rooms) {
@@ -44,13 +43,16 @@ export class DefenceSystem {
         }
     }
 
-    static createDefenderProfile(colonyExtras: ColonyExtras, roomName: string) {
+    public static createDefenderProfile(colonyExtras: ColonyExtras, roomName: string): ColonyCreepSpawnManagement {
         const body: BodyPartConstant[] = [];
 
         const room = colonyExtras.getMainRoom();
         const energy = room.energyCapacityAvailable;
 
-        const numberOfParts = Math.max(1, Math.floor((energy / (BODYPART_COST.attack + BODYPART_COST.move + BODYPART_COST.tough))));
+        const numberOfParts = Math.max(
+            1,
+            Math.floor(energy / (BODYPART_COST.attack + BODYPART_COST.move + BODYPART_COST.tough))
+        );
 
         for (let i = 0; i < numberOfParts; i++) {
             body.push(TOUGH);
@@ -63,29 +65,29 @@ export class DefenceSystem {
         const memory: AddCreepToQueueOptions = {
             homeRoomName: roomName,
             workDuration: 5,
-            role: 'defender',
+            role: "defender",
             averageEnergyConsumptionProductionPerTick: energyUsePerTick
-        }
+        };
         const creepSpawnManagement: ColonyCreepSpawnManagement = {
             creepNames: [],
             desiredAmount: 0,
             bodyBlueprint: body,
             memoryBlueprint: memory,
             important: true
-        }
+        };
 
         return creepSpawnManagement;
     }
 
-    static runDefenderCreep(creepExtras: CreepExtras) {
-        const creep = creepExtras.creep
-        
+    public static runDefenderCreep(creepExtras: CreepExtras): void {
+        const creep = creepExtras.creep;
+
         let target: Creep | null = null;
         if (creep.memory.targetId) {
             target = Game.getObjectById<Creep>(creep.memory.targetId);
             if (!target) {
                 delete creep.memory.targetId;
-                delete creep.memory.movementSystem.path;
+                delete creep.memory.movementSystem?.path;
             }
         } else {
             const closestHostile = creepExtras.creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
