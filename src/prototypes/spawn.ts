@@ -12,7 +12,7 @@ export class SpawnExtras {
 
     public initialRoomSetup(): void {
         if (this.spawn.memory.colonyId) {
-            console.error("room already setup, colony id:", this.spawn.memory.colonyId);
+            console.log("room already setup, colony id:", this.spawn.memory.colonyId);
             return;
         }
         console.log("Creating initial colony");
@@ -34,6 +34,7 @@ export class SpawnExtras {
                 sources: [],
                 energyUsageModifier: 1,
                 estimatedEnergyProductionRate: 0,
+                estimatedEnergyProductionEfficiency: 0,
                 totalEnergyUsagePercentageAllowed: 0
             },
             upgradeManagement: {

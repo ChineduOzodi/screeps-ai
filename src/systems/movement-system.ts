@@ -100,7 +100,7 @@ export class MovementSystem {
             creep.memory.targetRange = targetRange;
             creep.memory.movementSystem.pathStuck = 0;
         } else {
-            console.error(`movement-system | creep ${creep.id} could not move because no movement system`);
+            console.log(`movement-system | creep ${creep.id} could not move because no movement system`);
         }
     }
 
@@ -122,7 +122,7 @@ export class MovementSystem {
 
             PathfindingSystem.reserveLocation(creep, path[path.length - 1], startTime, endTime);
         } else {
-            console.error(`movement-system | creep ${creep.id} could not move because no movement system`);
+            console.log(`movement-system | creep ${creep.id} could not move because no movement system`);
         }
     }
 

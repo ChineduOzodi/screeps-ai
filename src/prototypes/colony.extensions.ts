@@ -34,6 +34,7 @@ interface ColonyEnergyManagement {
     nextUpdate: number;
     sources: ColonySource[];
     estimatedEnergyProductionRate: number;
+    estimatedEnergyProductionEfficiency?: number;
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
 }

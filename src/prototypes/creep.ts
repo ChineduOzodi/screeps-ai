@@ -20,7 +20,7 @@ export class CreepExtras {
         this.creep.memory.colonyId = this.creep.room.name;
         colony = Memory.colonies[this.creep.memory.colonyId];
         if (!colony) {
-            console.error(`creep: ${this.creep.id} does not have colony at ${this.creep.memory.colonyId}`);
+            console.log(`creep: ${this.creep.id} does not have colony at ${this.creep.memory.colonyId}`);
         }
         return colony;
     }

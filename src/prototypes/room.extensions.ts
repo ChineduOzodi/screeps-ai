@@ -1,5 +1,5 @@
 interface RoomMemory {
-    positionReservations: RoomPositionReservations
+    positionReservations: RoomPositionReservations;
 }
 
 interface RoomPositionReservations {
@@ -8,7 +8,7 @@ interface RoomPositionReservations {
 
 interface PositionReservations {
     pos: RoomPosition | PathStep;
-    reservations: PositionReservationData[]
+    reservations: PositionReservationData[];
 }
 
 interface PositionReservationData {

@@ -1,23 +1,21 @@
-import { PathfindingSystem } from './../systems/pathfinding-system';
+import { PathfindingSystem } from "./../systems/pathfinding-system";
 export class RoomExtras {
-    room: Room;
+    public room: Room;
 
-    constructor(room: Room) {
+    public constructor(room: Room) {
         this.room = room;
     }
 
-    run() {
+    public run(): void {
         this.visualizeReservations();
     }
 
+    // public getTotalPotentialEnergy(): void {
+    //     const totalPotentialEnergy = 0;
+    //     Game.creeps;
+    // }
 
-
-    getTotalPotentialEnergy() {
-        let totalPotentialEnergy = 0;
-        Game.creeps
-    }
-
-    visualizeReservations() {
+    public visualizeReservations(): void {
         if (!this.room.memory.positionReservations) {
             return;
         }
@@ -29,8 +27,11 @@ export class RoomExtras {
             if (reservation.reservations.length > 0) {
                 this.room.visual.circle(reservation.pos.x, reservation.pos.y);
                 if (reservation.reservations.length > 1) {
-                    this.room.visual.text(reservation.reservations.length.toString(), reservation.pos.x, reservation.pos.y)
-
+                    this.room.visual.text(
+                        reservation.reservations.length.toString(),
+                        reservation.pos.x,
+                        reservation.pos.y
+                    );
                 }
             }
         }

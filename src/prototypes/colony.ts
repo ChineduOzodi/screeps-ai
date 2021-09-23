@@ -50,12 +50,17 @@ export class ColonyExtras {
         room.visual.text(`Colony: ${this.colony.id}`, 3, 5, { color: "white", font: 1, align: "left" });
 
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
-        const { estimatedEnergyProductionRate, totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage } =
-            this.colony.energyManagement;
+        const {
+            estimatedEnergyProductionRate,
+            totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage,
+            estimatedEnergyProductionEfficiency
+        } = this.colony.energyManagement;
         room.visual.text(
-            `Energy Production: ${estimatedEnergyProductionRate.toFixed(
-                2
-            )}, Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`,
+            `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}, Actual: ${(
+                estimatedEnergyProductionRate * (estimatedEnergyProductionEfficiency || 0)
+            ).toFixed(2)}
+            Efficiency: ${(estimatedEnergyProductionEfficiency || 0).toFixed(2)}
+            Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`,
             3,
             6,
             textStyle
@@ -195,11 +200,13 @@ export class ColonyExtras {
     private creepSpawnManager() {
         const spawn = this.getMainSpawn();
         if (!spawn || spawn.spawning) {
+            console.log("already spawning");
             return;
         }
 
         const spawnQueue = this.getSpawnQueue();
         if (spawnQueue.length === 0) {
+            console.log("nothing in spawn queue");
             return;
         }
 
@@ -207,15 +214,23 @@ export class ColonyExtras {
         const { memory, body } = request;
         const creepData = this.getCreepData(memory.name);
         if (!creepData) {
-            console.error(`colony | could not get creep data for ${memory.name}}`);
+            console.log(`colony | could not get creep data for ${memory.name}}`);
         } else {
             if (creepData.status === CreepStatus.SPAWNING) {
                 creepData.status = CreepStatus.IDLE;
                 spawnQueue.splice(0, 1);
             } else {
                 const status = spawn.spawnCreep(body, memory.name, { memory });
-                if (status === 0) {
+                if (status === OK) {
                     creepData.status = CreepStatus.SPAWNING;
+                } else if (status === ERR_NAME_EXISTS) {
+                    // this should take care of if a name already exists, it goes to the next spawn
+                    console.log(
+                        `colony ${this.colony.id} | spawn skipping creep since name already exists: ${memory.name}`
+                    );
+                    spawnQueue.splice(0, 1);
+                } else {
+                    console.log(`spawn status error: ${status}`);
                 }
             }
         }

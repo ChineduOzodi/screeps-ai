@@ -18,6 +18,13 @@ export class HarvesterCreep extends CreepExtras {
         const { creep, memory } = this;
         const colonySource = this.getColonySource();
 
+        if (colonySource) {
+            if (!colonySource.cumulativeHarvestingTime) {
+                colonySource.cumulativeHarvestingTime = 0;
+            }
+            colonySource.cumulativeHarvestingTime += 1;
+        }
+
         if (!memory.workTargetId) {
             throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
         }
@@ -52,7 +59,8 @@ export class HarvesterCreep extends CreepExtras {
                         if (!colonySource.cumulativeHarvestedEnergy) {
                             colonySource.cumulativeHarvestedEnergy = 0;
                         }
-                        colonySource.cumulativeHarvestedEnergy += this.memory.cumulativeWork;
+                        colonySource.cumulativeHarvestedEnergy +=
+                            memory.workAmount * CreepConstants.WORK_PART_ENERGY_HARVEST_PER_TICK;
                     }
                 }
             } else {
@@ -92,13 +100,6 @@ export class HarvesterCreep extends CreepExtras {
                     MovementSystem.moveToWithReservation(creep, target, 2);
                 }
             }
-        }
-
-        if (colonySource && this.memory.cumulativeWork) {
-            if (!colonySource.cumulativeHarvestingTime) {
-                colonySource.cumulativeHarvestingTime = 0;
-            }
-            colonySource.cumulativeHarvestingTime += 1;
         }
     }
 }

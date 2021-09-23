@@ -30,7 +30,7 @@ export class EnergySystem {
         }
 
         if (this.energyManagement.nextUpdate < Game.time || stage !== this.energyManagement.stage) {
-            this.energyManagement.nextUpdate += 500;
+            this.energyManagement.nextUpdate = Game.time + 500;
             this.energyManagement.stage = stage;
             this.resetHarvestTracking();
             this.shouldUpdate = true;
@@ -57,12 +57,26 @@ export class EnergySystem {
     public manageHarvesters(): void {
         for (const colonySource of this.energyManagement.sources) {
             if (!colonySource.harvesters) {
+                console.log(`${this.colony.colony.id} energy-system | creating harvester profile`);
                 colonySource.harvesters = this.createHarvesterProfile(colonySource.sourceId);
             } else if (this.shouldUpdate) {
                 colonySource.harvesters = this.updateHarvesterProfile(colonySource.harvesters, colonySource.sourceId);
             }
             SpawningSystem.run(this.colony, colonySource.harvesters);
         }
+        this.calculateHarvestersProductionEfficiency();
+    }
+
+    private calculateHarvestersProductionEfficiency() {
+        const totalEnergyGained = this.energyManagement.sources
+            .map(x => x.cumulativeHarvestedEnergy || 0)
+            .reduce((a, b) => a + b);
+        const totalTimeUsed = this.energyManagement.sources
+            .map(x => x.cumulativeHarvestingTime || 0)
+            .reduce((a, b) => a + b);
+
+        this.energyManagement.estimatedEnergyProductionEfficiency =
+            totalEnergyGained / totalTimeUsed / this.energyManagement.estimatedEnergyProductionRate;
     }
 
     private createHarvesterProfile(sourceId: string): ColonyCreepSpawnManagement {
@@ -135,7 +149,7 @@ export class EnergySystem {
                 break;
             }
             if (count >= 100) {
-                console.error(`stuck in while loop, breaking`);
+                console.log(`stuck in while loop, breaking`);
                 break;
             }
         }
@@ -173,6 +187,7 @@ export class EnergySystem {
         harvesterProfile: ColonyCreepSpawnManagement,
         sourceId: string
     ): ColonyCreepSpawnManagement {
+        console.log(`${this.colony.colony.id} energy-system | updating harvester profile`);
         const newHarvesterProfile = this.createHarvesterProfile(sourceId);
         newHarvesterProfile.creepNames = harvesterProfile.creepNames;
         return newHarvesterProfile;
