@@ -200,13 +200,11 @@ export class ColonyExtras {
     private creepSpawnManager() {
         const spawn = this.getMainSpawn();
         if (!spawn || spawn.spawning) {
-            console.log("already spawning");
             return;
         }
 
         const spawnQueue = this.getSpawnQueue();
         if (spawnQueue.length === 0) {
-            console.log("nothing in spawn queue");
             return;
         }
 
@@ -229,7 +227,7 @@ export class ColonyExtras {
                         `colony ${this.colony.id} | spawn skipping creep since name already exists: ${memory.name}`
                     );
                     spawnQueue.splice(0, 1);
-                } else {
+                } else if (status !== ERR_NOT_ENOUGH_ENERGY) {
                     console.log(`spawn status error: ${status}`);
                 }
             }

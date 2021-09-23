@@ -89,7 +89,7 @@ export class EnergySystem {
 
         const maxCreepCount = 3;
         const sourceEnergyProductionPerTick = source.energyCapacity / ENERGY_REGEN_TIME; // how much energy produced per tick
-        const travelTime = path.length * 2; // distance to source and back
+        const travelTime = path.length * 3; // distance to source and back
 
         const energyAvailable = this.room.energyCapacityAvailable;
 
