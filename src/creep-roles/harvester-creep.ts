@@ -13,7 +13,7 @@ export class HarvesterCreep extends CreepExtras {
         );
     }
 
-    public run(): void {
+    public override run(): void {
         // requirements
         const { creep, memory } = this;
         const colonySource = this.getColonySource();

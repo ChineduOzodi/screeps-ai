@@ -13,31 +13,40 @@ interface Colony {
     upgradeManagement: ColonyUpgradeManagement;
     builderManagement: ColonyBuilderManagement;
     defenceManagement: ColonyDefenceManagement;
+    infrastructureManagement?: ColonyInfrastructureManagement;
+}
+
+interface ColonyBaseManagement {
+    stage: number;
+    nextUpdate: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface ColonyDefenceManagement {}
+interface ColonyDefenceManagement extends ColonyBaseManagement {}
 
-interface ColonyBuilderManagement {
+interface ColonyBuilderManagement extends ColonyBaseManagement {
     builders?: ColonyCreepSpawnManagement;
     buildQueue: string[];
     builderEnergy: EnergyUsageTracking;
 }
 
-interface ColonyUpgradeManagement {
+interface ColonyUpgradeManagement extends ColonyBaseManagement {
     upgraders?: ColonyCreepSpawnManagement;
     upgraderEnergy: EnergyUsageTracking;
 }
 
-interface ColonyEnergyManagement {
-    stage: number;
+interface ColonyEnergyManagement extends ColonyBaseManagement {
     lastUpdate?: number;
-    nextUpdate: number;
     sources: ColonySource[];
     estimatedEnergyProductionRate: number;
     estimatedEnergyProductionEfficiency?: number;
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
+}
+
+interface ColonyInfrastructureManagement extends ColonyBaseManagement {
+    repairers?: ColonyCreepSpawnManagement;
+    fillers?: ColonyCreepSpawnManagement;
 }
 
 interface EnergyUsageTracking {

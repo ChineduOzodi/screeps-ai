@@ -31,7 +31,7 @@ export class CreepExtras {
             return;
         }
 
-        switch (this.creep.memory.role) {
+        switch (this.memory.role) {
             case "upgrader":
                 UpgradeSystem.runUpgraderCreep(this.creep);
                 break;
@@ -44,7 +44,7 @@ export class CreepExtras {
                 DefenceSystem.runDefenderCreep(this);
                 break;
             default:
-                break;
+                throw new Error(`creep role "${this.memory.role}" not setup`);
         }
     }
 
