@@ -38,6 +38,8 @@ export class SpawnExtras {
                 totalEnergyUsagePercentageAllowed: 0
             },
             upgradeManagement: {
+                stage: 0,
+                nextUpdate: Game.time,
                 upgraderEnergy: {
                     actualEnergyUsagePercentage: 0,
                     estimatedEnergyWorkRate: 0,
@@ -46,6 +48,8 @@ export class SpawnExtras {
                 }
             },
             builderManagement: {
+                stage: 0,
+                nextUpdate: Game.time,
                 buildQueue: [],
                 builderEnergy: {
                     actualEnergyUsagePercentage: 0,
@@ -54,7 +58,10 @@ export class SpawnExtras {
                     allowedEnergyWorkRate: 0
                 }
             },
-            defenceManagement: {}
+            defenceManagement: {
+                stage: 0,
+                nextUpdate: Game.time,
+            }
         };
         Memory.colonies[colony.id] = colony;
         this.spawn.memory.colonyId = colony.id;
