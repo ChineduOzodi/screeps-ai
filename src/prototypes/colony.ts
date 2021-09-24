@@ -5,7 +5,7 @@ import { EnergySystem } from "./../systems/energy-system";
 import { MovementSystem } from "systems/movement-system";
 import { UpgradeSystem } from "./../systems/upgrade-system";
 
-export interface Colony {
+interface Colony {
     id: string;
     spawnIndex: number;
     setupComplete?: boolean;
@@ -20,6 +20,7 @@ export interface Colony {
     upgradeManagement: ColonyUpgradeManagement;
     builderManagement: ColonyBuilderManagement;
     defenceManagement: ColonyDefenceManagement;
+    infrastructureManagement?: ColonyInfrastructureManagement;
 }
 
 export class ColonyExtras {
