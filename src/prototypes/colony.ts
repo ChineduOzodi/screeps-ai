@@ -293,6 +293,7 @@ export class ColonyExtras {
 
         sources.forEach(source => {
             this.colony.energyManagement.sources.push({
+                accessCount: 1,
                 sourceId: source.id,
                 position: source.pos
             });
