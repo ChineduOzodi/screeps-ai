@@ -50,6 +50,7 @@ interface EnergyUsageTracking {
 interface ColonySource {
     sourceId: string;
     position: RoomPosition;
+    accessCount: number;
     cumulativeHarvestedEnergy?: number;
     harvesters?: ColonyCreepSpawnManagement;
     miners?: ColonyCreepSpawnManagement;

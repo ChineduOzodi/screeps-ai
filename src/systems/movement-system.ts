@@ -56,7 +56,8 @@ export class MovementSystem {
                     const lastPathStep = creep.memory.movementSystem.path[creep.memory.movementSystem.path.length - 1];
 
                     if (status !== OK && status !== ERR_TIRED && status !== ERR_BUSY) {
-                        console.log(`${creep.name}: resetting path due to error: ${status}`);
+                        // console.log(`${creep.name}: resetting path due to error: ${status}`);
+                        creep.say(`resetting`);
                         PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;

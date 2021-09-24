@@ -56,11 +56,14 @@ export class EnergySystem {
 
     public manageHarvesters(): void {
         for (const colonySource of this.energyManagement.sources) {
+            if (!colonySource.accessCount) {
+                colonySource.accessCount = 1;
+            }
             if (!colonySource.harvesters) {
                 console.log(`${this.colony.colony.id} energy-system | creating harvester profile`);
-                colonySource.harvesters = this.createHarvesterProfile(colonySource.sourceId);
+                colonySource.harvesters = this.createHarvesterProfile(colonySource);
             } else if (this.shouldUpdate) {
-                colonySource.harvesters = this.updateHarvesterProfile(colonySource.harvesters, colonySource.sourceId);
+                colonySource.harvesters = this.updateHarvesterProfile(colonySource);
             }
             SpawningSystem.run(this.colony, colonySource.harvesters);
         }
@@ -80,7 +83,8 @@ export class EnergySystem {
             totalEnergyGained / totalTimeUsed / this.energyManagement.estimatedEnergyProductionRate;
     }
 
-    private createHarvesterProfile(sourceId: string): ColonyCreepSpawnManagement {
+    private createHarvesterProfile(colonySource: ColonySource): ColonyCreepSpawnManagement {
+        const { sourceId, accessCount } = colonySource;
         const source = Game.getObjectById<Source>(sourceId);
         if (!source) {
             throw new Error(`Source not found with given id: ${sourceId}`);
@@ -88,7 +92,6 @@ export class EnergySystem {
         const target = this.colony.getMainSpawn();
         const path = target.pos.findPathTo(source, { ignoreCreeps: true, range: 1 });
 
-        const maxCreepCount = 3;
         const sourceEnergyProductionPerTick = source.energyCapacity / ENERGY_REGEN_TIME; // how much energy produced per tick
         const travelTime = path.length * 3; // distance to source and back
 
@@ -166,6 +169,16 @@ export class EnergySystem {
         }
 
         const sourceHarvestDuration = (carryPartCount * partCountMod * 50) / (workPartCount * partCountMod * 2);
+        const maxCreepCount = Math.min(
+            5,
+            Math.max(
+                1,
+                Math.round(
+                    (travelTime / this.getTimeEnergyProductionFullLoad(workPartCount, carryPartCount)) * accessCount +
+                        0.3
+                )
+            )
+        );
 
         const memory: AddCreepToQueueOptions = {
             workTargetId: source.id,
@@ -184,22 +197,23 @@ export class EnergySystem {
         return creepSpawnManagement;
     }
 
-    private updateHarvesterProfile(
-        harvesterProfile: ColonyCreepSpawnManagement,
-        sourceId: string
-    ): ColonyCreepSpawnManagement {
+    private updateHarvesterProfile(colonySource: ColonySource): ColonyCreepSpawnManagement {
         console.log(`${this.colony.colony.id} energy-system | updating harvester profile`);
-        const newHarvesterProfile = this.createHarvesterProfile(sourceId);
-        newHarvesterProfile.creepNames = harvesterProfile.creepNames;
+        const newHarvesterProfile = this.createHarvesterProfile(colonySource);
+        newHarvesterProfile.creepNames = colonySource.harvesters?.creepNames || [];
         return newHarvesterProfile;
     }
 
     private getEnergyProductionPerTick(workPartCount: number, carryPartCount: number, distance: number): number {
-        const energyCarried = CreepConstants.CARRY_PART_COST * carryPartCount;
+        const energyCarried = CARRY_CAPACITY * carryPartCount;
         const energyPerTick =
-            energyCarried /
-            (energyCarried / (workPartCount * CreepConstants.WORK_PART_ENERGY_HARVEST_PER_TICK) + distance + 1);
+            energyCarried / (this.getTimeEnergyProductionFullLoad(workPartCount, carryPartCount) + distance + 1);
         return energyPerTick;
+    }
+
+    private getTimeEnergyProductionFullLoad(workPartCount: number, carryPartCount: number) {
+        const energyCarried = CARRY_CAPACITY * carryPartCount;
+        return energyCarried / (workPartCount * CreepConstants.WORK_PART_ENERGY_HARVEST_PER_TICK);
     }
 
     public static getEnergy(creep: Creep): void {
