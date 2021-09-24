@@ -1,3 +1,4 @@
+import { InfastructureSystem } from './../systems/infastructure-system';
 import { BuilderSystem } from "./../systems/builder-system";
 import { CreepStatus } from "./creep";
 import { DefenceSystem } from "./../systems/defence-system";
@@ -39,6 +40,7 @@ export class ColonyExtras {
 
         DefenceSystem.run(this);
         EnergySystem.run(this);
+        InfastructureSystem.run(this);
         UpgradeSystem.run(this);
         BuilderSystem.run(this);
 
