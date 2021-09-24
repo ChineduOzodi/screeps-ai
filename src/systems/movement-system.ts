@@ -173,7 +173,8 @@ export class MovementSystem {
         creep: Creep,
         target: Structure | Source | Tombstone | Resource | ConstructionSite | Creep,
         workDuration: number,
-        range = 1
+        range = 1,
+        ignoreRoles?: string[]
     ): void {
         if (creep.spawning) {
             console.log(`creep still spawning:`, creep.name);
@@ -185,7 +186,7 @@ export class MovementSystem {
         }
 
         PathfindingSystem.unreservePosition(creep, creep.room, creep.pos);
-        const pathInfo = PathfindingSystem.findPathWithReservation(creep, target, range, workDuration);
+        const pathInfo = PathfindingSystem.findPathWithReservation(creep, target, range, workDuration, ignoreRoles);
 
         if (pathInfo.path && pathInfo.path.length > 0) {
             this.moveToTargetByPathWithReservation(

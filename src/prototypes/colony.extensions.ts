@@ -31,6 +31,7 @@ interface ColonyUpgradeManagement {
 
 interface ColonyEnergyManagement {
     stage: number;
+    lastUpdate?: number;
     nextUpdate: number;
     sources: ColonySource[];
     estimatedEnergyProductionRate: number;
@@ -49,7 +50,6 @@ interface EnergyUsageTracking {
 interface ColonySource {
     sourceId: string;
     position: RoomPosition;
-    cumulativeHarvestingTime?: number;
     cumulativeHarvestedEnergy?: number;
     harvesters?: ColonyCreepSpawnManagement;
     miners?: ColonyCreepSpawnManagement;

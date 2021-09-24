@@ -15,4 +15,5 @@ interface PositionReservationData {
     creepId: string;
     startTime: number;
     endTime: number;
+    role: string;
 }

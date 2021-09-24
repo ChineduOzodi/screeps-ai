@@ -38,7 +38,10 @@ export class HarvesterCreep extends CreepExtras {
             // moves to source
             if (source) {
                 if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, source, memory.workDuration);
+                    MovementSystem.moveToWithReservation(creep, source, memory.workDuration, undefined, [
+                        "builder",
+                        "upgrader"
+                    ]);
                 } else {
                     if (!memory.cumulativeWork) {
                         memory.cumulativeWork = 0;

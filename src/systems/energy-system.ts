@@ -34,6 +34,7 @@ export class EnergySystem {
             this.energyManagement.stage = stage;
             this.resetHarvestTracking();
             this.shouldUpdate = true;
+            this.energyManagement.lastUpdate = Game.time;
         }
 
         switch (stage) {
@@ -50,7 +51,6 @@ export class EnergySystem {
     private resetHarvestTracking() {
         for (const colonySource of this.energyManagement.sources) {
             colonySource.cumulativeHarvestedEnergy = 0;
-            colonySource.cumulativeHarvestingTime = 0;
         }
     }
 
@@ -62,10 +62,6 @@ export class EnergySystem {
             } else if (this.shouldUpdate) {
                 colonySource.harvesters = this.updateHarvesterProfile(colonySource.harvesters, colonySource.sourceId);
             }
-            if (!colonySource.cumulativeHarvestingTime) {
-                colonySource.cumulativeHarvestingTime = 0;
-            }
-            colonySource.cumulativeHarvestingTime += 1;
             SpawningSystem.run(this.colony, colonySource.harvesters);
         }
         this.calculateHarvestersProductionEfficiency();
@@ -75,9 +71,10 @@ export class EnergySystem {
         const totalEnergyGained = this.energyManagement.sources
             .map(x => x.cumulativeHarvestedEnergy || 0)
             .reduce((a, b) => a + b);
-        const totalTimeUsed = this.energyManagement.sources
-            .map(x => x.cumulativeHarvestingTime || 0)
-            .reduce((a, b) => a + b);
+        const totalTimeUsed = Math.max(
+            Game.time - (this.energyManagement.lastUpdate || this.energyManagement.nextUpdate - 500),
+            1
+        );
 
         this.energyManagement.estimatedEnergyProductionEfficiency =
             totalEnergyGained / totalTimeUsed / this.energyManagement.estimatedEnergyProductionRate;

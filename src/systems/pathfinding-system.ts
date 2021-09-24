@@ -3,7 +3,8 @@ export class PathfindingSystem {
         creep: Creep,
         target: RoomPosition | _HasRoomPosition,
         range: number,
-        workDuration: number
+        workDuration: number,
+        ignoreRoles?: string[]
     ): {
         path: PathStep[];
         startTime: number;
@@ -39,7 +40,13 @@ export class PathfindingSystem {
 
                         if (reservation.reservations) {
                             if (
-                                !PathfindingSystem.checkReservationAvailable(room, reservation.pos, startTime, endTime)
+                                !PathfindingSystem.checkReservationAvailable(
+                                    room,
+                                    reservation.pos,
+                                    startTime,
+                                    endTime,
+                                    ignoreRoles
+                                )
                             ) {
                                 // console.log(`${reservation.pos.x}, ${reservation.pos.y} not available`);
                                 costMatrix.set(reservation.pos.x, reservation.pos.y, 255);
@@ -58,15 +65,16 @@ export class PathfindingSystem {
         room: Room,
         pos: RoomPosition | PathStep,
         startTime: number,
-        endTime?: number
+        endTime?: number,
+        ignoreRoles?: string[]
     ): boolean {
         this.checkRoomReservationSetup(room, pos);
         for (const reservation of room.memory.positionReservations[`${pos.x},${pos.y}`].reservations) {
-            if (startTime <= reservation.endTime) {
+            if (startTime <= reservation.endTime && (!ignoreRoles || !(reservation.role in ignoreRoles))) {
                 // console.log(`${pos.x},${pos.y} reservation check: arriving too soon (${startTime} <= ${reservation.endTime})`);
                 return false;
             }
-            if (endTime && reservation.startTime <= endTime) {
+            if (endTime && reservation.startTime <= endTime && (!ignoreRoles || !(reservation.role in ignoreRoles))) {
                 // console.log(`${pos.x},${pos.y} reservation check: endint too late (${endTime} >= ${reservation.startTime})`);
                 return false;
             }
@@ -80,12 +88,20 @@ export class PathfindingSystem {
         startTime: number,
         endTime: number
     ): void {
-        this.checkRoomReservationSetup(creep.room, pos);
-        this.deletePastReservations(creep.room, pos);
+        const { room } = creep;
+        this.checkRoomReservationSetup(room, pos);
+        this.deletePastReservations(room, pos);
+        for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
+            const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];
+            if (reservation.endTime > startTime) {
+                reservation.endTime = startTime;
+            }
+        }
         creep.room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.push({
             creepId: creep.id,
             startTime,
-            endTime
+            endTime,
+            role: creep.memory.role
         });
     }
 
