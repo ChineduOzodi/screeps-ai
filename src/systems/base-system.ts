@@ -16,7 +16,7 @@ export class BaseSystem {
     }
 
     public static run(colony: ColonyExtras): void {
-        const system = new BaseSystem(colony);
+        const system = new this(colony);
         system.manage();
     }
 

@@ -104,7 +104,7 @@ export class BuilderSystem {
             } else {
                 const colony = creepExtras.getColony();
                 if (!colony) {
-                    console.log(`builder-system | creep: ${creep.id}, missing colony`);
+                    console.log(`builder-system | creep: ${creep.name}, missing colony`);
                 } else {
                     const buildQueue = colony.builderManagement.buildQueue;
                     if (buildQueue.length === 0) {
