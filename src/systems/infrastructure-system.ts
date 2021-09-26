@@ -1,9 +1,9 @@
-import { CreepConstants } from './../constants/creep-constants';
+import { CreepConstants } from '../constants/creep-constants';
 import { BaseSystem } from "./base-system";
 import { ColonyExtras } from "prototypes/colony";
 import { SpawningSystem } from './spawning-system';
 
-export class InfastructureSystem extends BaseSystem {
+export class InfrastructureSystem extends BaseSystem {
     protected override management: ColonyInfrastructureManagement;
 
     public constructor(colony: ColonyExtras) {
@@ -67,7 +67,7 @@ export class InfastructureSystem extends BaseSystem {
 
     private manageRepairers(): void {
         if (!this.management.repairers) {
-            console.log(`${this.colony.colony.id} infastructure-system | creating repairer profile`);
+            console.log(`${this.colony.colony.id} infrastructure-system | creating repairer profile`);
             this.management.repairers = this.createRepairerProfile();
         } else if (this.shouldUpdate) {
             this.management.repairers = this.updateRepairerProfile(this.management.repairers);
@@ -99,7 +99,7 @@ export class InfastructureSystem extends BaseSystem {
     }
 
     private updateRepairerProfile(profile: ColonyCreepSpawnManagement): ColonyCreepSpawnManagement {
-        console.log(`${this.colony.colony.id} infastructure-system | updating repairer profile`);
+        console.log(`${this.colony.colony.id} infrastructure-system | updating repairer profile`);
         const newProfile = this.createRepairerProfile();
         newProfile.creepNames = profile.creepNames;
         return newProfile;

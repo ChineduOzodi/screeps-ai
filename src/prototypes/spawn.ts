@@ -60,7 +60,7 @@ export class SpawnExtras {
             },
             defenceManagement: {
                 stage: 0,
-                nextUpdate: Game.time,
+                nextUpdate: Game.time
             }
         };
         Memory.colonies[colony.id] = colony;

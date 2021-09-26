@@ -1,5 +1,5 @@
-import { RepairerCreep } from './../creep-roles/repairer-creep';
 import { CreepExtras } from "prototypes/creep";
+import { RepairerCreep } from './../creep-roles/repairer-creep';
 import { HarvesterCreep } from "creep-roles/harvester-creep";
 import { MovementSystem } from "systems/movement-system";
 

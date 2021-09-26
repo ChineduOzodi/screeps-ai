@@ -32,7 +32,7 @@ export class RepairerCreep extends CreepExtras {
                 target = Game.getObjectById(creep.memory.targetId);
                 if (!target ||
                     (target.structureType !== STRUCTURE_EXTENSION  && target.structureType && target.hits && target.hitsMax && target.hits === target.hitsMax) ||
-                    (target.structureType === STRUCTURE_EXTENSION && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0)) {
+                    (target.structureType === STRUCTURE_EXTENSION && target.store && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0)) {
                     delete creep.memory.targetId;
                     delete movementSystem.path;
                 }
@@ -69,12 +69,10 @@ export class RepairerCreep extends CreepExtras {
                             console.log(`creep: ${creep.name}, missing colony`);
                         } else {
                             const buildQueue = colony.builderManagement.buildQueue;
-                            if (buildQueue.length === 0) {
-                                return;
+                            if (buildQueue.length > 0) {
+                                creep.memory.targetId = buildQueue[buildQueue.length - 1];
+                                target = Game.getObjectById<ConstructionSite>(creep.memory.targetId);
                             }
-
-                            creep.memory.targetId = buildQueue[0];
-                            target = Game.getObjectById<ConstructionSite>(creep.memory.targetId);
                         }
                     }
                 }
@@ -84,7 +82,9 @@ export class RepairerCreep extends CreepExtras {
                 if (creep.repair(target) !== OK &&
                     creep.transfer(target, RESOURCE_ENERGY) !== OK &&
                     creep.build(target as any as ConstructionSite) !== OK) {
-                    MovementSystem.moveToWithReservation(creep, target, 5);
+                    MovementSystem.moveToWithReservation(creep, target, target.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10, target.structureType === STRUCTURE_EXTENSION ? 1 : 3);
+                } else {
+                    creep.say('acting');
                 }
             }
         } else {
