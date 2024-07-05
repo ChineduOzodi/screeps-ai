@@ -1,5 +1,5 @@
 import { BuilderSystem } from "./../systems/builder-system";
-import { InfrastructureSystem } from '../systems/infrastructure-system';
+import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { CreepStatus } from "./creep";
 import { DefenceSystem } from "./../systems/defence-system";
 import { EnergySystem } from "./../systems/energy-system";

@@ -9,7 +9,7 @@
         "editor.formatOnSave": false
     },
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": "explicit"
     },
     "editor.formatOnSave": true,
     "editor.renderWhitespace": "boundary",
@@ -28,9 +28,12 @@
     "cSpell.words": [
         "BODYPART",
         "Buildable",
+        "nocheck",
         "Pathfinding",
+        "pserver",
         "REGEN",
         "Screep",
+        "screeps",
         "upgrader",
         "upgraders"
     ]

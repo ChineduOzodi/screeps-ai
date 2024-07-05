@@ -1,7 +1,7 @@
-import { CreepConstants } from '../constants/creep-constants';
 import { BaseSystem } from "./base-system";
 import { ColonyExtras } from "prototypes/colony";
-import { SpawningSystem } from './spawning-system';
+import { CreepConstants } from "../constants/creep-constants";
+import { SpawningSystem } from "./spawning-system";
 
 export class InfrastructureSystem extends BaseSystem {
     protected override management: ColonyInfrastructureManagement;
@@ -39,18 +39,22 @@ export class InfrastructureSystem extends BaseSystem {
     }
 
     public override determineStage(): number {
-        if (this.colony.getMainSpawn().room.find(FIND_STRUCTURES, {
-            filter: structure => {
-                return structure.structureType === STRUCTURE_TOWER;
-            }
-        }).length > 0) {
+        if (
+            this.colony.getMainSpawn().room.find(FIND_STRUCTURES, {
+                filter: structure => {
+                    return structure.structureType === STRUCTURE_TOWER;
+                }
+            }).length > 0
+        ) {
             return 2;
         }
-        if (this.colony.getMainSpawn().room.find(FIND_STRUCTURES, {
-            filter: structure => {
-                return structure.structureType === STRUCTURE_CONTAINER;
-            }
-        }).length > 0) {
+        if (
+            this.colony.getMainSpawn().room.find(FIND_STRUCTURES, {
+                filter: structure => {
+                    return structure.structureType === STRUCTURE_CONTAINER;
+                }
+            }).length > 0
+        ) {
             return 1;
         }
         return 0;
@@ -79,8 +83,11 @@ export class InfrastructureSystem extends BaseSystem {
         const maxCreepCount = this.stage === 2 ? 1 : 1; // TODO: change to not spawn repairer creeps when tower available
         const energyAvailable = this.room.energyCapacityAvailable;
 
-        const creepBodyScale = Math.floor(energyAvailable / (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST))
-        const body = BaseSystem.scaleCreepBody([WORK,CARRY, MOVE], creepBodyScale);
+        const creepBodyScale = Math.floor(
+            energyAvailable /
+                (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST)
+        );
+        const body = BaseSystem.scaleCreepBody([WORK, CARRY, MOVE], creepBodyScale);
 
         const memory: AddCreepToQueueOptions = {
             workAmount: creepBodyScale,
@@ -104,5 +111,4 @@ export class InfrastructureSystem extends BaseSystem {
         newProfile.creepNames = profile.creepNames;
         return newProfile;
     }
-
 }

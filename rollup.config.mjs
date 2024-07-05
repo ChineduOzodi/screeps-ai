@@ -5,6 +5,8 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from 'rollup-plugin-typescript2';
 import screeps from 'rollup-plugin-screeps';
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 
 let cfg;
 const dest = process.env.DEST;

@@ -1,10 +1,8 @@
-import { CreepConstants } from 'constants/creep-constants';
-import { CreepExtras } from 'prototypes/creep';
-import { EnergySystem } from 'systems/energy-system';
-import { MovementSystem } from 'systems/movement-system';
+import { CreepExtras } from "prototypes/creep";
+import { EnergySystem } from "systems/energy-system";
+import { MovementSystem } from "systems/movement-system";
 
 export class RepairerCreep extends CreepExtras {
-
     public constructor(creep: Creep) {
         super(creep);
     }
@@ -30,35 +28,40 @@ export class RepairerCreep extends CreepExtras {
             let target: AnyStructure | null = null;
             if (creep.memory.targetId) {
                 target = Game.getObjectById(creep.memory.targetId);
-                if (!target ||
-                    (target.structureType !== STRUCTURE_EXTENSION  && target.structureType && target.hits && target.hitsMax && target.hits === target.hitsMax) ||
-                    (target.structureType === STRUCTURE_EXTENSION && target.store && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0)) {
+                if (
+                    !target ||
+                    (target.structureType !== STRUCTURE_EXTENSION &&
+                        target.structureType &&
+                        target.hits &&
+                        target.hitsMax &&
+                        target.hits === target.hitsMax) ||
+                    (target.structureType === STRUCTURE_EXTENSION &&
+                        target.store &&
+                        target.store.getFreeCapacity(RESOURCE_ENERGY) === 0)
+                ) {
                     delete creep.memory.targetId;
                     delete movementSystem.path;
                 }
             } else {
                 // Prioritizes refilling extension structures and then repairing structures
                 let target: AnyStructure | ConstructionSite | null = null;
-                target = creep.pos.findClosestByPath(
-                    FIND_STRUCTURES,
-                    {
-                        filter: structure => {
-                            return (
-                                structure.structureType === STRUCTURE_EXTENSION &&
-                                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                            );
-                        }
+                target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+                    filter: structure => {
+                        return (
+                            structure.structureType === STRUCTURE_EXTENSION &&
+                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                        );
                     }
-                );
+                });
 
                 if (target) {
                     memory.targetId = target.id;
                 } else {
                     const targets = creep.room.find(FIND_STRUCTURES, {
-                        filter: object => object.hits < (object.hitsMax/4)
+                        filter: object => object.hits < object.hitsMax / 4
                     });
 
-                    targets.sort((a,b) => a.hits - b.hits);
+                    targets.sort((a, b) => a.hits - b.hits);
 
                     if (targets.length > 0) {
                         memory.targetId = targets[0].id;
@@ -79,21 +82,24 @@ export class RepairerCreep extends CreepExtras {
             }
 
             if (target) {
-                if (creep.repair(target) !== OK &&
+                if (
+                    creep.repair(target) !== OK &&
                     creep.transfer(target, RESOURCE_ENERGY) !== OK &&
-                    creep.build(target as any as ConstructionSite) !== OK) {
-                    MovementSystem.moveToWithReservation(creep, target, target.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10, target.structureType === STRUCTURE_EXTENSION ? 1 : 3);
+                    creep.build(target as any as ConstructionSite) !== OK
+                ) {
+                    MovementSystem.moveToWithReservation(
+                        creep,
+                        target,
+                        target.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10,
+                        target.structureType === STRUCTURE_EXTENSION ? 1 : 3
+                    );
                 } else {
-                    creep.say('acting');
+                    creep.say("acting");
                 }
             }
         } else {
             // find energy
             EnergySystem.getEnergy(creep);
         }
-
     }
-
-
-
 }

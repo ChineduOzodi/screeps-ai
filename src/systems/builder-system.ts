@@ -44,9 +44,14 @@ export class BuilderSystem {
     }
 
     public static getConstructionSites(colony: Colony): ConstructionSite<BuildableStructureConstant>[] {
-        const constructionSites = _.filter(Game.constructionSites, site => {
-            return colony.rooms.find(x => site.room?.name === x.name);
-        });
+        const constructionSites: ConstructionSite<BuildableStructureConstant>[] = [];
+        for (const name in Game.constructionSites) {
+            const site = Game.constructionSites[name];
+
+            if (colony.rooms.find(x => site.room?.name === x.name)) {
+                constructionSites.push(site);
+            }
+        }
 
         return constructionSites;
     }

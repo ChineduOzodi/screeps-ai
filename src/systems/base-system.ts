@@ -32,7 +32,7 @@ export class BaseSystem {
         throw new Error("Should override manage method");
     }
 
-    protected getManagement(colony: ColonyExtras): ColonyBaseManagement {
+    protected getManagement(_colony: ColonyExtras): ColonyBaseManagement {
         throw new Error("Should override manage method");
     }
 
