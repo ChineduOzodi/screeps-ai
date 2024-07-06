@@ -1,93 +1,50 @@
-import { BaseSystem } from "./base-system";
-import { ColonyExtras } from "prototypes/colony";
+import { BaseSystemImpl } from "./base-system";
 import { CreepConstants } from "../constants/creep-constants";
 import { SpawningSystem } from "./spawning-system";
 
-export class InfrastructureSystem extends BaseSystem {
-    protected override management: ColonyInfrastructureManagement;
+export class InfrastructureSystem extends BaseSystemImpl {
+    public override onStart(): void {}
 
-    public constructor(colony: ColonyExtras) {
-        super(colony);
-        this.management = this.getManagement(colony);
+    public override run(): void {
+        this.manageRepairers();
     }
 
-    public override manage(): void {
-        switch (this.stage) {
-            case 0: // no towers or structures
-                this.manageRepairers();
-                break;
-            case 1: // no towers
-                this.manageRepairers();
-                break;
-            case 2: // has towers
-                this.manageRepairers();
-                break;
-            default:
-                this.manageRepairers();
-                break;
+    public override onLevelUp(_level: number): void {}
+
+    public override updateProfiles(): void {
+        if (!this.systemInfo.repairers) {
+            console.log(`${this.colony.colonyInfo.roomName} infrastructure-system | creating repairer profile`);
+            this.systemInfo.repairers = this.createRepairerProfile();
+        } else {
+            this.systemInfo.repairers = this.updateRepairerProfile(this.systemInfo.repairers);
         }
     }
 
-    protected override getManagement(colony: ColonyExtras): ColonyInfrastructureManagement {
-        if (!colony.colony.infrastructureManagement) {
-            colony.colony.infrastructureManagement = {
-                stage: 0,
+    public override get systemInfo(): ColonyInfrastructureManagement {
+        if (!this.colony.colonyInfo.infrastructureManagement) {
+            this.colony.colonyInfo.infrastructureManagement = {
                 nextUpdate: 0
             };
         }
-        return colony.colony.infrastructureManagement;
-    }
-
-    public override determineStage(): number {
-        if (
-            this.colony.getMainSpawn().room.find(FIND_STRUCTURES, {
-                filter: structure => {
-                    return structure.structureType === STRUCTURE_TOWER;
-                }
-            }).length > 0
-        ) {
-            return 2;
-        }
-        if (
-            this.colony.getMainSpawn().room.find(FIND_STRUCTURES, {
-                filter: structure => {
-                    return structure.structureType === STRUCTURE_CONTAINER;
-                }
-            }).length > 0
-        ) {
-            return 1;
-        }
-        return 0;
-    }
-
-    public override checkShouldUpdate(): boolean {
-        if (this.management.nextUpdate < Game.time || this.stage !== this.management.stage) {
-            this.management.nextUpdate = Game.time + 500;
-            this.management.stage = this.stage;
-            return true;
-        }
-        return false;
+        return this.colony.colonyInfo.infrastructureManagement;
     }
 
     private manageRepairers(): void {
-        if (!this.management.repairers) {
-            console.log(`${this.colony.colony.id} infrastructure-system | creating repairer profile`);
-            this.management.repairers = this.createRepairerProfile();
-        } else if (this.shouldUpdate) {
-            this.management.repairers = this.updateRepairerProfile(this.management.repairers);
+        if (!this.systemInfo.repairers) {
+            throw new Error("systemInfo.repairers is null, cannot proceed with managing.");
         }
-        SpawningSystem.run(this.colony, this.management.repairers);
+        SpawningSystem.run(this.colony, this.systemInfo.repairers);
     }
 
     private createRepairerProfile(): ColonyCreepSpawnManagement {
-        const maxCreepCount = this.stage === 2 ? 1 : 1; // TODO: change to not spawn repairer creeps when tower available
+        const maxCreepCount = 1;
         const energyAvailable = this.room.energyCapacityAvailable;
 
         const creepBodyScale = Math.floor(
             energyAvailable /
                 (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST)
         );
-        const body = BaseSystem.scaleCreepBody([WORK, CARRY, MOVE], creepBodyScale);
+        const body = BaseSystemImpl.scaleCreepBody([WORK, CARRY, MOVE], creepBodyScale);
 
         const memory: AddCreepToQueueOptions = {
             workAmount: creepBodyScale,
@@ -106,7 +63,7 @@ export class InfrastructureSystem extends BaseSystem {
     }
 
     private updateRepairerProfile(profile: ColonyCreepSpawnManagement): ColonyCreepSpawnManagement {
-        console.log(`${this.colony.colony.id} infrastructure-system | updating repairer profile`);
+        console.log(`${this.colony.colonyInfo.roomName} infrastructure-system | updating repairer profile`);
         const newProfile = this.createRepairerProfile();
         newProfile.creepNames = profile.creepNames;
         return newProfile;

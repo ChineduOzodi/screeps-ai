@@ -3,7 +3,6 @@ import { HarvesterCreep } from "creep-roles/harvester-creep";
 import { MovementSystem } from "systems/movement-system";
 import { RepairerCreep } from "./../creep-roles/repairer-creep";
 
-
 export class CreepManagement {
     public static run(creep: Creep): void {
         if (creep.spawning) {
@@ -35,7 +34,7 @@ export class CreepManagement {
             //     break;
 
             // case "defender":
-            //     DefenceSystem.runDefenderCreep(this);
+            //     DefenseSystem.runDefenderCreep(this);
             //     break;
             default:
                 return new CreepExtras(creep);

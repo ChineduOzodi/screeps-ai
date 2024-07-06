@@ -1,7 +1,7 @@
-import { ColonyExtras } from "prototypes/colony";
+import { ColonyManager } from "prototypes/colony";
 
 export class SpawningSystem {
-    public static run(colony: ColonyExtras, creepSpawnManagement: ColonyCreepSpawnManagement): void {
+    public static run(colony: ColonyManager, creepSpawnManagement: ColonyCreepSpawnManagement): void {
         for (let i = creepSpawnManagement.creepNames.length - 1; i >= 0; i--) {
             const creepName = creepSpawnManagement.creepNames[i];
             const colonyCreeps = colony.getColonyCreeps();

@@ -17,7 +17,7 @@ export class SpawnExtras {
         }
         console.log("Creating initial colony");
         const colony: Colony = {
-            id: this.spawn.room.name,
+            roomName: this.spawn.room.name,
             mainSpawnId: this.spawn.id,
             spawnEnergy: 200,
             screepCount: {},
@@ -28,8 +28,8 @@ export class SpawnExtras {
             stats: {
                 estimatedEnergyProductionRate: 0
             },
+            nextUpdate: 0,
             energyManagement: {
-                stage: 0,
                 nextUpdate: Game.time,
                 sources: [],
                 energyUsageModifier: 1,
@@ -38,7 +38,6 @@ export class SpawnExtras {
                 totalEnergyUsagePercentageAllowed: 0
             },
             upgradeManagement: {
-                stage: 0,
                 nextUpdate: Game.time,
                 upgraderEnergy: {
                     actualEnergyUsagePercentage: 0,
@@ -48,7 +47,6 @@ export class SpawnExtras {
                 }
             },
             builderManagement: {
-                stage: 0,
                 nextUpdate: Game.time,
                 buildQueue: [],
                 builderEnergy: {
@@ -58,12 +56,11 @@ export class SpawnExtras {
                     allowedEnergyWorkRate: 0
                 }
             },
-            defenceManagement: {
-                stage: 0,
+            defenseManagement: {
                 nextUpdate: Game.time
             }
         };
-        Memory.colonies[colony.id] = colony;
-        this.spawn.memory.colonyId = colony.id;
+        Memory.colonies[colony.roomName] = colony;
+        this.spawn.memory.colonyId = colony.roomName;
     }
 }

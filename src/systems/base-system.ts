@@ -1,23 +1,30 @@
-import { ColonyExtras } from "prototypes/colony";
+import { ColonyManager } from "prototypes/colony";
 
-export class BaseSystem {
-    protected colony: ColonyExtras;
-    protected room: Room;
-    protected shouldUpdate: boolean;
-    protected stage: number;
-    protected management: ColonyBaseManagement;
+export interface BaseSystem {
+    /** What happens when an new colony is started. */
+    onStart(): void;
 
-    public constructor(colony: ColonyExtras) {
+    run(): void;
+
+    /** What happens when the room controller levels up. */
+    onLevelUp(level: number): void;
+
+    /** Functionality to update profiles of creeps to be spawned by the spawning system. Primarily invoked by colony manager. */
+    updateProfiles(): void;
+
+    /** Reference to the system data that lives in screeps. */
+    get systemInfo(): ColonyBaseSystemInfo;
+}
+
+export abstract class BaseSystemImpl implements BaseSystem {
+    protected colony: ColonyManager;
+
+    public constructor(colony: ColonyManager) {
         this.colony = colony;
-        this.room = colony.getMainRoom();
-        this.stage = this.determineStage();
-        this.management = this.getManagement(colony);
-        this.shouldUpdate = this.checkShouldUpdate();
     }
 
-    public static run(colony: ColonyExtras): void {
-        const system = new this(colony);
-        system.manage();
+    protected get room() {
+        return this.colony.getMainRoom();
     }
 
     public static scaleCreepBody(body: BodyPartConstant[], scale: number) {
@@ -28,19 +35,10 @@ export class BaseSystem {
         return scaledBody;
     }
 
-    public manage(): void {
-        throw new Error("Should override manage method");
-    }
+    public abstract get systemInfo(): ColonyBaseSystemInfo;
 
-    protected getManagement(_colony: ColonyExtras): ColonyBaseManagement {
-        throw new Error("Should override manage method");
-    }
-
-    protected determineStage(): number {
-        throw new Error("Should override manage method");
-    }
-
-    protected checkShouldUpdate(): boolean {
-        throw new Error("Should override manage method");
-    }
+    public abstract onStart(): void;
+    public abstract run(): void;
+    public abstract onLevelUp(level: number): void;
+    public abstract updateProfiles(): void;
 }

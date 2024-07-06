@@ -3,16 +3,15 @@ import { CreepConstants } from "./../constants/creep-constants";
 import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
 
+/**
+ * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
+ */
 export class EnergySystem {
     private colony: ColonyExtras;
-    private energyManagement: ColonyEnergyManagement;
-    private room: Room;
     private shouldUpdate: boolean;
 
     public constructor(colony: ColonyExtras) {
         this.colony = colony;
-        this.energyManagement = colony.colony.energyManagement;
-        this.room = colony.getMainRoom();
         this.shouldUpdate = false;
     }
 
@@ -21,31 +20,23 @@ export class EnergySystem {
         energySystem.manage();
     }
 
+    private get energyManagement() {
+        return this.colony.colonyInfo.energyManagement;
+    }
+
+    private get room() {
+        return this.colony.getMainRoom();
+    }
+
     public manage(): void {
-        const { energyCapacityAvailable } = this.room;
-
-        let stage = 0;
-        if (energyCapacityAvailable >= 500) {
-            stage = 1;
-        }
-
-        if (this.energyManagement.nextUpdate < Game.time || stage !== this.energyManagement.stage) {
+        if (this.energyManagement.nextUpdate < Game.time) {
             this.energyManagement.nextUpdate = Game.time + 500;
-            this.energyManagement.stage = stage;
             this.resetHarvestTracking();
             this.shouldUpdate = true;
             this.energyManagement.lastUpdate = Game.time;
         }
 
-        switch (stage) {
-            case 0:
-                this.manageHarvesters();
-                break;
-
-            default:
-                this.manageHarvesters();
-                break;
-        }
+        this.manageHarvesters();
     }
 
     private resetHarvestTracking() {
@@ -60,7 +51,7 @@ export class EnergySystem {
                 colonySource.accessCount = 1;
             }
             if (!colonySource.harvesters) {
-                console.log(`${this.colony.colony.id} energy-system | creating harvester profile`);
+                console.log(`${this.colony.colonyInfo.roomName} energy-system | creating harvester profile`);
                 colonySource.harvesters = this.createHarvesterProfile(colonySource);
             } else if (this.shouldUpdate) {
                 colonySource.harvesters = this.updateHarvesterProfile(colonySource);
@@ -198,7 +189,7 @@ export class EnergySystem {
     }
 
     private updateHarvesterProfile(colonySource: ColonySource): ColonyCreepSpawnManagement {
-        console.log(`${this.colony.colony.id} energy-system | updating harvester profile`);
+        console.log(`${this.colony.colonyInfo.roomName} energy-system | updating harvester profile`);
         const newHarvesterProfile = this.createHarvesterProfile(colonySource);
         newHarvesterProfile.creepNames = colonySource.harvesters?.creepNames || [];
         return newHarvesterProfile;

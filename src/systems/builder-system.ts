@@ -24,13 +24,13 @@ export class BuilderSystem {
     }
 
     public static manageBuilders(colonyExtras: ColonyExtras): void {
-        if (!colonyExtras.colony.builderManagement.builders) {
-            colonyExtras.colony.builderManagement.builders = this.createBuilderProfile(colonyExtras);
+        if (!colonyExtras.colonyInfo.builderManagement.builders) {
+            colonyExtras.colonyInfo.builderManagement.builders = this.createBuilderProfile(colonyExtras);
         }
-        colonyExtras.colony.builderManagement.buildQueue = this.getConstructionSites(colonyExtras.colony).map(
+        colonyExtras.colonyInfo.builderManagement.buildQueue = this.getConstructionSites(colonyExtras.colonyInfo).map(
             x => x.id
         );
-        const { buildQueue, builderEnergy, builders } = colonyExtras.colony.builderManagement;
+        const { buildQueue, builderEnergy, builders } = colonyExtras.colonyInfo.builderManagement;
         if (buildQueue.length > 0) {
             builderEnergy.requestedEnergyUsagePercentage = 0.5;
             const energyUsagePerCreep = builders.memoryBlueprint.averageEnergyConsumptionProductionPerTick;
@@ -40,7 +40,7 @@ export class BuilderSystem {
             builders.desiredAmount = 0;
         }
 
-        SpawningSystem.run(colonyExtras, colonyExtras.colony.builderManagement.builders);
+        SpawningSystem.run(colonyExtras, colonyExtras.colonyInfo.builderManagement.builders);
     }
 
     public static getConstructionSites(colony: Colony): ConstructionSite<BuildableStructureConstant>[] {

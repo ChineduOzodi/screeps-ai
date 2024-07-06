@@ -3,7 +3,7 @@ import { CreepExtras } from "prototypes/creep";
 import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
 
-export class DefenceSystem {
+export class DefenseSystem {
     public static run(colonyExtras: ColonyExtras): void {
         const room = colonyExtras.getMainRoom();
 
@@ -23,7 +23,7 @@ export class DefenceSystem {
     }
 
     public static manageDefenders(colonyExtras: ColonyExtras): void {
-        const rooms = colonyExtras.colony.rooms;
+        const rooms = colonyExtras.colonyInfo.rooms;
 
         for (const room of rooms) {
             if (!room.defenders) {

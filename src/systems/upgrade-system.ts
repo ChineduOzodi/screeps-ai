@@ -14,7 +14,7 @@ export class UpgradeSystem {
 
         switch (stage) {
             case 0:
-                colonyExtras.colony.upgradeManagement.upgraderEnergy.requestedEnergyUsagePercentage = 0.5;
+                colonyExtras.colonyInfo.upgradeManagement.upgraderEnergy.requestedEnergyUsagePercentage = 0.5;
                 this.manageUpgraders(colonyExtras);
                 break;
 
@@ -24,16 +24,16 @@ export class UpgradeSystem {
     }
 
     public static manageUpgraders(colony: ColonyExtras): void {
-        if (!colony.colony.upgradeManagement.upgraders) {
-            colony.colony.upgradeManagement.upgraders = this.createUpgraderProfile(colony);
+        if (!colony.colonyInfo.upgradeManagement.upgraders) {
+            colony.colonyInfo.upgradeManagement.upgraders = this.createUpgraderProfile(colony);
         }
 
-        const { upgraders, upgraderEnergy } = colony.colony.upgradeManagement;
+        const { upgraders, upgraderEnergy } = colony.colonyInfo.upgradeManagement;
 
         const energyUsagePerCreep = upgraders.memoryBlueprint.averageEnergyConsumptionProductionPerTick;
         upgraders.desiredAmount = Math.max(1, Math.floor(upgraderEnergy.allowedEnergyWorkRate / energyUsagePerCreep));
 
-        SpawningSystem.run(colony, colony.colony.upgradeManagement.upgraders);
+        SpawningSystem.run(colony, colony.colonyInfo.upgradeManagement.upgraders);
     }
 
     public static createUpgraderProfile(colony: ColonyExtras): ColonyCreepSpawnManagement {

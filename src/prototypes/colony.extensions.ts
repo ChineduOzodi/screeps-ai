@@ -1,41 +1,41 @@
 interface Colony {
-    id: string;
+    roomName: string;
     spawnIndex: number;
     setupComplete?: boolean;
     spawnEnergy: number;
     screepCount: ScreepCount;
     creeps: ColonyCreeps | undefined;
     rooms: RoomData[];
-    mainSpawnId: string;
+    mainSpawnId: Id<StructureSpawn>;
     spawnQueue: SpawnRequest[] | undefined;
     stats: ColonyStats;
+    nextUpdate: number;
     energyManagement: ColonyEnergyManagement;
     upgradeManagement: ColonyUpgradeManagement;
     builderManagement: ColonyBuilderManagement;
-    defenceManagement: ColonyDefenceManagement;
+    defenseManagement: ColonyDefenseManagement;
     infrastructureManagement?: ColonyInfrastructureManagement;
 }
 
-interface ColonyBaseManagement {
-    stage: number;
+interface ColonyBaseSystemInfo {
     nextUpdate: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface ColonyDefenceManagement extends ColonyBaseManagement {}
+interface ColonyDefenseManagement extends ColonyBaseSystemInfo {}
 
-interface ColonyBuilderManagement extends ColonyBaseManagement {
+interface ColonyBuilderManagement extends ColonyBaseSystemInfo {
     builders?: ColonyCreepSpawnManagement;
     buildQueue: string[];
     builderEnergy: EnergyUsageTracking;
 }
 
-interface ColonyUpgradeManagement extends ColonyBaseManagement {
+interface ColonyUpgradeManagement extends ColonyBaseSystemInfo {
     upgraders?: ColonyCreepSpawnManagement;
     upgraderEnergy: EnergyUsageTracking;
 }
 
-interface ColonyEnergyManagement extends ColonyBaseManagement {
+interface ColonyEnergyManagement extends ColonyBaseSystemInfo {
     lastUpdate?: number;
     sources: ColonySource[];
     estimatedEnergyProductionRate: number;
@@ -44,7 +44,7 @@ interface ColonyEnergyManagement extends ColonyBaseManagement {
     energyUsageModifier: number;
 }
 
-interface ColonyInfrastructureManagement extends ColonyBaseManagement {
+interface ColonyInfrastructureManagement extends ColonyBaseSystemInfo {
     repairers?: ColonyCreepSpawnManagement;
     fillers?: ColonyCreepSpawnManagement;
 }

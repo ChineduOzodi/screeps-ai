@@ -30,7 +30,8 @@ interface CreepMovementSystem {
 
 interface CreepData {
     name: string;
-    id?: string;
+    /** I believe this can be null if the creep is dead. */
+    id?: Id<Creep>;
     status: CreepStatus;
 }
 
