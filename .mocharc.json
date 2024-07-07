@@ -1,0 +1,14 @@
+{
+  "extensions": [".ts"],
+  "spec": ["**/test/unit/**/*.test.*"],
+  "require": ["ts-node/register","test/setup-mocha.js", "tsconfig-paths/register"],
+  "ui": "bdd",
+  "reporter": "spec",
+  "bail": true,
+  "full-trace": true,
+  "watch-extensions": ["tsx", "ts"],
+  "colors":true,
+  "recursive": true,
+  "timeout": 5000,
+  "exit": true
+}

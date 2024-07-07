@@ -57,7 +57,7 @@ export class ColonyExtras implements ColonyManager {
 
     public visualizeStats(): void {
         const room = this.getMainRoom();
-        room.visual.text(`Colony: ${this.colonyInfo.roomName}`, 3, 5, { color: "white", font: 1, align: "left" });
+        room.visual.text(`Colony: ${this.colonyInfo.id}`, 3, 5, { color: "white", font: 1, align: "left" });
 
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
         const {
@@ -234,7 +234,7 @@ export class ColonyExtras implements ColonyManager {
                 } else if (status === ERR_NAME_EXISTS) {
                     // this should take care of if a name already exists, it goes to the next spawn
                     console.log(
-                        `colony ${this.colonyInfo.roomName} | spawn skipping creep since name already exists: ${memory.name}`
+                        `colony ${this.colonyInfo.id} | spawn skipping creep since name already exists: ${memory.name}`
                     );
                     spawnQueue.splice(0, 1);
                 } else if (status !== ERR_NOT_ENOUGH_ENERGY) {
@@ -271,11 +271,11 @@ export class ColonyExtras implements ColonyManager {
     public addToSpawnCreepQueue(body: BodyPartConstant[], additionalMemory: AddCreepToQueueOptions): string {
         const memory: CreepMemory = {
             ...additionalMemory,
-            name: `${this.colonyInfo.roomName}-${additionalMemory.role}-${this.colonyInfo.spawnIndex++}`,
-            colonyId: this.colonyInfo.roomName,
+            name: `${this.colonyInfo.id}-${additionalMemory.role}-${this.colonyInfo.spawnIndex++}`,
+            colonyId: this.colonyInfo.id,
             working: false,
             movementSystem: MovementSystem.createMovementSystem(this.getMainSpawn().pos),
-            workDuration: additionalMemory?.workDuration ? additionalMemory?.workDuration : 5
+            workDuration: additionalMemory?.workDuration ? additionalMemory?.workDuration : 5,
         };
         this.getColonyCreeps()[memory.name] = {
             name: memory.name,
@@ -320,14 +320,14 @@ export class ColonyExtras implements ColonyManager {
     }
 
     public getMainRoom(): Room {
-        return Game.rooms[this.colonyInfo.roomName];
+        return Game.rooms[this.colonyInfo.id];
     }
 
     public getMainSpawn(): StructureSpawn {
         const spawn = Game.getObjectById(this.colonyInfo.mainSpawnId);
         if (!spawn) {
             throw new Error(
-                `Could not find main spawn "${this.colonyInfo.mainSpawnId}" for ${this.colonyInfo.roomName}`
+                `Could not find main spawn "${this.colonyInfo.mainSpawnId}" for ${this.colonyInfo.id}`
             );
         }
         return spawn;
@@ -338,7 +338,7 @@ export class ColonyExtras implements ColonyManager {
     }
 
     public getId(): string {
-        return this.colonyInfo.roomName;
+        return this.colonyInfo.id;
     }
 
     public setDesiredScreepCount(role: string, amount: number): void {

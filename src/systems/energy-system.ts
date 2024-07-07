@@ -51,7 +51,7 @@ export class EnergySystem {
                 colonySource.accessCount = 1;
             }
             if (!colonySource.harvesters) {
-                console.log(`${this.colony.colonyInfo.roomName} energy-system | creating harvester profile`);
+                console.log(`${this.colony.colonyInfo.id} energy-system | creating harvester profile`);
                 colonySource.harvesters = this.createHarvesterProfile(colonySource);
             } else if (this.shouldUpdate) {
                 colonySource.harvesters = this.updateHarvesterProfile(colonySource);
@@ -189,7 +189,7 @@ export class EnergySystem {
     }
 
     private updateHarvesterProfile(colonySource: ColonySource): ColonyCreepSpawnManagement {
-        console.log(`${this.colony.colonyInfo.roomName} energy-system | updating harvester profile`);
+        console.log(`${this.colony.colonyInfo.id} energy-system | updating harvester profile`);
         const newHarvesterProfile = this.createHarvesterProfile(colonySource);
         newHarvesterProfile.creepNames = colonySource.harvesters?.creepNames || [];
         return newHarvesterProfile;

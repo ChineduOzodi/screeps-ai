@@ -1,5 +1,5 @@
 interface Colony {
-    roomName: string;
+    id: string;
     spawnIndex: number;
     setupComplete?: boolean;
     spawnEnergy: number;
