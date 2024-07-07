@@ -1,8 +1,8 @@
-import { CreepExtras } from "prototypes/creep";
+import { CreepManager } from "prototypes/creep";
 import { EnergySystem } from "systems/energy-system";
 import { MovementSystem } from "systems/movement-system";
 
-export class RepairerCreep extends CreepExtras {
+export class RepairerCreep extends CreepManager {
     public constructor(creep: Creep) {
         super(creep);
     }
@@ -15,13 +15,13 @@ export class RepairerCreep extends CreepExtras {
             memory.working = false;
             delete creep.memory.targetId;
             delete movementSystem.path;
-            creep.say("r_refilling");
+            creep.say("r: refilling");
         }
         if (!memory.working && creep.store[RESOURCE_ENERGY] === creep.store.getCapacity()) {
             memory.working = true;
             delete memory.targetId;
             delete movementSystem.path;
-            creep.say("r_working");
+            creep.say("r: working");
         }
 
         if (memory.working) {

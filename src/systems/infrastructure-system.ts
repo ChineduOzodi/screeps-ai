@@ -13,7 +13,7 @@ export class InfrastructureSystem extends BaseSystemImpl {
 
     public override updateProfiles(): void {
         if (!this.systemInfo.repairers) {
-            console.log(`${this.colony.colonyInfo.roomName} infrastructure-system | creating repairer profile`);
+            console.log(`${this.colony.colonyInfo.id} infrastructure-system | creating repairer profile`);
             this.systemInfo.repairers = this.createRepairerProfile();
         } else {
             this.systemInfo.repairers = this.updateRepairerProfile(this.systemInfo.repairers);
@@ -63,7 +63,7 @@ export class InfrastructureSystem extends BaseSystemImpl {
     }
 
     private updateRepairerProfile(profile: ColonyCreepSpawnManagement): ColonyCreepSpawnManagement {
-        console.log(`${this.colony.colonyInfo.roomName} infrastructure-system | updating repairer profile`);
+        console.log(`${this.colony.colonyInfo.id} infrastructure-system | updating repairer profile`);
         const newProfile = this.createRepairerProfile();
         newProfile.creepNames = profile.creepNames;
         return newProfile;

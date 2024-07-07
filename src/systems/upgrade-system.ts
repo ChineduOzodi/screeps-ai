@@ -69,7 +69,7 @@ export class UpgradeSystem {
             creep.memory.working = false;
             delete creep.memory.targetId;
             delete creep.memory.movementSystem?.path;
-            creep.say("u_harvesting");
+            creep.say("u: harvesting");
         }
         if (!creep.memory.working && creep.store[RESOURCE_ENERGY] === creep.store.getCapacity()) {
             creep.memory.working = true;

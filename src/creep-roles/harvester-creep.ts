@@ -1,8 +1,8 @@
 import { CreepConstants } from "constants/creep-constants";
-import { CreepExtras } from "prototypes/creep";
+import { CreepManager } from "prototypes/creep";
 import { MovementSystem } from "systems/movement-system";
 
-export class HarvesterCreep extends CreepExtras {
+export class HarvesterCreep extends CreepManager {
     public constructor(creep: Creep) {
         super(creep);
     }
@@ -65,19 +65,34 @@ export class HarvesterCreep extends CreepExtras {
         } else {
             // finds closest storage / spawn to store energy
             let target: Structure | null = null;
-            target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn | StructureTower>(
+            target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn>(
                 FIND_STRUCTURES,
                 {
                     filter: structure => {
                         return (
                             (structure.structureType === STRUCTURE_EXTENSION ||
-                                structure.structureType === STRUCTURE_SPAWN ||
-                                structure.structureType === STRUCTURE_TOWER) &&
-                            structure.energy < structure.energyCapacity
+                                structure.structureType === STRUCTURE_SPAWN) &&
+                            structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY)
                         );
                     }
                 }
             );
+
+            // StructureTower has lower priority than extensions and spawn so as not to
+            // accidentally starve creep generation.
+            if (!target) {
+                target = creep.pos.findClosestByPath<StructureTower>(
+                    FIND_STRUCTURES,
+                    {
+                        filter: structure => {
+                            return (
+                                structure.structureType === STRUCTURE_TOWER &&
+                                structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY)
+                            );
+                        }
+                    }
+                );
+            }
 
             if (!target) {
                 target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -90,7 +105,6 @@ export class HarvesterCreep extends CreepExtras {
                     }
                 });
             }
-            // console.log(target.id);
             if (target) {
                 if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     MovementSystem.moveToWithReservation(creep, target, 2);

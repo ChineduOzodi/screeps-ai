@@ -1,5 +1,5 @@
 interface Colony {
-    roomName: string;
+    id: string;
     spawnIndex: number;
     setupComplete?: boolean;
     spawnEnergy: number;
@@ -57,7 +57,7 @@ interface EnergyUsageTracking {
 }
 
 interface ColonySource {
-    sourceId: string;
+    sourceId: Id<Source>;
     position: RoomPosition;
     accessCount: number;
     cumulativeHarvestedEnergy?: number;

@@ -3,7 +3,7 @@ import { DefenseSystem } from "./../systems/defense-system";
 import { MovementSystem } from "./../systems/movement-system";
 import { UpgradeSystem } from "./../systems/upgrade-system";
 
-export class CreepExtras {
+export class CreepManager {
     public creep: Creep;
     protected memory: CreepMemory;
 

@@ -1,4 +1,4 @@
-import { CreepExtras } from "prototypes/creep";
+import { CreepManager } from "prototypes/creep";
 import { HarvesterCreep } from "creep-roles/harvester-creep";
 import { MovementSystem } from "systems/movement-system";
 import { RepairerCreep } from "./../creep-roles/repairer-creep";
@@ -19,7 +19,7 @@ export class CreepManagement {
         MovementSystem.run(creep);
     }
 
-    public static getCreepExtras(creep: Creep): CreepExtras {
+    public static getCreepExtras(creep: Creep): CreepManager {
         switch (creep.memory.role) {
             case "harvester":
                 return new HarvesterCreep(creep);
@@ -37,7 +37,7 @@ export class CreepManagement {
             //     DefenseSystem.runDefenderCreep(this);
             //     break;
             default:
-                return new CreepExtras(creep);
+                return new CreepManager(creep);
         }
     }
 }
