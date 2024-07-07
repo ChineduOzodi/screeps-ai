@@ -11,6 +11,7 @@ export interface ColonyManager {
     get colonyInfo(): Colony;
 
     getMainRoom(): Room;
+    getMainSpawn(): StructureSpawn;
     getColonyCreeps(): ColonyCreeps;
     addToSpawnCreepQueue(bodyBlueprint: BodyPartConstant[], memoryBlueprint: AddCreepToQueueOptions): string;
 }
@@ -20,7 +21,10 @@ export class ColonyExtras implements ColonyManager {
     public systems: BaseSystem[];
     public constructor(colony: Colony) {
         this.colonyInfo = colony;
-        this.systems = [new InfrastructureSystem(this)];
+        this.systems = [
+            new EnergySystem(this),
+            new InfrastructureSystem(this),
+        ];
     }
 
     public run(): void {
@@ -38,8 +42,8 @@ export class ColonyExtras implements ColonyManager {
 
         this.systems.forEach(x => x.run());
 
+        // TODO: update the rest of the systems to use BaseSystemImpl
         DefenseSystem.run(this);
-        EnergySystem.run(this);
         UpgradeSystem.run(this);
         BuilderSystem.run(this);
 
@@ -126,7 +130,7 @@ export class ColonyExtras implements ColonyManager {
 
     public manageEnergyProductionConsumption(): void {
         this.colonyInfo.energyManagement.estimatedEnergyProductionRate =
-            this.getTotalEstimatedEnergyconsumptionProductionRate("harvester");
+            this.getTotalEstimatedEnergyConsumptionProductionRate("harvester");
         this.colonyInfo.energyManagement.totalEnergyUsagePercentageAllowed = 0.8;
         this.setEnergyUsageMod();
         this.manageEnergySystem(this.colonyInfo.upgradeManagement.upgraderEnergy, "upgrader");
@@ -134,14 +138,14 @@ export class ColonyExtras implements ColonyManager {
     }
 
     public manageEnergySystem(energyTracking: EnergyUsageTracking, role: string): void {
-        energyTracking.estimatedEnergyWorkRate = this.getTotalEstimatedEnergyconsumptionProductionRate(role);
+        energyTracking.estimatedEnergyWorkRate = this.getTotalEstimatedEnergyConsumptionProductionRate(role);
         energyTracking.actualEnergyUsagePercentage =
             energyTracking.requestedEnergyUsagePercentage * this.colonyInfo.energyManagement.energyUsageModifier;
         energyTracking.allowedEnergyWorkRate =
             this.colonyInfo.energyManagement.estimatedEnergyProductionRate * energyTracking.actualEnergyUsagePercentage;
     }
 
-    public getTotalEstimatedEnergyconsumptionProductionRate(role: string): number {
+    public getTotalEstimatedEnergyConsumptionProductionRate(role: string): number {
         let totalEnergyConsumptionProductionRate = 0;
         const creeps = this.getCreeps().filter(x => x.memory.role === role);
 

@@ -1,3 +1,3 @@
-import { CreepExtras } from "prototypes/creep";
+import { CreepManager } from "prototypes/creep";
 
-export class UpgraderCreep extends CreepExtras {}
+export class UpgraderCreep extends CreepManager {}

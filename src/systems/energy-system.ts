@@ -2,59 +2,65 @@ import { ColonyExtras } from "./../prototypes/colony";
 import { CreepConstants } from "./../constants/creep-constants";
 import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
+import { BaseSystem, BaseSystemImpl } from "./base-system";
 
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
  */
-export class EnergySystem {
-    private colony: ColonyExtras;
-    private shouldUpdate: boolean;
+export class EnergySystem extends BaseSystemImpl {
 
-    public constructor(colony: ColonyExtras) {
-        this.colony = colony;
-        this.shouldUpdate = false;
-    }
-
-    public static run(colony: ColonyExtras): void {
-        const energySystem = new EnergySystem(colony);
-        energySystem.manage();
-    }
-
-    private get energyManagement() {
+    public override get systemInfo(): ColonyEnergyManagement {
+        if (!this.colony.colonyInfo.energyManagement) {
+            this.colony.colonyInfo.energyManagement = {
+                nextUpdate: Game.time,
+                sources: [],
+                energyUsageModifier: 1,
+                estimatedEnergyProductionRate: 0,
+                estimatedEnergyProductionEfficiency: 0,
+                totalEnergyUsagePercentageAllowed: 0
+            };
+        }
         return this.colony.colonyInfo.energyManagement;
     }
 
-    private get room() {
-        return this.colony.getMainRoom();
+    public override onStart(): void {
+        this.resetHarvestTracking();
     }
 
-    public manage(): void {
-        if (this.energyManagement.nextUpdate < Game.time) {
-            this.energyManagement.nextUpdate = Game.time + 500;
-            this.resetHarvestTracking();
-            this.shouldUpdate = true;
-            this.energyManagement.lastUpdate = Game.time;
-        }
-
+    public override run(): void {
         this.manageHarvesters();
     }
 
+    public override onLevelUp(_level: number): void {}
+
+    public override updateProfiles(): void {
+        this.resetHarvestTracking();
+        for (const colonySource of this.systemInfo.sources) {
+            if (!colonySource.harvesters) {
+                console.log(`${this.colony.colonyInfo.id} energy-system | creating harvester profile`);
+                colonySource.harvesters = this.createHarvesterProfile(colonySource);
+            } else {
+                colonySource.harvesters = this.updateHarvesterProfile(colonySource);
+            }
+        }
+
+    }
+
     private resetHarvestTracking() {
-        for (const colonySource of this.energyManagement.sources) {
+        for (const colonySource of this.systemInfo.sources) {
             colonySource.cumulativeHarvestedEnergy = 0;
         }
+        this.systemInfo.lastUpdate = Game.time;
     }
 
     public manageHarvesters(): void {
-        for (const colonySource of this.energyManagement.sources) {
+        for (const colonySource of this.systemInfo.sources) {
             if (!colonySource.accessCount) {
                 colonySource.accessCount = 1;
             }
             if (!colonySource.harvesters) {
-                console.log(`${this.colony.colonyInfo.id} energy-system | creating harvester profile`);
+                console.log("ERROR: ${this.colony.colonyInfo.id} energy-system | harvesters undefined");
                 colonySource.harvesters = this.createHarvesterProfile(colonySource);
-            } else if (this.shouldUpdate) {
-                colonySource.harvesters = this.updateHarvesterProfile(colonySource);
             }
             SpawningSystem.run(this.colony, colonySource.harvesters);
         }
@@ -62,16 +68,17 @@ export class EnergySystem {
     }
 
     private calculateHarvestersProductionEfficiency() {
-        const totalEnergyGained = this.energyManagement.sources
+        if (!this.systemInfo.lastUpdate) {
+            console.log("ERROR: ${this.colony.colonyInfo.id} energy-system | lastUpdate undefined");
+            this.systemInfo.lastUpdate = Game.time - 1;
+        }
+        const totalEnergyGained = this.systemInfo.sources
             .map(x => x.cumulativeHarvestedEnergy || 0)
             .reduce((a, b) => a + b);
-        const totalTimeUsed = Math.max(
-            Game.time - (this.energyManagement.lastUpdate || this.energyManagement.nextUpdate - 500),
-            1
-        );
+        const totalTimeUsed = Math.max(Game.time - this.systemInfo.lastUpdate, 1);
 
-        this.energyManagement.estimatedEnergyProductionEfficiency =
-            totalEnergyGained / totalTimeUsed / this.energyManagement.estimatedEnergyProductionRate;
+        this.systemInfo.estimatedEnergyProductionEfficiency =
+            totalEnergyGained / totalTimeUsed / this.systemInfo.estimatedEnergyProductionRate;
     }
 
     private createHarvesterProfile(colonySource: ColonySource): ColonyCreepSpawnManagement {
@@ -166,7 +173,7 @@ export class EnergySystem {
                 1,
                 Math.round(
                     (travelTime / this.getTimeEnergyProductionFullLoad(workPartCount, carryPartCount)) * accessCount +
-                        0.3
+                    0.3
                 )
             )
         );
@@ -278,6 +285,8 @@ export class EnergySystem {
             ) {
                 MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration * 0.5);
             }
+        } else {
+            creep.say("Can't find energy");
         }
     }
 }

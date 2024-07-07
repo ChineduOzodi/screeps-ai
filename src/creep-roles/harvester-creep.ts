@@ -1,8 +1,8 @@
 import { CreepConstants } from "constants/creep-constants";
-import { CreepExtras } from "prototypes/creep";
+import { CreepManager } from "prototypes/creep";
 import { MovementSystem } from "systems/movement-system";
 
-export class HarvesterCreep extends CreepExtras {
+export class HarvesterCreep extends CreepManager {
     public constructor(creep: Creep) {
         super(creep);
     }

@@ -57,7 +57,7 @@ interface EnergyUsageTracking {
 }
 
 interface ColonySource {
-    sourceId: string;
+    sourceId: Id<Source>;
     position: RoomPosition;
     accessCount: number;
     cumulativeHarvestedEnergy?: number;
