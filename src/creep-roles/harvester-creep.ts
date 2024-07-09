@@ -1,8 +1,8 @@
 import { CreepConstants } from "constants/creep-constants";
-import { CreepManager } from "prototypes/creep";
+import { CreepRunner } from "prototypes/creep";
 import { MovementSystem } from "systems/movement-system";
 
-export class HarvesterCreep extends CreepManager {
+export class HarvesterCreep extends CreepRunner {
     public constructor(creep: Creep) {
         super(creep);
     }
@@ -13,8 +13,7 @@ export class HarvesterCreep extends CreepManager {
         );
     }
 
-    public override run(): void {
-        // requirements
+    public override onRun(): void {
         const { creep, memory } = this;
         const colonySource = this.getColonySource();
 
@@ -37,7 +36,7 @@ export class HarvesterCreep extends CreepManager {
             // moves to target
             // moves to source
             if (source) {
-                if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                if (this.harvest(source) === ERR_NOT_IN_RANGE) {
                     MovementSystem.moveToWithReservation(creep, source, memory.workDuration, undefined, [
                         "builder",
                         "upgrader"
@@ -106,7 +105,7 @@ export class HarvesterCreep extends CreepManager {
                 });
             }
             if (target) {
-                if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     MovementSystem.moveToWithReservation(creep, target, 2);
                 }
             }

@@ -26,7 +26,7 @@ interface ColonyDefenseManagement extends ColonyBaseSystemInfo {}
 
 interface ColonyBuilderManagement extends ColonyBaseSystemInfo {
     builders?: ColonyCreepSpawnManagement;
-    buildQueue: string[];
+    buildQueue: Id<ConstructionSite>[];
     builderEnergy: EnergyUsageTracking;
 }
 
@@ -54,6 +54,18 @@ interface EnergyUsageTracking {
     allowedEnergyWorkRate: number;
     requestedEnergyUsagePercentage: number;
     actualEnergyUsagePercentage: number;
+}
+
+interface EnergyTrackingInfo {
+    /** List to store the rolling amount of energy used in a tick. Positive is for energy gain, negative for energy loss. */
+    energyFlow?: number[];
+
+    /** How many ticks has been counted so far. */
+    count?: number;
+
+    index?: number;
+    average?: number;
+    total?: number;
 }
 
 interface ColonySource {

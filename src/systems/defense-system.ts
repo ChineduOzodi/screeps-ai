@@ -1,5 +1,5 @@
 import { ColonyExtras } from "prototypes/colony";
-import { CreepManager } from "prototypes/creep";
+import { CreepRunner } from "prototypes/creep";
 import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
 
@@ -79,7 +79,7 @@ export class DefenseSystem {
         return creepSpawnManagement;
     }
 
-    public static runDefenderCreep(creepExtras: CreepManager): void {
+    public static runDefenderCreep(creepExtras: CreepRunner): void {
         const creep = creepExtras.creep;
 
         let target: Creep | null = null;

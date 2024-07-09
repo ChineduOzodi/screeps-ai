@@ -1,5 +1,5 @@
 import { ColonyExtras } from "prototypes/colony";
-import { CreepManager } from "./../prototypes/creep";
+import { CreepRunner } from "./../prototypes/creep";
 import { EnergySystem } from "./energy-system";
 import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
@@ -83,7 +83,7 @@ export class BuilderSystem {
         return creepSpawnManagement;
     }
 
-    public static runBuilderCreep(creepExtras: CreepManager): void {
+    public static runBuilderCreep(creepExtras: CreepRunner): void {
         const { creep } = creepExtras;
         const movementSystem = creepExtras.getMovementSystem();
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {

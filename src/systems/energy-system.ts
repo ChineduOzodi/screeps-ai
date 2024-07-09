@@ -31,7 +31,7 @@ export class EnergySystem extends BaseSystemImpl {
         this.manageHarvesters();
     }
 
-    public override onLevelUp(_level: number): void {}
+    public override onLevelUp(_level: number): void { }
 
     public override updateProfiles(): void {
         this.resetHarvestTracking();
@@ -288,5 +288,70 @@ export class EnergySystem extends BaseSystemImpl {
         } else {
             creep.say("Can't find energy");
         }
+    }
+}
+
+export interface EnergyTracking {
+    /** Positive is for energy gain, negative for energy loss. Must be called every tick to be accurate. */
+    onTickFlow(energy: number): void
+
+    getAverageEnergyFlow(): number
+}
+
+export class EnergyTrackingImpl implements EnergyTracking {
+
+    energyInfo: EnergyTrackingInfo;
+
+    /**
+     * Allows you to track the average energy flow of an entity (creep, spawn, etc.) to be used to allocate energy spend to systems.
+     * @param memoryLocation Location in Memory the energyTackingInfo is stored. It should at least be an empty dictionary.
+     * @param numberTicks Number of ticks to use for average;
+     */
+    constructor(memoryLocation: EnergyTrackingInfo, numberTicks: number) {
+        this.energyInfo = memoryLocation;
+
+        if (!this.energyInfo || !this.energyInfo.energyFlow || this.energyInfo.energyFlow.length != numberTicks) {
+            this.setupEnergyTracking(numberTicks);
+        }
+    }
+
+    setupEnergyTracking(numberTicks: number) {
+        this.energyInfo.energyFlow = new Array(numberTicks);
+        this.energyInfo.count = 0;
+        this.energyInfo.index = 0;
+        this.energyInfo.average = 0;
+        this.energyInfo.total = 0;
+    }
+
+    /** Adds Energy to flow array and calculates average. */
+    onTickFlow(energy: number): void {
+        if (typeof this.energyInfo.average == "undefined" ||
+            typeof this.energyInfo.count == "undefined" ||
+            typeof this.energyInfo.energyFlow == "undefined" ||
+            typeof this.energyInfo.index == "undefined" ||
+            typeof this.energyInfo.total == "undefined") {
+            console.log(`EnergyTracking missing expected field, resetting: ${JSON.stringify(this.energyInfo)}`);
+            this.setupEnergyTracking(this.energyInfo.energyFlow?.length || this.energyInfo.count || 50);
+            return;
+        }
+
+        this.energyInfo.total += energy;
+
+        if (this.energyInfo.count == this.energyInfo.energyFlow.length) {
+            const subtractNumber = this.energyInfo.energyFlow[this.energyInfo.index];
+            this.energyInfo.total -= subtractNumber;
+        } else {
+            this.energyInfo.count++;
+        }
+
+        this.energyInfo.average = this.energyInfo.total / this.energyInfo.count;
+        this.energyInfo.energyFlow[this.energyInfo.index] = energy;
+
+        const nextIndex = (this.energyInfo.index+1) % this.energyInfo.energyFlow.length;
+        this.energyInfo.index = nextIndex;
+    }
+
+    getAverageEnergyFlow(): number {
+        return this.energyInfo.average || 0;
     }
 }
