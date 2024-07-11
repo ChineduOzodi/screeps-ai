@@ -172,7 +172,7 @@ export class MovementSystem {
 
     public static moveToWithReservation(
         creep: Creep,
-        target: Structure | Source | Tombstone | Resource | ConstructionSite | Creep,
+        target: _HasRoomPosition & _HasId,
         workDuration: number,
         range = 1,
         ignoreRoles?: string[]

@@ -1,22 +1,13 @@
-import { CreepConstants } from "constants/creep-constants";
-import { CreepManager } from "prototypes/creep";
+import { CreepRunner } from "prototypes/creep";
 import { MovementSystem } from "systems/movement-system";
 
-export class HarvesterCreep extends CreepManager {
+export class HarvesterCreep extends CreepRunner {
     public constructor(creep: Creep) {
         super(creep);
     }
 
-    private getColonySource(): ColonySource | undefined {
-        return this.getColony()?.energyManagement.sources?.find(x =>
-            x.harvesters?.creepNames.find(name => name === this.creep.name)
-        );
-    }
-
-    public override run(): void {
-        // requirements
+    public override onRun(): void {
         const { creep, memory } = this;
-        const colonySource = this.getColonySource();
 
         if (!memory.workTargetId) {
             throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
@@ -37,27 +28,11 @@ export class HarvesterCreep extends CreepManager {
             // moves to target
             // moves to source
             if (source) {
-                if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                if (this.harvest(source) === ERR_NOT_IN_RANGE) {
                     MovementSystem.moveToWithReservation(creep, source, memory.workDuration, undefined, [
                         "builder",
                         "upgrader"
                     ]);
-                } else {
-                    if (!memory.cumulativeWork) {
-                        memory.cumulativeWork = 0;
-                    }
-                    if (!memory.workAmount) {
-                        memory.workAmount = creep.body.filter(x => x.type === WORK).length;
-                    }
-                    memory.cumulativeWork += memory.workAmount * CreepConstants.WORK_PART_ENERGY_HARVEST_PER_TICK;
-                    if (colonySource && this.memory.cumulativeWork) {
-                        // Used to figure out energy harvesting efficiency
-                        if (!colonySource.cumulativeHarvestedEnergy) {
-                            colonySource.cumulativeHarvestedEnergy = 0;
-                        }
-                        colonySource.cumulativeHarvestedEnergy +=
-                            memory.workAmount * CreepConstants.WORK_PART_ENERGY_HARVEST_PER_TICK;
-                    }
                 }
             } else {
                 creep.say(`can't find source in room`);
@@ -106,7 +81,7 @@ export class HarvesterCreep extends CreepManager {
                 });
             }
             if (target) {
-                if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     MovementSystem.moveToWithReservation(creep, target, 2);
                 }
             }

@@ -3,6 +3,28 @@ import { CreepConstants } from "../constants/creep-constants";
 import { SpawningSystem } from "./spawning-system";
 
 export class InfrastructureSystem extends BaseSystemImpl {
+
+    public override get systemInfo(): ColonyInfrastructureManagement {
+        if (!this.colony.colonyInfo.infrastructureManagement) {
+            this.colony.colonyInfo.infrastructureManagement = {
+                nextUpdate: 0
+            };
+        }
+        return this.colony.colonyInfo.infrastructureManagement;
+    }
+
+    public override get energyUsageTracking(): EnergyUsageTracking {
+        if (!this.systemInfo.energyUsageTracking) {
+            this.systemInfo.energyUsageTracking = {
+                actualEnergyUsagePercentage: 0,
+                estimatedEnergyWorkRate: 0,
+                requestedEnergyUsageWeight: 0.25,
+                allowedEnergyWorkRate: 0
+            };
+        }
+        return this.systemInfo.energyUsageTracking;
+    }
+
     public override onStart(): void {}
 
     public override run(): void {
@@ -20,13 +42,8 @@ export class InfrastructureSystem extends BaseSystemImpl {
         }
     }
 
-    public override get systemInfo(): ColonyInfrastructureManagement {
-        if (!this.colony.colonyInfo.infrastructureManagement) {
-            this.colony.colonyInfo.infrastructureManagement = {
-                nextUpdate: 0
-            };
-        }
-        return this.colony.colonyInfo.infrastructureManagement;
+    public override getRolesToTrackEnergy(): string[] {
+        return ["repairer"];
     }
 
     private manageRepairers(): void {

@@ -30,36 +30,6 @@ export class SpawnExtras {
                 estimatedEnergyProductionRate: 0
             },
             nextUpdate: 0,
-            energyManagement: {
-                nextUpdate: Game.time,
-                sources: [],
-                energyUsageModifier: 1,
-                estimatedEnergyProductionRate: 0,
-                estimatedEnergyProductionEfficiency: 0,
-                totalEnergyUsagePercentageAllowed: 0
-            },
-            upgradeManagement: {
-                nextUpdate: Game.time,
-                upgraderEnergy: {
-                    actualEnergyUsagePercentage: 0,
-                    estimatedEnergyWorkRate: 0,
-                    requestedEnergyUsagePercentage: 0,
-                    allowedEnergyWorkRate: 0
-                }
-            },
-            builderManagement: {
-                nextUpdate: Game.time,
-                buildQueue: [],
-                builderEnergy: {
-                    actualEnergyUsagePercentage: 0,
-                    estimatedEnergyWorkRate: 0,
-                    requestedEnergyUsagePercentage: 0,
-                    allowedEnergyWorkRate: 0
-                }
-            },
-            defenseManagement: {
-                nextUpdate: Game.time
-            }
         };
         Memory.colonies[colony.id] = colony;
         this.spawn.memory.colonyId = colony.id;

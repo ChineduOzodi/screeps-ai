@@ -1,33 +1,50 @@
-import { ColonyExtras } from "prototypes/colony";
-import { CreepManager } from "prototypes/creep";
-import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
+import { BaseSystemImpl } from "./base-system";
 
-export class DefenseSystem {
-    public static run(colonyExtras: ColonyExtras): void {
-        const room = colonyExtras.getMainRoom();
-
-        let stage = 0;
-        if (room.controller && room.controller.level > 1) {
-            stage = 0;
+export class DefenseSystem extends BaseSystemImpl {
+    public override get systemInfo(): ColonyBaseSystemInfo {
+        if (!this.colony.colonyInfo.defenseManagement) {
+            this.colony.colonyInfo.defenseManagement = {
+                nextUpdate: Game.time
+            }
         }
+        return this.colony.colonyInfo.defenseManagement;
+    }
 
-        switch (stage) {
-            case 0:
-                this.manageDefenders(colonyExtras);
-                break;
+    public override get energyUsageTracking(): EnergyUsageTracking {
+        if (!this.systemInfo.energyUsageTracking) {
+            this.systemInfo.energyUsageTracking = {
+                actualEnergyUsagePercentage: 0,
+                estimatedEnergyWorkRate: 0,
+                requestedEnergyUsageWeight: 0,
+                allowedEnergyWorkRate: 0
+            };
+        }
+        return this.systemInfo.energyUsageTracking;
+    }
 
-            default:
-                break;
+    public override onStart(): void {}
+
+    public override run(): void {
+        this.manageDefenders();
+    }
+
+    public override onLevelUp(_level: number): void {}
+
+    public override updateProfiles(): void {
+        const rooms = this.colony.colonyInfo.rooms;
+        for (const room of rooms) {
+            room.defenders = this.createDefenderProfile(room.name);
         }
     }
 
-    public static manageDefenders(colonyExtras: ColonyExtras): void {
-        const rooms = colonyExtras.colonyInfo.rooms;
+    public manageDefenders(): void {
+        const colony = this.colony;
+        const rooms = colony.colonyInfo.rooms;
 
         for (const room of rooms) {
             if (!room.defenders) {
-                room.defenders = this.createDefenderProfile(colonyExtras, room.name);
+                room.defenders = this.createDefenderProfile(room.name);
             }
 
             const gameRoom = Game.rooms[room.name];
@@ -39,14 +56,14 @@ export class DefenseSystem {
                 room.defenders.desiredAmount = room.alertLevel + 1;
             }
 
-            SpawningSystem.run(colonyExtras, room.defenders);
+            SpawningSystem.run(colony, room.defenders);
         }
     }
 
-    public static createDefenderProfile(colonyExtras: ColonyExtras, roomName: string): ColonyCreepSpawnManagement {
+    public createDefenderProfile(roomName: string): ColonyCreepSpawnManagement {
         const body: BodyPartConstant[] = [];
 
-        const room = colonyExtras.getMainRoom();
+        const room = this.colony.getMainRoom();
         const energy = room.energyCapacityAvailable;
 
         const numberOfParts = Math.max(
@@ -79,26 +96,7 @@ export class DefenseSystem {
         return creepSpawnManagement;
     }
 
-    public static runDefenderCreep(creepExtras: CreepManager): void {
-        const creep = creepExtras.creep;
-
-        let target: Creep | null = null;
-        if (creep.memory.targetId) {
-            target = Game.getObjectById<Creep>(creep.memory.targetId);
-            if (!target) {
-                delete creep.memory.targetId;
-                delete creep.memory.movementSystem?.path;
-            }
-        } else {
-            const closestHostile = creepExtras.creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
-            creep.memory.targetId = closestHostile?.id;
-            target = closestHostile;
-        }
-
-        if (target) {
-            if (creep.attack(target) === ERR_NOT_IN_RANGE) {
-                MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration);
-            }
-        }
+    public override getRolesToTrackEnergy(): string[] {
+        return ["defender"];
     }
 }

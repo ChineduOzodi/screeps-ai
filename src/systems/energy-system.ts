@@ -1,8 +1,7 @@
-import { ColonyExtras } from "./../prototypes/colony";
 import { CreepConstants } from "./../constants/creep-constants";
 import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
-import { BaseSystem, BaseSystemImpl } from "./base-system";
+import { BaseSystemImpl } from "./base-system";
 
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
@@ -16,25 +15,48 @@ export class EnergySystem extends BaseSystemImpl {
                 sources: [],
                 energyUsageModifier: 1,
                 estimatedEnergyProductionRate: 0,
-                estimatedEnergyProductionEfficiency: 0,
                 totalEnergyUsagePercentageAllowed: 0
             };
+            this.setSources();
         }
         return this.colony.colonyInfo.energyManagement;
     }
 
+    public override get energyUsageTracking(): EnergyUsageTracking {
+        if (!this.systemInfo.energyUsageTracking) {
+            this.systemInfo.energyUsageTracking = {
+                actualEnergyUsagePercentage: 0,
+                estimatedEnergyWorkRate: 0,
+                requestedEnergyUsageWeight: 0,
+                allowedEnergyWorkRate: 0
+            };
+        }
+        return this.systemInfo.energyUsageTracking;
+    }
+
     public override onStart(): void {
-        this.resetHarvestTracking();
+        this.setSources();
+    }
+
+    private setSources() {
+        const sources = this.colony.getMainRoom().find(FIND_SOURCES);
+
+        sources.forEach(source => {
+            this.systemInfo.sources.push({
+                accessCount: 1,
+                sourceId: source.id,
+                position: source.pos
+            });
+        });
     }
 
     public override run(): void {
         this.manageHarvesters();
     }
 
-    public override onLevelUp(_level: number): void {}
+    public override onLevelUp(_level: number): void { }
 
     public override updateProfiles(): void {
-        this.resetHarvestTracking();
         for (const colonySource of this.systemInfo.sources) {
             if (!colonySource.harvesters) {
                 console.log(`${this.colony.colonyInfo.id} energy-system | creating harvester profile`);
@@ -46,11 +68,8 @@ export class EnergySystem extends BaseSystemImpl {
 
     }
 
-    private resetHarvestTracking() {
-        for (const colonySource of this.systemInfo.sources) {
-            colonySource.cumulativeHarvestedEnergy = 0;
-        }
-        this.systemInfo.lastUpdate = Game.time;
+    public override getRolesToTrackEnergy(): string[] {
+        return ["harvester"];
     }
 
     public manageHarvesters(): void {
@@ -59,26 +78,11 @@ export class EnergySystem extends BaseSystemImpl {
                 colonySource.accessCount = 1;
             }
             if (!colonySource.harvesters) {
-                console.log("ERROR: ${this.colony.colonyInfo.id} energy-system | harvesters undefined");
+                console.log(`ERROR: ${this.colony.colonyInfo.id} energy-system | harvesters undefined`);
                 colonySource.harvesters = this.createHarvesterProfile(colonySource);
             }
             SpawningSystem.run(this.colony, colonySource.harvesters);
         }
-        this.calculateHarvestersProductionEfficiency();
-    }
-
-    private calculateHarvestersProductionEfficiency() {
-        if (!this.systemInfo.lastUpdate) {
-            console.log("ERROR: ${this.colony.colonyInfo.id} energy-system | lastUpdate undefined");
-            this.systemInfo.lastUpdate = Game.time - 1;
-        }
-        const totalEnergyGained = this.systemInfo.sources
-            .map(x => x.cumulativeHarvestedEnergy || 0)
-            .reduce((a, b) => a + b);
-        const totalTimeUsed = Math.max(Game.time - this.systemInfo.lastUpdate, 1);
-
-        this.systemInfo.estimatedEnergyProductionEfficiency =
-            totalEnergyGained / totalTimeUsed / this.systemInfo.estimatedEnergyProductionRate;
     }
 
     private createHarvesterProfile(colonySource: ColonySource): ColonyCreepSpawnManagement {
@@ -288,5 +292,57 @@ export class EnergySystem extends BaseSystemImpl {
         } else {
             creep.say("Can't find energy");
         }
+    }
+}
+
+export interface EnergyTracking {
+    /** Positive is for energy gain, negative for energy loss. Must be called every tick to be accurate. */
+    onTickFlow(energy: number): void
+
+    getAverageEnergyFlow(): number
+}
+
+export class EnergyTrackingImpl implements EnergyTracking {
+
+    energyInfo: EnergyTrackingInfo;
+
+    /**
+     * Allows you to track the average energy flow of an entity (creep, spawn, etc.) to be used to allocate energy spend to systems.
+     * @param memoryLocation Location in Memory the energyTackingInfo is stored. It should at least be an empty dictionary.
+     * @param numberTicks Number of ticks to use for average;
+     */
+    constructor(memoryLocation: EnergyTrackingInfo) {
+        this.energyInfo = memoryLocation;
+
+        if (!this.energyInfo) {
+            this.setupEnergyTracking();
+        }
+    }
+
+    setupEnergyTracking() {
+        this.energyInfo.count = 0;
+        this.energyInfo.average = 0;
+        this.energyInfo.total = 0;
+    }
+
+    /** Adds Energy to flow array and calculates average. */
+    onTickFlow(energy: number): void {
+        if (typeof this.energyInfo.average == "undefined" ||
+            typeof this.energyInfo.count == "undefined" ||
+            typeof this.energyInfo.total == "undefined") {
+            console.log(`EnergyTracking missing expected field, resetting: ${JSON.stringify(this.energyInfo)}`);
+            this.energyInfo.count = 0;
+            this.energyInfo.average = 0;
+            this.energyInfo.total = 0;
+        }
+
+        this.energyInfo.total += energy;
+        this.energyInfo.count++;
+
+        this.energyInfo.average = this.energyInfo.total / this.energyInfo.count;
+    }
+
+    getAverageEnergyFlow(): number {
+        return this.energyInfo.average || 0;
     }
 }
