@@ -1,4 +1,4 @@
-import { ColonyExtras } from "./prototypes/colony";
+import { ColonyManagerImpl } from "./prototypes/colony";
 import { CreepManagement } from "management/creep-management";
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomExtras } from "./prototypes/room";
@@ -30,7 +30,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
             delete Memory.colonies[name];
             continue;
         }
-        const colony = new ColonyExtras(colonyData);
+        const colony = new ColonyManagerImpl(colonyData);
         colony.run();
     }
 

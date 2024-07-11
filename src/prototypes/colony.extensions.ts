@@ -10,15 +10,16 @@ interface Colony {
     spawnQueue: SpawnRequest[] | undefined;
     stats: ColonyStats;
     nextUpdate: number;
-    energyManagement: ColonyEnergyManagement;
-    upgradeManagement: ColonyUpgradeManagement;
-    builderManagement: ColonyBuilderManagement;
-    defenseManagement: ColonyDefenseManagement;
+    energyManagement?: ColonyEnergyManagement;
+    upgradeManagement?: ColonyUpgradeManagement;
+    builderManagement?: ColonyBuilderManagement;
+    defenseManagement?: ColonyDefenseManagement;
     infrastructureManagement?: ColonyInfrastructureManagement;
 }
 
 interface ColonyBaseSystemInfo {
     nextUpdate: number;
+    energyUsageTracking?: EnergyUsageTracking;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -27,43 +28,35 @@ interface ColonyDefenseManagement extends ColonyBaseSystemInfo {}
 interface ColonyBuilderManagement extends ColonyBaseSystemInfo {
     builders?: ColonyCreepSpawnManagement;
     buildQueue: Id<ConstructionSite>[];
-    builderEnergy: EnergyUsageTracking;
 }
 
 interface ColonyUpgradeManagement extends ColonyBaseSystemInfo {
     upgraders?: ColonyCreepSpawnManagement;
-    upgraderEnergy: EnergyUsageTracking;
 }
 
 interface ColonyEnergyManagement extends ColonyBaseSystemInfo {
-    lastUpdate?: number;
     sources: ColonySource[];
     estimatedEnergyProductionRate: number;
-    estimatedEnergyProductionEfficiency?: number;
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
 }
 
 interface ColonyInfrastructureManagement extends ColonyBaseSystemInfo {
     repairers?: ColonyCreepSpawnManagement;
-    fillers?: ColonyCreepSpawnManagement;
 }
 
 interface EnergyUsageTracking {
     estimatedEnergyWorkRate: number;
     allowedEnergyWorkRate: number;
-    requestedEnergyUsagePercentage: number;
+    
+    // Number is added to energy weights of other systems to determine the distribution of energy allowance.
+    requestedEnergyUsageWeight: number;
     actualEnergyUsagePercentage: number;
 }
 
 interface EnergyTrackingInfo {
-    /** List to store the rolling amount of energy used in a tick. Positive is for energy gain, negative for energy loss. */
-    energyFlow?: number[];
-
     /** How many ticks has been counted so far. */
     count?: number;
-
-    index?: number;
     average?: number;
     total?: number;
 }
@@ -72,7 +65,6 @@ interface ColonySource {
     sourceId: Id<Source>;
     position: RoomPosition;
     accessCount: number;
-    cumulativeHarvestedEnergy?: number;
     harvesters?: ColonyCreepSpawnManagement;
     miners?: ColonyCreepSpawnManagement;
     carriers?: ColonyCreepSpawnManagement;

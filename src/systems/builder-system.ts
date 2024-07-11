@@ -1,49 +1,75 @@
-import { ColonyExtras } from "prototypes/colony";
-import { CreepRunner } from "./../prototypes/creep";
-import { EnergySystem } from "./energy-system";
-import { MovementSystem } from "./movement-system";
+import { ColonyManager } from "prototypes/colony";
 import { SpawningSystem } from "./spawning-system";
+import { BaseSystemImpl } from "./base-system";
 
-export class BuilderSystem {
-    public static run(colonyExtras: ColonyExtras): void {
-        const room = colonyExtras.getMainRoom();
+export class BuilderSystem extends BaseSystemImpl {
 
-        let stage = 0;
-        if (room.controller && room.controller.level > 1) {
-            stage = 0;
+    public override get systemInfo(): ColonyBuilderManagement {
+        if (!this.colony.colonyInfo.builderManagement) {
+            this.colony.colonyInfo.builderManagement = {
+                nextUpdate: Game.time,
+                buildQueue: [],
+                energyUsageTracking: {
+                    actualEnergyUsagePercentage: 0,
+                    estimatedEnergyWorkRate: 0,
+                    requestedEnergyUsageWeight: 0,
+                    allowedEnergyWorkRate: 0
+                }
+            };
         }
-
-        switch (stage) {
-            case 0:
-                this.manageBuilders(colonyExtras);
-                break;
-
-            default:
-                break;
-        }
+        return this.colony.colonyInfo.builderManagement;
     }
 
-    public static manageBuilders(colonyExtras: ColonyExtras): void {
-        if (!colonyExtras.colonyInfo.builderManagement.builders) {
-            colonyExtras.colonyInfo.builderManagement.builders = this.createBuilderProfile(colonyExtras);
+    public override get energyUsageTracking(): EnergyUsageTracking {
+        if (!this.systemInfo.energyUsageTracking) {
+            this.systemInfo.energyUsageTracking = {
+                actualEnergyUsagePercentage: 0,
+                estimatedEnergyWorkRate: 0,
+                requestedEnergyUsageWeight: 0.25,
+                allowedEnergyWorkRate: 0
+            };
         }
-        colonyExtras.colonyInfo.builderManagement.buildQueue = this.getConstructionSites(colonyExtras.colonyInfo).map(
+        return this.systemInfo.energyUsageTracking;
+    }
+
+    public override onStart(): void {
+        this.systemInfo;
+    }
+    public override run(): void {
+        this.manageBuilders();
+    }
+    public override onLevelUp(_level: number): void {}
+    public override updateProfiles(): void {
+        // TODO: Add ability to scale builder.
+    }
+
+    public manageBuilders(): void {
+        const colonyManager = this.colony;
+        if (!this.systemInfo.builders) {
+            this.systemInfo.builders = this.createBuilderProfile(colonyManager);
+        }
+        this.systemInfo.buildQueue = this.getConstructionSites(colonyManager.colonyInfo).map(
             x => x.id
         );
-        const { buildQueue, builderEnergy, builders } = colonyExtras.colonyInfo.builderManagement;
+        const { buildQueue, builders } = this.systemInfo;
         if (buildQueue.length > 0) {
-            builderEnergy.requestedEnergyUsagePercentage = 0.5;
-            const energyUsagePerCreep = builders.memoryBlueprint.averageEnergyConsumptionProductionPerTick;
-            builders.desiredAmount = Math.max(1, Math.floor(builderEnergy.allowedEnergyWorkRate / energyUsagePerCreep));
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
+            const energyUsagePerCreep = -colonyManager.getTotalEstimatedEnergyFlowRate("builder");
+
+            if (energyUsagePerCreep <= 0) {
+                builders.desiredAmount = 1;
+            } else {
+                builders.desiredAmount = Math.max(1, Math.floor(this.energyUsageTracking.allowedEnergyWorkRate / energyUsagePerCreep));
+            }
         } else {
-            builderEnergy.requestedEnergyUsagePercentage = 0;
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0;
             builders.desiredAmount = 0;
         }
 
-        SpawningSystem.run(colonyExtras, colonyExtras.colonyInfo.builderManagement.builders);
+        SpawningSystem.run(colonyManager, this.systemInfo.builders);
     }
 
-    public static getConstructionSites(colony: Colony): ConstructionSite<BuildableStructureConstant>[] {
+    public getConstructionSites(colony: Colony): ConstructionSite<BuildableStructureConstant>[] {
         const constructionSites: ConstructionSite<BuildableStructureConstant>[] = [];
         for (const name in Game.constructionSites) {
             const site = Game.constructionSites[name];
@@ -56,7 +82,7 @@ export class BuilderSystem {
         return constructionSites;
     }
 
-    public static createBuilderProfile(colony: ColonyExtras): ColonyCreepSpawnManagement {
+    public createBuilderProfile(colony: ColonyManager): ColonyCreepSpawnManagement {
         const body: BodyPartConstant[] = [];
 
         body.push(WORK);
@@ -83,52 +109,7 @@ export class BuilderSystem {
         return creepSpawnManagement;
     }
 
-    public static runBuilderCreep(creepExtras: CreepRunner): void {
-        const { creep } = creepExtras;
-        const movementSystem = creepExtras.getMovementSystem();
-        if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
-            creep.memory.working = false;
-            delete creep.memory.targetId;
-            delete movementSystem.path;
-            creep.say("b: harvesting");
-        }
-        if (!creep.memory.working && creep.store[RESOURCE_ENERGY] === creep.store.getCapacity()) {
-            creep.memory.working = true;
-            delete creep.memory.targetId;
-            delete movementSystem.path;
-            creep.say("building");
-        }
-        if (creep.memory.working) {
-            let target: ConstructionSite | null = null;
-            if (creep.memory.targetId) {
-                target = Game.getObjectById<ConstructionSite>(creep.memory.targetId);
-                if (!target) {
-                    delete creep.memory.targetId;
-                    delete movementSystem.path;
-                }
-            } else {
-                const colony = creepExtras.getColony();
-                if (!colony) {
-                    console.log(`builder-system | creep: ${creep.name}, missing colony`);
-                } else {
-                    const buildQueue = colony.builderManagement.buildQueue;
-                    if (buildQueue.length === 0) {
-                        return;
-                    }
-
-                    creep.memory.targetId = buildQueue[0];
-                    target = Game.getObjectById<ConstructionSite>(creep.memory.targetId);
-                }
-            }
-
-            if (target) {
-                if (creep.build(target) === ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration, 3);
-                }
-            }
-        } else {
-            // Find energy
-            EnergySystem.getEnergy(creep);
-        }
+    public override getRolesToTrackEnergy(): string[] {
+        return ["builder"];
     }
 }

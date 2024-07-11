@@ -7,6 +7,16 @@ import { MovementSystem } from "systems/movement-system";
 import { UpgradeSystem } from "./../systems/upgrade-system";
 import { BaseSystem } from "systems/base-system";
 
+function getSystems(colony: ColonyManager) {
+    return {
+        "energy": new EnergySystem(colony),
+        "defense": new DefenseSystem(colony),
+        "infrastructure": new InfrastructureSystem(colony),
+        "upgrade": new UpgradeSystem(colony),
+        "builder": new BuilderSystem(colony),
+    }
+}
+
 export interface ColonyManager {
     get colonyInfo(): Colony;
 
@@ -14,41 +24,45 @@ export interface ColonyManager {
     getMainSpawn(): StructureSpawn;
     getColonyCreeps(): ColonyCreeps;
     addToSpawnCreepQueue(bodyBlueprint: BodyPartConstant[], memoryBlueprint: AddCreepToQueueOptions): string;
+    getTotalEstimatedEnergyFlowRate(role: string): number;
 }
 
-export class ColonyExtras implements ColonyManager {
+export class ColonyManagerImpl implements ColonyManager {
     public colonyInfo: Colony;
-    public systems: BaseSystem[];
+    public systems = getSystems(this);
+
     public constructor(colony: Colony) {
         this.colonyInfo = colony;
-        this.systems = [
-            new EnergySystem(this),
-            new InfrastructureSystem(this),
-        ];
     }
 
     public run(): void {
+        const systems = this.getSystemsList();
+
         if (!this.colonyInfo.setupComplete) {
             this.colonyInfo.setupComplete = this.initialSetup();
-            this.systems.forEach(x => x.onStart());
+            systems.forEach(x => x.onStart());
         }
 
         this.creepSpawnManager();
         this.manageEnergyProductionConsumption();
 
         if (this.shouldUpdate()) {
-            this.systems.forEach(x => x.updateProfiles());
+            systems.forEach(x => x.updateProfiles());
         }
 
-        this.systems.forEach(x => x.run());
-
-        // TODO: update the rest of the systems to use BaseSystemImpl
-        DefenseSystem.run(this);
-        UpgradeSystem.run(this);
-        BuilderSystem.run(this);
+        systems.forEach(x => x.run());
 
         this.creepManager();
         this.visualizeStats();
+    }
+
+    private getSystemsList(): BaseSystem[] {
+        const s = (this.systems as { [k: string]: BaseSystem });
+        const systems = [];
+        for (const key in s) {
+            systems.push(s[key]);
+        }
+        return systems;
     }
 
     private shouldUpdate(): boolean {
@@ -67,14 +81,9 @@ export class ColonyExtras implements ColonyManager {
         const {
             estimatedEnergyProductionRate,
             totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage,
-            estimatedEnergyProductionEfficiency
-        } = this.colonyInfo.energyManagement;
+        } = this.systems["energy"].systemInfo;
         room.visual.text(
-            `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}, Actual: ${(
-                estimatedEnergyProductionRate * (estimatedEnergyProductionEfficiency || 0)
-            ).toFixed(2)}
-            Efficiency: ${(estimatedEnergyProductionEfficiency || 0).toFixed(2)}
-            Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`,
+            `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}         Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`,
             3,
             6,
             textStyle
@@ -84,21 +93,26 @@ export class ColonyExtras implements ColonyManager {
         this.visualizeSystems(visualizeSystems);
     }
 
-    public getEnergyTrackingSystems(): EnergyTrackingSystem[] {
-        const systems: EnergyTrackingSystem[] = [
-            {
-                systemName: "Upgrade System",
-                energyTracking: this.colonyInfo.upgradeManagement.upgraderEnergy
-            },
-            {
-                systemName: "Builder System",
-                energyTracking: this.colonyInfo.builderManagement.builderEnergy
+    private getEnergyTrackingSystems(): EnergyTrackingSystem[] {
+        const systems: EnergyTrackingSystem[] = [];
+        const s = (this.systems as { [k: string]: BaseSystem });
+
+        for (const key in s) {
+
+            const system = s[key];
+            if (!system.energyUsageTracking.requestedEnergyUsageWeight) {
+                continue;
             }
-        ];
+
+            systems.push({
+                systemName: key,
+                energyTracking: system.energyUsageTracking
+            })
+        }
         return systems;
     }
 
-    public visualizeSystems(options: EnergyTrackingSystem[]): void {
+    private visualizeSystems(options: EnergyTrackingSystem[]): void {
         const room = this.getMainRoom();
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
         let offset = 7;
@@ -106,7 +120,7 @@ export class ColonyExtras implements ColonyManager {
         for (const option of options) {
             const {
                 estimatedEnergyWorkRate,
-                requestedEnergyUsagePercentage,
+                requestedEnergyUsageWeight: requestedEnergyUsagePercentage,
                 actualEnergyUsagePercentage,
                 allowedEnergyWorkRate
             } = option.energyTracking;
@@ -129,28 +143,40 @@ export class ColonyExtras implements ColonyManager {
     }
 
     public manageEnergyProductionConsumption(): void {
-        this.colonyInfo.energyManagement.estimatedEnergyProductionRate =
-            this.getTotalEstimatedEnergyConsumptionProductionRate("harvester");
-        this.colonyInfo.energyManagement.totalEnergyUsagePercentageAllowed = 0.8;
+        this.systems.energy.systemInfo.estimatedEnergyProductionRate =
+            this.getTotalEstimatedEnergyFlowRate("harvester");
+        this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
         this.setEnergyUsageMod();
-        this.manageEnergySystem(this.colonyInfo.upgradeManagement.upgraderEnergy, "upgrader");
-        this.manageEnergySystem(this.colonyInfo.builderManagement.builderEnergy, "builder");
+
+        const s = (this.systems as { [k: string]: BaseSystem });
+
+        for (const key in s) {
+
+            const system = s[key];
+            if (!system.energyUsageTracking.requestedEnergyUsageWeight) {
+                continue;
+            }
+
+            this.manageEnergySystem(system.energyUsageTracking, system.getRolesToTrackEnergy());
+        }
     }
 
-    public manageEnergySystem(energyTracking: EnergyUsageTracking, role: string): void {
-        energyTracking.estimatedEnergyWorkRate = this.getTotalEstimatedEnergyConsumptionProductionRate(role);
+    public manageEnergySystem(energyTracking: EnergyUsageTracking, roles: string[]): void {
+        energyTracking.estimatedEnergyWorkRate = 0;
+
+        roles.forEach( x => energyTracking.estimatedEnergyWorkRate -= this.getTotalEstimatedEnergyFlowRate(x));
         energyTracking.actualEnergyUsagePercentage =
-            energyTracking.requestedEnergyUsagePercentage * this.colonyInfo.energyManagement.energyUsageModifier;
+            energyTracking.requestedEnergyUsageWeight * this.systems.energy.systemInfo.energyUsageModifier;
         energyTracking.allowedEnergyWorkRate =
-            this.colonyInfo.energyManagement.estimatedEnergyProductionRate * energyTracking.actualEnergyUsagePercentage;
+            this.systems.energy.systemInfo.estimatedEnergyProductionRate * energyTracking.actualEnergyUsagePercentage;
     }
 
-    public getTotalEstimatedEnergyConsumptionProductionRate(role: string): number {
+    public getTotalEstimatedEnergyFlowRate(role: string): number {
         let totalEnergyConsumptionProductionRate = 0;
         const creeps = this.getCreeps().filter(x => x.memory.role === role);
 
         creeps.forEach(creep => {
-            totalEnergyConsumptionProductionRate += creep.memory.averageEnergyConsumptionProductionPerTick;
+            totalEnergyConsumptionProductionRate += creep.memory.energyTrackingInfo?.average || 0;
         });
 
         return totalEnergyConsumptionProductionRate;
@@ -160,12 +186,12 @@ export class ColonyExtras implements ColonyManager {
         const systems = this.getEnergyTrackingSystems();
         let totalPercentEnergyRequested = 0;
         systems.forEach(x => {
-            totalPercentEnergyRequested += x.energyTracking.requestedEnergyUsagePercentage;
+            totalPercentEnergyRequested += x.energyTracking.requestedEnergyUsageWeight;
         });
         totalPercentEnergyRequested = totalPercentEnergyRequested === 0 ? 1 : totalPercentEnergyRequested;
 
-        const mod = this.colonyInfo.energyManagement.totalEnergyUsagePercentageAllowed / totalPercentEnergyRequested;
-        this.colonyInfo.energyManagement.energyUsageModifier = mod;
+        const mod = this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed / totalPercentEnergyRequested;
+        this.systems.energy.systemInfo.energyUsageModifier = mod;
     }
 
     public getCreeps(): Creep[] {
@@ -248,6 +274,7 @@ export class ColonyExtras implements ColonyManager {
         }
     }
 
+    // TODO: Move to energy system and it's own class
     public createMiner(sourceId: string, energy: number): string {
         let numberOfParts = Math.floor(energy / 100);
 
@@ -299,17 +326,6 @@ export class ColonyExtras implements ColonyManager {
             name: room.name,
             isMain: true,
             alertLevel: 0
-        });
-
-        // Find Sources
-        const sources = room.find(FIND_SOURCES);
-
-        sources.forEach(source => {
-            this.colonyInfo.energyManagement.sources.push({
-                accessCount: 1,
-                sourceId: source.id,
-                position: source.pos
-            });
         });
 
         // create first container

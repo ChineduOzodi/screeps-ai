@@ -6,7 +6,6 @@ interface CreepMemory extends AddCreepToQueueOptions {
     targetId?: string; // TODO: convert to Id<Tombstone | StructureExtension | AnyStructure | Resource<ResourceConstant> | Source | ConstructionSite<BuildableStructureConstant> or _HasId
     working: boolean;
     workDuration: number;
-    cumulativeWork?: number;
 }
 
 type TargetType = (_HasId & _HasRoomPosition) | null;
@@ -75,4 +74,6 @@ enum CreepWorkPastAction {
 
     /** Build a structure at the target construction site using carried energy. */
     BUILD = "build",
+    ATTACK = "attack",
+    UPGRADE_CONTROLLER = "upgrade controller",
 }

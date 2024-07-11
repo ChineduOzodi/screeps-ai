@@ -37,7 +37,7 @@ export class RepairerCreep extends CreepRunner {
             }
 
             if (!target) {
-                target = this.getNextTargetInBuildQueue();
+                target = this.findNextTargetInBuildQueue();
                 newTarget = true;
             }
 

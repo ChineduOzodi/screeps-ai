@@ -1,8 +1,6 @@
 import { MovementSystem } from "./../systems/movement-system";
 import { EnergyTrackingImpl } from "systems/energy-system";
 
-const ACTION_GET_ERR_MESSAGE = "err getting action";
-
 export abstract class CreepRunner {
     public creep: Creep;
     protected memory: CreepMemory;
@@ -95,7 +93,7 @@ export abstract class CreepRunner {
         }
 
         const flow = this.getTrackedEnergyFlow(memory.lastAction, memory.energyFlow);
-        const energyTracking = new EnergyTrackingImpl(memory.energyTrackingInfo, 100);
+        const energyTracking = new EnergyTrackingImpl(memory.energyTrackingInfo);
 
         energyTracking.onTickFlow(flow);
 
@@ -105,7 +103,7 @@ export abstract class CreepRunner {
 
     private setAction(action: CreepWorkPastAction) {
         this.creep.memory.lastAction = action;
-        if (action !== CreepWorkPastAction.NONE) {
+        if (action !== CreepWorkPastAction.NONE && this.creep.memory.lastAction !== action) {
             this.creep.say(action);
         }
     }
@@ -113,16 +111,14 @@ export abstract class CreepRunner {
     /** What to count in energyFlow calculations based on the type of creep. */
     public getTrackedEnergyFlow(lastAction: CreepWorkPastAction, energyFlow: number): number {
         switch (lastAction) {
-            case CreepWorkPastAction.HARVEST:
-                return energyFlow;
-            case CreepWorkPastAction.REPAIR:
-                return energyFlow;
-            case CreepWorkPastAction.BUILD:
-                return energyFlow;
-            case CreepWorkPastAction.PICKUP:
-                return energyFlow;
-            default:
+            case CreepWorkPastAction.NONE:
                 return 0;
+            case CreepWorkPastAction.TRANSFER:
+                return 0;
+            case CreepWorkPastAction.WITHDRAW:
+                return 0;
+            default:
+                return energyFlow;
         }
     }
 
@@ -249,18 +245,22 @@ export abstract class CreepRunner {
         return null;
     }
 
-    protected getNextTargetInBuildQueue() {
+    protected findNextTargetInBuildQueue() {
         const colony = this.getColony();
         if (!colony) {
             console.log(`${this.creep.name}: missing colony`);
             return null;
         }
 
-        const buildQueue = colony.builderManagement.buildQueue;
-        if (buildQueue.length > 0) {
+        const buildQueue = colony.builderManagement?.buildQueue;
+        if (buildQueue && buildQueue.length > 0) {
             return Game.getObjectById(buildQueue[0]);
         }
         return null;
+    }
+
+    protected findClosestHostile() {
+        return this.creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
     }
 
     public getEnergy(): void {
@@ -359,6 +359,22 @@ export abstract class CreepRunner {
         }
         return actionStatus;
     }
+
+    protected attack(target: TargetType): CreepActionReturnCode {
+        const actionStatus = this.creep.attack(target as any);
+        if (actionStatus === OK) {
+            this.setAction(CreepWorkPastAction.ATTACK);
+        }
+        return actionStatus;
+    }
+
+    protected upgradeController(target: TargetType): ScreepsReturnCode {
+        const actionStatus = this.creep.upgradeController(target as any);
+        if (actionStatus === OK) {
+            this.setAction(CreepWorkPastAction.UPGRADE_CONTROLLER);
+        }
+        return actionStatus;
+    }
 }
 
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
@@ -388,4 +404,6 @@ export enum CreepWorkPastAction {
 
     /** Build a structure at the target construction site using carried energy. */
     BUILD = "build",
+    ATTACK = "attack",
+    UPGRADE_CONTROLLER = "upgrade controller",
 }

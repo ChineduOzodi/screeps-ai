@@ -1,42 +1,69 @@
-import { ColonyExtras } from "prototypes/colony";
-import { EnergySystem } from "systems/energy-system";
-import { MovementSystem } from "./movement-system";
 import { SpawningSystem } from "./spawning-system";
+import { BaseSystemImpl } from "./base-system";
 
-export class UpgradeSystem {
-    public static run(colonyExtras: ColonyExtras): void {
-        const room = colonyExtras.getMainRoom();
-
-        let stage = 0;
-        if (room.controller && room.controller.level > 1) {
-            stage = 0;
+export class UpgradeSystem extends BaseSystemImpl {
+    public override get systemInfo(): ColonyUpgradeManagement  {
+        if (!this.colony.colonyInfo.upgradeManagement) {
+            this.colony.colonyInfo.upgradeManagement = {
+                nextUpdate: Game.time,
+                energyUsageTracking: {
+                    actualEnergyUsagePercentage: 0,
+                    estimatedEnergyWorkRate: 0,
+                    requestedEnergyUsageWeight: 0.5,
+                    allowedEnergyWorkRate: 0
+                }
+            }
         }
-
-        switch (stage) {
-            case 0:
-                colonyExtras.colonyInfo.upgradeManagement.upgraderEnergy.requestedEnergyUsagePercentage = 0.5;
-                this.manageUpgraders(colonyExtras);
-                break;
-
-            default:
-                break;
-        }
+        return this.colony.colonyInfo.upgradeManagement;
     }
 
-    public static manageUpgraders(colony: ColonyExtras): void {
-        if (!colony.colonyInfo.upgradeManagement.upgraders) {
-            colony.colonyInfo.upgradeManagement.upgraders = this.createUpgraderProfile(colony);
+    public override get energyUsageTracking(): EnergyUsageTracking {
+        if (!this.systemInfo.energyUsageTracking) {
+            this.systemInfo.energyUsageTracking = {
+                actualEnergyUsagePercentage: 0,
+                estimatedEnergyWorkRate: 0,
+                requestedEnergyUsageWeight: 0.5,
+                allowedEnergyWorkRate: 0
+            }
         }
-
-        const { upgraders, upgraderEnergy } = colony.colonyInfo.upgradeManagement;
-
-        const energyUsagePerCreep = upgraders.memoryBlueprint.averageEnergyConsumptionProductionPerTick;
-        upgraders.desiredAmount = Math.max(1, Math.floor(upgraderEnergy.allowedEnergyWorkRate / energyUsagePerCreep));
-
-        SpawningSystem.run(colony, colony.colonyInfo.upgradeManagement.upgraders);
+        return this.systemInfo.energyUsageTracking;
     }
 
-    public static createUpgraderProfile(colony: ColonyExtras): ColonyCreepSpawnManagement {
+    public override onStart(): void {}
+
+    public override run(): void {
+        this.manageUpgraders();
+    }
+    public override onLevelUp(_level: number): void {}
+
+    public override updateProfiles(): void {
+        // TODO: scale upgraders
+    }
+
+    public override getRolesToTrackEnergy(): string[] {
+        return ["upgrader"];
+    }
+
+    public manageUpgraders(): void {
+        const colony = this.colony;
+        if (!this.systemInfo.upgraders) {
+            this.systemInfo.upgraders = this.createUpgraderProfile();
+        }
+
+        const { upgraders } = this.systemInfo;
+
+        const energyUsagePerCreep = -colony.getTotalEstimatedEnergyFlowRate("upgrader");
+        if (energyUsagePerCreep <= 0) {
+            upgraders.desiredAmount = 1;
+        } else {
+            upgraders.desiredAmount = Math.max(1, Math.floor(this.energyUsageTracking.allowedEnergyWorkRate / energyUsagePerCreep));
+        }
+
+        SpawningSystem.run(colony, this.systemInfo.upgraders);
+    }
+
+    public createUpgraderProfile(): ColonyCreepSpawnManagement {
+        const colony = this.colony;
         const body: BodyPartConstant[] = [];
 
         body.push(WORK);
@@ -62,32 +89,5 @@ export class UpgradeSystem {
         };
 
         return creepSpawnManagement;
-    }
-
-    public static runUpgraderCreep(creep: Creep): void {
-        if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
-            creep.memory.working = false;
-            delete creep.memory.targetId;
-            delete creep.memory.movementSystem?.path;
-            creep.say("u: harvesting");
-        }
-        if (!creep.memory.working && creep.store[RESOURCE_ENERGY] === creep.store.getCapacity()) {
-            creep.memory.working = true;
-            delete creep.memory.targetId;
-            delete creep.memory.movementSystem?.path;
-            creep.say("upgrading");
-        }
-        if (creep.memory.working) {
-            if (!creep.room.controller) {
-                throw new Error(`${creep.id} - No room controller to upgrade: ${creep.room.name}`);
-            }
-
-            if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-                MovementSystem.moveToWithReservation(creep, creep.room.controller, creep.memory.workDuration, 3);
-            }
-        } else {
-            // Find energy
-            EnergySystem.getEnergy(creep);
-        }
     }
 }

@@ -1,6 +1,12 @@
 import { ColonyManager } from "prototypes/colony";
 
 export interface BaseSystem {
+    /** Reference to the system data that lives in screeps. */
+    get systemInfo(): ColonyBaseSystemInfo;
+
+    /** Reference to the energy usage tracking data that lives in screeps. */
+    get energyUsageTracking(): EnergyUsageTracking;
+
     /** What happens when an new colony is started. */
     onStart(): void;
 
@@ -12,8 +18,8 @@ export interface BaseSystem {
     /** Functionality to update profiles of creeps to be spawned by the spawning system. Primarily invoked by colony manager. */
     updateProfiles(): void;
 
-    /** Reference to the system data that lives in screeps. */
-    get systemInfo(): ColonyBaseSystemInfo;
+    /** Get Roles to track energy */
+    getRolesToTrackEnergy(): string[];
 }
 
 export abstract class BaseSystemImpl implements BaseSystem {
@@ -36,9 +42,11 @@ export abstract class BaseSystemImpl implements BaseSystem {
     }
 
     public abstract get systemInfo(): ColonyBaseSystemInfo;
+    public abstract get energyUsageTracking(): EnergyUsageTracking;
 
     public abstract onStart(): void;
     public abstract run(): void;
     public abstract onLevelUp(level: number): void;
     public abstract updateProfiles(): void;
+    public abstract getRolesToTrackEnergy(): string[];
 }
