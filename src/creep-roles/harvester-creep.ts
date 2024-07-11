@@ -40,33 +40,27 @@ export class HarvesterCreep extends CreepRunner {
         } else {
             // finds closest storage / spawn to store energy
             let target: Structure | null = null;
-            target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn>(
-                FIND_STRUCTURES,
-                {
-                    filter: structure => {
-                        return (
-                            (structure.structureType === STRUCTURE_EXTENSION ||
-                                structure.structureType === STRUCTURE_SPAWN) &&
-                            structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY)
-                        );
-                    }
+            target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
+                filter: structure => {
+                    return (
+                        (structure.structureType === STRUCTURE_EXTENSION ||
+                            structure.structureType === STRUCTURE_SPAWN) &&
+                        structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY)
+                    );
                 }
-            );
+            });
 
             // StructureTower has lower priority than extensions and spawn so as not to
             // accidentally starve creep generation.
             if (!target) {
-                target = creep.pos.findClosestByPath<StructureTower>(
-                    FIND_STRUCTURES,
-                    {
-                        filter: structure => {
-                            return (
-                                structure.structureType === STRUCTURE_TOWER &&
-                                structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY)
-                            );
-                        }
+                target = creep.pos.findClosestByPath<StructureTower>(FIND_STRUCTURES, {
+                    filter: structure => {
+                        return (
+                            structure.structureType === STRUCTURE_TOWER &&
+                            structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY)
+                        );
                     }
-                );
+                });
             }
 
             if (!target) {

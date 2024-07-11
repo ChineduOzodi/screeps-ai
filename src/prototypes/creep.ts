@@ -1,5 +1,39 @@
-import { MovementSystem } from "./../systems/movement-system";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable no-shadow */
 import { EnergyTrackingImpl } from "systems/energy-system";
+import { MovementSystem } from "systems/movement-system";
+
+// Is mirrored to work in screeps.com, so should update the counterpart when updating this
+export enum CreepStatus {
+    WORKING = "working",
+    IDLE = "idle",
+    SPAWN_QUEUE = "spawn queue",
+    SPAWNING = "spawning"
+}
+
+// Is mirrored to work in screeps.com, so should update the counterpart when updating this
+export enum CreepWorkPastAction {
+    NONE = "none",
+
+    /** Transfer resource from the creep to another object. */
+    TRANSFER = "transfer",
+    HARVEST = "harvest",
+
+    /** Withdraw resources from a structure, a tombstone or a ruin. */
+    WITHDRAW = "withdraw",
+
+    /** Pick up an item (a dropped piece of energy). */
+    PICKUP = "pickup",
+
+    /** Repair a damaged structure using carried energy. */
+    REPAIR = "repair",
+
+    /** Build a structure at the target construction site using carried energy. */
+    BUILD = "build",
+    ATTACK = "attack",
+    UPGRADE_CONTROLLER = "upgrade controller"
+}
 
 export abstract class CreepRunner {
     public creep: Creep;
@@ -138,7 +172,7 @@ export abstract class CreepRunner {
         if (!target) {
             this.removeTarget();
         }
-        return target as any;
+        return target as any as TargetType;
     }
 
     protected removeTarget() {
@@ -312,7 +346,11 @@ export abstract class CreepRunner {
         }
     }
 
-    protected withdraw(target: TargetType, resourceType: ResourceConstant, amount?: number | undefined): ScreepsReturnCode {
+    protected withdraw(
+        target: TargetType,
+        resourceType: ResourceConstant,
+        amount?: number | undefined
+    ): ScreepsReturnCode {
         const actionStatus = this.creep.withdraw(target as any, resourceType, amount);
         if (actionStatus === OK) {
             this.setAction(CreepWorkPastAction.WITHDRAW);
@@ -320,7 +358,11 @@ export abstract class CreepRunner {
         return actionStatus;
     }
 
-    protected transfer(target: TargetType, resourceType: ResourceConstant, amount?: number | undefined): ScreepsReturnCode {
+    protected transfer(
+        target: TargetType,
+        resourceType: ResourceConstant,
+        amount?: number | undefined
+    ): ScreepsReturnCode {
         const actionStatus = this.creep.transfer(target as any, resourceType, amount);
         if (actionStatus === OK) {
             this.setAction(CreepWorkPastAction.TRANSFER);
@@ -375,35 +417,4 @@ export abstract class CreepRunner {
         }
         return actionStatus;
     }
-}
-
-// Is mirrored to work in screeps.com, so should update the counterpart when updating this
-export enum CreepStatus {
-    WORKING = "working",
-    IDLE = "idle",
-    SPAWN_QUEUE = "spawn queue",
-    SPAWNING = "spawning"
-}
-
-// Is mirrored to work in screeps.com, so should update the counterpart when updating this
-export enum CreepWorkPastAction {
-    NONE = "none",
-
-    /** Transfer resource from the creep to another object. */
-    TRANSFER = "transfer",
-    HARVEST = "harvest",
-
-    /** Withdraw resources from a structure, a tombstone or a ruin. */
-    WITHDRAW = "withdraw",
-
-    /** Pick up an item (a dropped piece of energy). */
-    PICKUP = "pickup",
-
-    /** Repair a damaged structure using carried energy. */
-    REPAIR = "repair",
-
-    /** Build a structure at the target construction site using carried energy. */
-    BUILD = "build",
-    ATTACK = "attack",
-    UPGRADE_CONTROLLER = "upgrade controller",
 }

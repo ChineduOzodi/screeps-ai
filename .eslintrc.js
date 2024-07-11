@@ -42,6 +42,7 @@ module.exports = {
     "@typescript-eslint/no-parameter-properties": "off",
     "@typescript-eslint/no-unused-expressions": "error",
     "@typescript-eslint/no-use-before-define": ["error", { functions: false }],
+    "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/prefer-for-of": "error",
     "@typescript-eslint/space-within-parens": ["off", "never"],
     "@typescript-eslint/unified-signatures": "error",

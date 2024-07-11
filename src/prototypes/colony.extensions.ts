@@ -48,7 +48,7 @@ interface ColonyInfrastructureManagement extends ColonyBaseSystemInfo {
 interface EnergyUsageTracking {
     estimatedEnergyWorkRate: number;
     allowedEnergyWorkRate: number;
-    
+
     // Number is added to energy weights of other systems to determine the distribution of energy allowance.
     requestedEnergyUsageWeight: number;
     actualEnergyUsagePercentage: number;

@@ -3,7 +3,6 @@ import { CreepConstants } from "../constants/creep-constants";
 import { SpawningSystem } from "./spawning-system";
 
 export class InfrastructureSystem extends BaseSystemImpl {
-
     public override get systemInfo(): ColonyInfrastructureManagement {
         if (!this.colony.colonyInfo.infrastructureManagement) {
             this.colony.colonyInfo.infrastructureManagement = {

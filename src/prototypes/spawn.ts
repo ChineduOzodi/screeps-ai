@@ -29,7 +29,7 @@ export class SpawnExtras {
             stats: {
                 estimatedEnergyProductionRate: 0
             },
-            nextUpdate: 0,
+            nextUpdate: 0
         };
         Memory.colonies[colony.id] = colony;
         this.spawn.memory.colonyId = colony.id;
