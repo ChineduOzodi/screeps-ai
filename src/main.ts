@@ -1,14 +1,14 @@
-import { ColonyManagerImpl } from "./prototypes/colony";
-import { CreepManagement } from "management/creep-management";
-import { ErrorMapper } from "utils/ErrorMapper";
-import { RoomExtras } from "./prototypes/room";
-import { SpawnExtras } from "prototypes/spawn";
-
 import "./prototypes/memory.extensions";
 import "./prototypes/colony.extensions";
 import "./prototypes/creep.extensions";
 import "./prototypes/spawn.extensions";
 import "./prototypes/room.extensions";
+
+import { ColonyManagerImpl } from "./prototypes/colony";
+import { CreepManagement } from "management/creep-management";
+import { ErrorMapper } from "utils/ErrorMapper";
+import { RoomExtras } from "./prototypes/room";
+import { SpawnExtras } from "prototypes/spawn";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code

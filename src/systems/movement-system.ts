@@ -90,7 +90,7 @@ export class MovementSystem {
             previousPos,
             idle: 0,
             pathStuck: 0,
-            idleReserved: false
+            idleReserved: false,
         };
     }
 
@@ -111,7 +111,7 @@ export class MovementSystem {
         targetRange: number,
         path: PathStep[],
         startTime: number,
-        endTime: number
+        endTime: number,
     ): void {
         if (creep.memory.movementSystem) {
             creep.memory.movementSystem.path = path;
@@ -153,7 +153,7 @@ export class MovementSystem {
                                     room,
                                     reservation.pos,
                                     Game.time,
-                                    Game.time + ticksToLive
+                                    Game.time + ticksToLive,
                                 )
                             ) {
                                 costMatrix.set(reservation.pos.x, reservation.pos.y, 255);
@@ -161,7 +161,7 @@ export class MovementSystem {
                         }
                     }
                 }
-            }
+            },
         });
 
         if (path && path.length > 0) {
@@ -175,7 +175,7 @@ export class MovementSystem {
         target: _HasRoomPosition & _HasId,
         workDuration: number,
         range = 1,
-        ignoreRoles?: string[]
+        ignoreRoles?: string[],
     ): void {
         if (creep.spawning) {
             console.log(`creep still spawning:`, creep.name);
@@ -196,7 +196,7 @@ export class MovementSystem {
                 range,
                 pathInfo.path,
                 pathInfo.startTime,
-                pathInfo.endTime
+                pathInfo.endTime,
             );
         } else {
             console.log(`${creep.name}: did not found path`);

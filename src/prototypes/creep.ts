@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable no-shadow */
-import { EnergyTrackingImpl } from "systems/energy-system";
+import { ColonyManager } from "./colony";
+import { EnergyTrackingImpl } from "systems/energy-tracking";
 import { MovementSystem } from "systems/movement-system";
 
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
@@ -9,7 +10,7 @@ export enum CreepStatus {
     WORKING = "working",
     IDLE = "idle",
     SPAWN_QUEUE = "spawn queue",
-    SPAWNING = "spawning"
+    SPAWNING = "spawning",
 }
 
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
@@ -32,7 +33,24 @@ export enum CreepWorkPastAction {
     /** Build a structure at the target construction site using carried energy. */
     BUILD = "build",
     ATTACK = "attack",
-    UPGRADE_CONTROLLER = "upgrade controller"
+    UPGRADE_CONTROLLER = "upgrade controller",
+}
+
+export enum CreepRole {
+    REPAIRER = "repairer",
+    BUILDER = "builder",
+    HARVESTER = "harvester",
+    DEFENDER = "defender",
+    UPGRADER = "upgrader",
+    MINER = "miner",
+}
+
+export interface CreepProfiles {
+    [k: string]: ColonyCreepSpawnManagement;
+}
+
+export interface CreepSpawner {
+    createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles;
 }
 
 export abstract class CreepRunner {
@@ -205,7 +223,7 @@ export abstract class CreepRunner {
         return this.creep.pos.findClosestByPath(FIND_TOMBSTONES, {
             filter: stone => {
                 return stone.store[RESOURCE_ENERGY] >= minEnergy;
-            }
+            },
         });
     }
 
@@ -213,7 +231,7 @@ export abstract class CreepRunner {
         return this.creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
             filter: resource => {
                 return resource.amount >= minEnergy && resource.resourceType === RESOURCE_ENERGY;
-            }
+            },
         });
     }
 
@@ -226,7 +244,7 @@ export abstract class CreepRunner {
                         structure.structureType === STRUCTURE_STORAGE) &&
                     structure.store[RESOURCE_ENERGY] >= minEnergy
                 );
-            }
+            },
         });
     }
 
@@ -238,7 +256,7 @@ export abstract class CreepRunner {
                     structure.structureType === STRUCTURE_SPAWN &&
                     structure.store.energy === structure.store.getCapacity(RESOURCE_ENERGY)
                 );
-            }
+            },
         });
     }
 
@@ -246,7 +264,7 @@ export abstract class CreepRunner {
         return this.creep.pos.findClosestByPath(FIND_SOURCES, {
             filter: s => {
                 return s.energy >= minEnergy;
-            }
+            },
         });
     }
 
@@ -257,7 +275,7 @@ export abstract class CreepRunner {
                     structure.structureType === STRUCTURE_EXTENSION &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) >= minFreeSpace
                 );
-            }
+            },
         });
     }
 
@@ -268,7 +286,7 @@ export abstract class CreepRunner {
      */
     protected findMostDamagedStructure(maxHitPointPercent: number) {
         const targets = this.creep.room.find(FIND_STRUCTURES, {
-            filter: object => object.hits < object.hitsMax * maxHitPointPercent
+            filter: object => object.hits < object.hitsMax * maxHitPointPercent,
         });
 
         targets.sort((a, b) => a.hits - b.hits);
@@ -349,7 +367,7 @@ export abstract class CreepRunner {
     protected withdraw(
         target: TargetType,
         resourceType: ResourceConstant,
-        amount?: number | undefined
+        amount?: number | undefined,
     ): ScreepsReturnCode {
         const actionStatus = this.creep.withdraw(target as any, resourceType, amount);
         if (actionStatus === OK) {
@@ -361,7 +379,7 @@ export abstract class CreepRunner {
     protected transfer(
         target: TargetType,
         resourceType: ResourceConstant,
-        amount?: number | undefined
+        amount?: number | undefined,
     ): ScreepsReturnCode {
         const actionStatus = this.creep.transfer(target as any, resourceType, amount);
         if (actionStatus === OK) {

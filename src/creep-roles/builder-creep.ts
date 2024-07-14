@@ -1,4 +1,7 @@
-import { CreepRunner } from "prototypes/creep";
+/* eslint-disable max-classes-per-file */
+import { CreepProfiles, CreepRole, CreepRunner, CreepSpawner } from "prototypes/creep";
+
+import { ColonyManager } from "prototypes/colony";
 import { MovementSystem } from "systems/movement-system";
 
 export class BuilderCreep extends CreepRunner {
@@ -53,5 +56,52 @@ export class BuilderCreep extends CreepRunner {
             // Find energy
             this.getEnergy();
         }
+    }
+}
+
+export class BuilderCreepSpawner implements CreepSpawner {
+    public createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+        const { buildQueue } = colony.systems.builder.systemInfo;
+        const profile = this.createProfile(energyCap, colony);
+        if (buildQueue.length > 0) {
+            const energyUsagePerCreep = -colony.getTotalEstimatedEnergyFlowRate(CreepRole.BUILDER);
+
+            if (energyUsagePerCreep <= 0) {
+                profile.desiredAmount = 1;
+            } else {
+                profile.desiredAmount = Math.max(1, Math.floor(energyCap / energyUsagePerCreep));
+            }
+        } else {
+            profile.desiredAmount = 0;
+        }
+
+        const profiles: CreepProfiles = {};
+        profiles[CreepRole.BUILDER] = profile;
+        return profiles;
+    }
+
+    private createProfile(energyCap: number, colony: ColonyManager): ColonyCreepSpawnManagement {
+        const body: BodyPartConstant[] = [];
+
+        body.push(WORK);
+        body.push(CARRY);
+        body.push(CARRY);
+        body.push(MOVE);
+        body.push(MOVE);
+
+        const energyUsePerTick = BUILD_POWER * 1;
+
+        const memory: AddCreepToQueueOptions = {
+            workTargetId: colony.getMainRoom().controller?.id,
+            workDuration: (CARRY_CAPACITY * 2) / energyUsePerTick,
+            role: CreepRole.BUILDER,
+            averageEnergyConsumptionProductionPerTick: energyUsePerTick,
+        };
+        const creepSpawnManagement: ColonyCreepSpawnManagement = {
+            bodyBlueprint: body,
+            memoryBlueprint: memory,
+        };
+
+        return creepSpawnManagement;
     }
 }

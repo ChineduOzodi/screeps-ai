@@ -40,6 +40,7 @@ module.exports = {
     ],
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-parameter-properties": "off",
+    "@typescript-eslint/max-classes-per-file": "off",
     "@typescript-eslint/no-unused-expressions": "error",
     "@typescript-eslint/no-use-before-define": ["error", { functions: false }],
     "@typescript-eslint/no-unused-vars": "off",

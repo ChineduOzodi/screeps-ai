@@ -1,3 +1,4 @@
+import { CreepRole, CreepSpawner } from "prototypes/creep";
 import { ColonyManager } from "prototypes/colony";
 
 export interface BaseSystem {
@@ -19,10 +20,13 @@ export interface BaseSystem {
     updateProfiles(): void;
 
     /** Get Roles to track energy */
-    getRolesToTrackEnergy(): string[];
+    getRolesToTrackEnergy(): CreepRole[];
 }
 
 export abstract class BaseSystemImpl implements BaseSystem {
+    public abstract get systemInfo(): ColonyBaseSystemInfo;
+    public abstract get energyUsageTracking(): EnergyUsageTracking;
+
     protected colony: ColonyManager;
 
     public constructor(colony: ColonyManager) {
@@ -41,12 +45,22 @@ export abstract class BaseSystemImpl implements BaseSystem {
         return scaledBody;
     }
 
-    public abstract get systemInfo(): ColonyBaseSystemInfo;
-    public abstract get energyUsageTracking(): EnergyUsageTracking;
+    public updateProfiles(): void {
+        const creepSpawners = this.getCreepSpawners();
+        for (const spawner of creepSpawners) {
+            const profiles = spawner.createProfiles(this.energyUsageTracking.allowedEnergyWorkRate, this.colony);
+            for (const name in profiles) {
+                this.systemInfo.creepSpawnersInfo[name] = {
+                    ...profiles[name],
+                    creepNames: this.systemInfo.creepSpawnersInfo[name]?.creepNames || [],
+                };
+            }
+        }
+    }
 
     public abstract onStart(): void;
     public abstract run(): void;
     public abstract onLevelUp(level: number): void;
-    public abstract updateProfiles(): void;
-    public abstract getRolesToTrackEnergy(): string[];
+    public abstract getRolesToTrackEnergy(): CreepRole[];
+    public abstract getCreepSpawners(): CreepSpawner[];
 }

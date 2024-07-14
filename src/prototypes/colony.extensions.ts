@@ -20,19 +20,17 @@ interface Colony {
 interface ColonyBaseSystemInfo {
     nextUpdate: number;
     energyUsageTracking?: EnergyUsageTracking;
+    creepSpawnersInfo: { [k: string]: ColonyCreepSpawnManagement };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ColonyDefenseManagement extends ColonyBaseSystemInfo {}
 
 interface ColonyBuilderManagement extends ColonyBaseSystemInfo {
-    builders?: ColonyCreepSpawnManagement;
     buildQueue: Id<ConstructionSite>[];
 }
 
-interface ColonyUpgradeManagement extends ColonyBaseSystemInfo {
-    upgraders?: ColonyCreepSpawnManagement;
-}
+interface ColonyUpgradeManagement extends ColonyBaseSystemInfo {}
 
 interface ColonyEnergyManagement extends ColonyBaseSystemInfo {
     sources: ColonySource[];
@@ -71,10 +69,10 @@ interface ColonySource {
 }
 
 interface ColonyCreepSpawnManagement {
-    desiredAmount: number;
-    creepNames: string[];
-    bodyBlueprint: BodyPartConstant[];
-    memoryBlueprint: AddCreepToQueueOptions;
+    desiredAmount?: number;
+    creepNames?: string[];
+    bodyBlueprint?: BodyPartConstant[];
+    memoryBlueprint?: AddCreepToQueueOptions;
     important?: boolean;
 }
 

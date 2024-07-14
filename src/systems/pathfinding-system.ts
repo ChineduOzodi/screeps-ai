@@ -4,7 +4,7 @@ export class PathfindingSystem {
         target: RoomPosition | _HasRoomPosition,
         range: number,
         workDuration: number,
-        ignoreRoles?: string[]
+        ignoreRoles?: string[],
     ): {
         path: PathStep[];
         startTime: number;
@@ -12,7 +12,7 @@ export class PathfindingSystem {
     } {
         const moveTime = creep.pos.findPathTo(target, {
             range,
-            ignoreCreeps: true
+            ignoreCreeps: true,
         }).length;
 
         if (!creep.ticksToLive || (moveTime >= creep.ticksToLive && !workDuration)) {
@@ -45,7 +45,7 @@ export class PathfindingSystem {
                                     reservation.pos,
                                     startTime,
                                     endTime,
-                                    ignoreRoles
+                                    ignoreRoles,
                                 )
                             ) {
                                 // console.log(`${reservation.pos.x}, ${reservation.pos.y} not available`);
@@ -54,7 +54,7 @@ export class PathfindingSystem {
                         }
                     }
                 }
-            }
+            },
         });
 
         // console.log(`${creep.name}, target pos: ${(target as _HasRoomPosition).pos.x},${(target as _HasRoomPosition).pos.y}, creep pos: ${creep.pos.x}, ${creep.pos.y}, path length: ${path.length}, range: ${range}`);
@@ -66,7 +66,7 @@ export class PathfindingSystem {
         pos: RoomPosition | PathStep,
         startTime: number,
         endTime?: number,
-        ignoreRoles?: string[]
+        ignoreRoles?: string[],
     ): boolean {
         this.checkRoomReservationSetup(room, pos);
         for (const reservation of room.memory.positionReservations[`${pos.x},${pos.y}`].reservations) {
@@ -86,7 +86,7 @@ export class PathfindingSystem {
         creep: Creep,
         pos: RoomPosition | PathStep,
         startTime: number,
-        endTime: number
+        endTime: number,
     ): void {
         const { room } = creep;
         this.checkRoomReservationSetup(room, pos);
@@ -101,7 +101,7 @@ export class PathfindingSystem {
             creepId: creep.id,
             startTime,
             endTime,
-            role: creep.memory.role
+            role: creep.memory.role,
         });
     }
 
@@ -112,7 +112,7 @@ export class PathfindingSystem {
         if (pos && !room.memory.positionReservations[`${pos.x},${pos.y}`]) {
             room.memory.positionReservations[`${pos.x},${pos.y}`] = {
                 pos,
-                reservations: []
+                reservations: [],
             };
         }
     }
