@@ -1,10 +1,10 @@
-import { CreepRole, CreepSpawner } from "prototypes/creep";
-
 import { BaseSystemImpl } from "./base-system";
+import { CreepRole } from "prototypes/creep";
+import { CreepSpawner } from "prototypes/CreepSpawner";
 import { DefenderCreepSpawner } from "creep-roles/defender-creep";
 
 export class DefenseSystem extends BaseSystemImpl {
-    public override get systemInfo(): ColonyBaseSystemInfo {
+    public override get systemInfo(): BaseSystemInfo {
         if (!this.colony.colonyInfo.defenseManagement) {
             this.colony.colonyInfo.defenseManagement = {
                 nextUpdate: Game.time,

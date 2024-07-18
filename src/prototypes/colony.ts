@@ -84,7 +84,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
     private shouldUpdate(): boolean {
         if (!this.colonyInfo.nextUpdate || this.colonyInfo.nextUpdate < Game.time) {
-            this.colonyInfo.nextUpdate = Game.time + 500;
+            this.colonyInfo.nextUpdate = Game.time + 10;
             return true;
         }
         return false;
@@ -159,25 +159,40 @@ export class ColonyManagerImpl implements ColonyManager {
     public manageEnergyProductionConsumption(): void {
         this.systems.energy.systemInfo.estimatedEnergyProductionRate =
             this.getTotalEstimatedEnergyFlowRate("harvester");
+        this.systems.energy
+            .getSpawnerProfilesList()
+            .forEach(
+                x =>
+                    (this.systems.energy.systemInfo.estimatedEnergyProductionRate -=
+                        (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
+            );
         this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
         this.setEnergyUsageMod();
 
         const s = this.systems as unknown as { [k: string]: BaseSystem };
 
         for (const key in s) {
-            const system = s[key];
-            if (!system.energyUsageTracking.requestedEnergyUsageWeight) {
+            if (key === "energy") {
                 continue;
             }
-
-            this.manageEnergySystem(system.energyUsageTracking, system.getRolesToTrackEnergy());
+            const system = s[key];
+            this.manageEnergySystem(system);
         }
     }
 
-    public manageEnergySystem(energyTracking: EnergyUsageTracking, roles: CreepRole[]): void {
+    public manageEnergySystem(system: BaseSystem): void {
+        const roles = system.getRolesToTrackEnergy();
+        const { energyUsageTracking: energyTracking } = system;
+
         energyTracking.estimatedEnergyWorkRate = 0;
 
         roles.forEach(x => (energyTracking.estimatedEnergyWorkRate -= this.getTotalEstimatedEnergyFlowRate(x)));
+        system
+            .getSpawnerProfilesList()
+            .forEach(
+                x => (energyTracking.estimatedEnergyWorkRate += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
+            );
+
         energyTracking.actualEnergyUsagePercentage =
             energyTracking.requestedEnergyUsageWeight * this.systems.energy.systemInfo.energyUsageModifier;
         energyTracking.allowedEnergyWorkRate =
@@ -268,10 +283,7 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     private initialSetup() {
-        this.setDesiredScreepCount("harvester", 2);
-
         // setup main room
-
         const room = this.getMainRoom();
         this.colonyInfo.rooms.push({
             name: room.name,
@@ -308,25 +320,6 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public getId(): string {
         return this.colonyInfo.id;
-    }
-
-    public setDesiredScreepCount(role: string, amount: number): void {
-        this.checkCreepCount(role);
-        this.colonyInfo.screepCount[role].desired = amount;
-    }
-
-    private checkCreepCount(role: string) {
-        if (!this.colonyInfo.screepCount) {
-            this.colonyInfo.screepCount = {};
-        }
-
-        if (!this.colonyInfo.screepCount[role]) {
-            this.colonyInfo.screepCount[role] = {
-                spawning: 0,
-                count: 0,
-                desired: 0,
-            };
-        }
     }
 }
 

@@ -1,7 +1,8 @@
 /* eslint-disable max-classes-per-file */
-import { CreepProfiles, CreepRole, CreepRunner, CreepSpawner } from "prototypes/creep";
+import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { ColonyManager } from "prototypes/colony";
+import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { MovementSystem } from "systems/movement-system";
 
 export class UpgraderCreep extends CreepRunner {
@@ -38,8 +39,8 @@ export class UpgraderCreep extends CreepRunner {
     }
 }
 
-export class UpgraderCreepSpawner implements CreepSpawner {
-    public createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+export class UpgraderCreepSpawner extends CreepSpawnerImpl {
+    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
         const energyUsagePerCreep = -colony.getTotalEstimatedEnergyFlowRate(CreepRole.UPGRADER);
         let desiredAmount = 1;
         if (energyUsagePerCreep > 0) {
@@ -63,7 +64,7 @@ export class UpgraderCreepSpawner implements CreepSpawner {
             role: CreepRole.UPGRADER,
         };
 
-        const creepSpawnManagement: ColonyCreepSpawnManagement = {
+        const creepSpawnManagement: CreepSpawnerProfileInfo = {
             creepNames: [],
             desiredAmount: 1,
             bodyBlueprint: body,

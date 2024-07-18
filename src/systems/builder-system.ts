@@ -1,6 +1,7 @@
-import { CreepRole, CreepSpawner } from "prototypes/creep";
 import { BaseSystemImpl } from "./base-system";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";
+import { CreepRole } from "prototypes/creep";
+import { CreepSpawner } from "prototypes/CreepSpawner";
 
 export class BuilderSystem extends BaseSystemImpl {
     public override get systemInfo(): ColonyBuilderManagement {
@@ -8,12 +9,6 @@ export class BuilderSystem extends BaseSystemImpl {
             this.colony.colonyInfo.builderManagement = {
                 nextUpdate: Game.time,
                 buildQueue: [],
-                energyUsageTracking: {
-                    actualEnergyUsagePercentage: 0,
-                    estimatedEnergyWorkRate: 0,
-                    requestedEnergyUsageWeight: 0,
-                    allowedEnergyWorkRate: 0,
-                },
                 creepSpawnersInfo: {},
             };
         }

@@ -1,6 +1,6 @@
-import { CreepRole, CreepSpawner } from "prototypes/creep";
-
 import { BaseSystemImpl } from "./base-system";
+import { CreepRole } from "prototypes/creep";
+import { CreepSpawner } from "prototypes/CreepSpawner";
 import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
 
 /**
@@ -35,11 +35,14 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     public override onStart(): void {
-        this.setSources();
+        // Make sure system info is initiated
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        this.systemInfo;
     }
 
     private setSources() {
         const sources = this.colony.getMainRoom().find(FIND_SOURCES);
+        this.systemInfo.sources = [];
 
         sources.forEach(source => {
             this.systemInfo.sources.push({
@@ -60,5 +63,9 @@ export class EnergySystem extends BaseSystemImpl {
 
     public override getRolesToTrackEnergy(): CreepRole[] {
         return [CreepRole.HARVESTER];
+    }
+
+    public noEnergyCollectors(): boolean {
+        return this.getRoleCount(CreepRole.HARVESTER) === 0 && this.getRoleCount(CreepRole.MINER) === 0;
     }
 }

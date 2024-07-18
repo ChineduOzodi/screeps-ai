@@ -1,8 +1,8 @@
 /* eslint-disable max-classes-per-file */
-import { CreepProfiles, CreepRole, CreepRunner, CreepSpawner } from "prototypes/creep";
-
+import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 import { ColonyManager } from "prototypes/colony";
 import { CreepConstants } from "constants/creep-constants";
+import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { MovementSystem } from "systems/movement-system";
 import { SpawnerUtils } from "utils/spawner-utils";
 
@@ -20,11 +20,9 @@ export class HarvesterCreep extends CreepRunner {
 
         if (memory.working && this.creep.store[RESOURCE_ENERGY] === creep.store.getCapacity()) {
             memory.working = false;
-            creep.say("delivering");
         }
         if (!memory.working && creep.store[RESOURCE_ENERGY] === 0) {
             memory.working = true;
-            creep.say("harvesting");
         }
 
         if (memory.working) {
@@ -88,8 +86,8 @@ export class HarvesterCreep extends CreepRunner {
     }
 }
 
-export class HarvesterCreepSpawner implements CreepSpawner {
-    public createProfiles(_energyCap: number, colony: ColonyManager): CreepProfiles {
+export class HarvesterCreepSpawner extends CreepSpawnerImpl {
+    public onCreateProfiles(_energyRateCap: number, colony: ColonyManager): CreepProfiles {
         const profiles: CreepProfiles = {};
         for (const colonySource of colony.systems.energy.systemInfo.sources) {
             if (!colonySource.accessCount) {
@@ -97,12 +95,20 @@ export class HarvesterCreepSpawner implements CreepSpawner {
             }
             const spawn = colony.getMainSpawn();
             const profileName = `${CreepRole.HARVESTER}-${colonySource.sourceId}`;
-            profiles[profileName] = this.createHarvesterProfile(spawn, colonySource);
+            let energy = spawn.room.energyCapacityAvailable;
+            if (colony.systems.energy.noEnergyCollectors()) {
+                energy = spawn.room.energyAvailable;
+            }
+            profiles[profileName] = this.createHarvesterProfile(spawn, colonySource, energy);
         }
         return profiles;
     }
 
-    private createHarvesterProfile(spawn: StructureSpawn, colonySource: ColonySource): ColonyCreepSpawnManagement {
+    private createHarvesterProfile(
+        spawn: StructureSpawn,
+        colonySource: ColonySource,
+        energyCap: number,
+    ): CreepSpawnerProfileInfo {
         const { sourceId, accessCount } = colonySource;
         const source = Game.getObjectById<Source>(sourceId);
         if (!source) {
@@ -113,8 +119,6 @@ export class HarvesterCreepSpawner implements CreepSpawner {
 
         const sourceEnergyProductionPerTick = source.energyCapacity / ENERGY_REGEN_TIME; // how much energy produced per tick
         const travelTime = path.length * 3; // distance to source and back
-
-        const energyAvailable = spawn.room.energyCapacityAvailable;
 
         const body: BodyPartConstant[] = [];
 
@@ -127,7 +131,7 @@ export class HarvesterCreepSpawner implements CreepSpawner {
             CreepConstants.CARRY_PART_COST * carryPartCount +
             CreepConstants.MOVE_PART_COST * movePartCount;
 
-        let partCountMod = Math.floor(energyAvailable / totalCost);
+        let partCountMod = Math.floor(energyCap / totalCost);
 
         let energyProductionPerTick = SpawnerUtils.getEnergyProductionPerTick(
             workPartCount * partCountMod,
@@ -147,12 +151,12 @@ export class HarvesterCreepSpawner implements CreepSpawner {
                 CreepConstants.CARRY_PART_COST * pCarryPartCount +
                 CreepConstants.MOVE_PART_COST * pMovePartCount;
 
-            if (pTotalCost > energyAvailable) {
-                console.log(`pTotalCost greater than energy available, breaking`);
+            if (pTotalCost > energyCap) {
+                // pTotalCost greater than energy available, breaking
                 break;
             }
 
-            const pPartCountMod = Math.floor(energyAvailable / pTotalCost);
+            const pPartCountMod = Math.floor(energyCap / pTotalCost);
 
             const pEnergyProductionPerTick = SpawnerUtils.getEnergyProductionPerTick(
                 pWorkPartCount * pPartCountMod,
@@ -207,11 +211,11 @@ export class HarvesterCreepSpawner implements CreepSpawner {
             workDuration: sourceHarvestDuration,
             role: CreepRole.HARVESTER,
         };
-        const creepSpawnManagement: ColonyCreepSpawnManagement = {
-            creepNames: [],
+        const creepSpawnManagement: CreepSpawnerProfileInfo = {
             desiredAmount: Math.min(maxCreepCount, sourceEnergyProductionPerTick / energyProductionPerTick),
             bodyBlueprint: body,
             memoryBlueprint: memory,
+            important: true,
         };
 
         return creepSpawnManagement;

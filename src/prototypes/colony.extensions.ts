@@ -3,7 +3,6 @@ interface Colony {
     spawnIndex: number;
     setupComplete?: boolean;
     spawnEnergy: number;
-    screepCount: ScreepCount;
     creeps: ColonyCreeps | undefined;
     rooms: RoomData[];
     mainSpawnId: Id<StructureSpawn>;
@@ -17,31 +16,29 @@ interface Colony {
     infrastructureManagement?: ColonyInfrastructureManagement;
 }
 
-interface ColonyBaseSystemInfo {
+interface BaseSystemInfo {
     nextUpdate: number;
     energyUsageTracking?: EnergyUsageTracking;
-    creepSpawnersInfo: { [k: string]: ColonyCreepSpawnManagement };
+    creepSpawnersInfo: { [k: string]: CreepSpawnerProfileInfo };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface ColonyDefenseManagement extends ColonyBaseSystemInfo {}
+interface ColonyDefenseManagement extends BaseSystemInfo {}
 
-interface ColonyBuilderManagement extends ColonyBaseSystemInfo {
+interface ColonyBuilderManagement extends BaseSystemInfo {
     buildQueue: Id<ConstructionSite>[];
 }
 
-interface ColonyUpgradeManagement extends ColonyBaseSystemInfo {}
+interface ColonyUpgradeManagement extends BaseSystemInfo {}
 
-interface ColonyEnergyManagement extends ColonyBaseSystemInfo {
+interface ColonyEnergyManagement extends BaseSystemInfo {
     sources: ColonySource[];
     estimatedEnergyProductionRate: number;
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
 }
 
-interface ColonyInfrastructureManagement extends ColonyBaseSystemInfo {
-    repairers?: ColonyCreepSpawnManagement;
-}
+interface ColonyInfrastructureManagement extends BaseSystemInfo {}
 
 interface EnergyUsageTracking {
     estimatedEnergyWorkRate: number;
@@ -63,17 +60,16 @@ interface ColonySource {
     sourceId: Id<Source>;
     position: RoomPosition;
     accessCount: number;
-    harvesters?: ColonyCreepSpawnManagement;
-    miners?: ColonyCreepSpawnManagement;
-    carriers?: ColonyCreepSpawnManagement;
 }
 
-interface ColonyCreepSpawnManagement {
+interface CreepSpawnerProfileInfo {
     desiredAmount?: number;
     creepNames?: string[];
     bodyBlueprint?: BodyPartConstant[];
     memoryBlueprint?: AddCreepToQueueOptions;
     important?: boolean;
+    /** Cost to spawn profile. A positive number. */
+    spawnCostPerTick?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -88,20 +84,9 @@ interface ColonyCreeps {
     [name: string]: CreepData;
 }
 
-interface ScreepCount {
-    [role: string]: ScreepCountStats;
-}
-
-interface ScreepCountStats {
-    spawning: number;
-    count: number;
-    desired: number;
-}
-
 interface RoomData {
     name: string;
     isMain?: boolean;
-    defenders?: ColonyCreepSpawnManagement;
     alertLevel: number;
 }
 

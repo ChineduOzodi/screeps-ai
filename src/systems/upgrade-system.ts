@@ -1,4 +1,5 @@
-import { CreepRole, CreepSpawner } from "prototypes/creep";
+import { CreepRole } from "prototypes/creep";
+import { CreepSpawner } from "prototypes/CreepSpawner";
 import { BaseSystemImpl } from "./base-system";
 import { UpgraderCreepSpawner } from "creep-roles/upgrader-creep";
 
@@ -7,12 +8,6 @@ export class UpgradeSystem extends BaseSystemImpl {
         if (!this.colony.colonyInfo.upgradeManagement) {
             this.colony.colonyInfo.upgradeManagement = {
                 nextUpdate: Game.time,
-                energyUsageTracking: {
-                    actualEnergyUsagePercentage: 0,
-                    estimatedEnergyWorkRate: 0,
-                    requestedEnergyUsageWeight: 0.5,
-                    allowedEnergyWorkRate: 0,
-                },
                 creepSpawnersInfo: {},
             };
         }

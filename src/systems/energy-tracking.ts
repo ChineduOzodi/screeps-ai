@@ -34,7 +34,6 @@ export class EnergyTrackingImpl implements EnergyTracking {
             typeof this.energyInfo.count == "undefined" ||
             typeof this.energyInfo.total == "undefined"
         ) {
-            console.log(`EnergyTracking missing expected field, resetting: ${JSON.stringify(this.energyInfo)}`);
             this.energyInfo.count = 0;
             this.energyInfo.average = 0;
             this.energyInfo.total = 0;

@@ -1,8 +1,11 @@
 /* eslint-disable max-classes-per-file */
-import { CreepProfiles, CreepRole, CreepRunner, CreepSpawner } from "prototypes/creep";
+import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { ColonyManager } from "prototypes/colony";
+import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { MovementSystem } from "systems/movement-system";
+
+const BASE_DEFENDER = [TOUGH, MOVE, ATTACK];
 
 export class DefenderCreep extends CreepRunner {
     public override onRun(): void {
@@ -32,46 +35,45 @@ export class DefenderCreep extends CreepRunner {
     }
 }
 
-export class DefenderCreepSpawner implements CreepSpawner {
-    public createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+export class DefenderCreepSpawner extends CreepSpawnerImpl {
+    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
         const rooms = colony.colonyInfo.rooms;
         const profiles: CreepProfiles = {};
-        for (const room of rooms) {
-            const profileName = `${CreepRole.DEFENDER}-${room.name}`;
-            profiles[profileName] = this.createDefenderProfile(room.name, colony);
-            if (room.alertLevel > 0) {
-                profiles[profileName].desiredAmount = room.alertLevel + 1;
+        for (const roomInfo of rooms) {
+            const profileName = `${CreepRole.DEFENDER}-${roomInfo.name}`;
+            profiles[profileName] = this.createDefenderProfile(roomInfo.name, colony);
+            const room = Game.rooms[roomInfo.name];
+            const towers = room.find<StructureTower>(FIND_MY_STRUCTURES, {
+                filter: { structureType: STRUCTURE_TOWER },
+            });
+            const enemyCount = room.find(FIND_HOSTILE_CREEPS).length;
+            roomInfo.alertLevel = enemyCount;
+            if (roomInfo.alertLevel > 0 && towers.length === 0) {
+                profiles[profileName].desiredAmount = roomInfo.alertLevel + 1;
+            } else {
+                profiles[profileName].desiredAmount = Math.max(0, roomInfo.alertLevel - towers.length);
             }
         }
         return profiles;
     }
 
-    private createDefenderProfile(roomName: string, colony: ColonyManager): ColonyCreepSpawnManagement {
-        const body: BodyPartConstant[] = [];
-
+    private createDefenderProfile(roomName: string, colony: ColonyManager): CreepSpawnerProfileInfo {
         const room = colony.getMainRoom();
-        const energy = room.energyCapacityAvailable;
-
-        const numberOfParts = Math.max(
-            1,
-            Math.floor(energy / (BODYPART_COST.attack + BODYPART_COST.move + BODYPART_COST.tough)),
-        );
-
-        for (let i = 0; i < numberOfParts; i++) {
-            body.push(TOUGH);
-            body.push(MOVE);
-            body.push(ATTACK);
+        let energy = room.energyCapacityAvailable;
+        if (colony.systems.energy.noEnergyCollectors()) {
+            energy = room.energyAvailable;
         }
 
-        const energyUsePerTick = 0;
+        const numberOfParts = Math.max(1, Math.floor(energy / CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_DEFENDER)));
+        const body = CreepSpawnerImpl.multiplyBody(BASE_DEFENDER, numberOfParts);
 
         const memory: AddCreepToQueueOptions = {
             homeRoomName: roomName,
             workDuration: 5,
             role: CreepRole.DEFENDER,
-            averageEnergyConsumptionProductionPerTick: energyUsePerTick,
+            averageEnergyConsumptionProductionPerTick: 0,
         };
-        const creepSpawnManagement: ColonyCreepSpawnManagement = {
+        const creepSpawnManagement: CreepSpawnerProfileInfo = {
             desiredAmount: 0,
             bodyBlueprint: body,
             memoryBlueprint: memory,

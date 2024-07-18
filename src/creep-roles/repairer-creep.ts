@@ -1,9 +1,10 @@
 /* eslint-disable max-classes-per-file */
-import { CreepProfiles, CreepRole, CreepRunner, CreepSpawner } from "prototypes/creep";
+import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { BaseSystemImpl } from "systems/base-system";
 import { ColonyManager } from "prototypes/colony";
 import { CreepConstants } from "constants/creep-constants";
+import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { MovementSystem } from "systems/movement-system";
 
 export class RepairerCreep extends CreepRunner {
@@ -73,13 +74,16 @@ export class RepairerCreep extends CreepRunner {
     }
 }
 
-export class RepairerCreepSpawner implements CreepSpawner {
-    public createProfiles(energyCap: number, _colony: ColonyManager): CreepProfiles {
+export class RepairerCreepSpawner extends CreepSpawnerImpl {
+    public onCreateProfiles(energyCap: number, _colony: ColonyManager): CreepProfiles {
         const maxCreepCount = 1;
 
-        const creepBodyScale = Math.floor(
-            energyCap /
-                (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST),
+        const creepBodyScale = Math.max(
+            1,
+            Math.floor(
+                energyCap /
+                    (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST),
+            ),
         );
         const body = BaseSystemImpl.scaleCreepBody([WORK, CARRY, MOVE], creepBodyScale);
 
@@ -89,8 +93,7 @@ export class RepairerCreepSpawner implements CreepSpawner {
             workDuration: 2,
             role: CreepRole.REPAIRER,
         };
-        const creepSpawnManagement: ColonyCreepSpawnManagement = {
-            creepNames: [],
+        const creepSpawnManagement: CreepSpawnerProfileInfo = {
             desiredAmount: maxCreepCount,
             bodyBlueprint: body,
             memoryBlueprint: memory,

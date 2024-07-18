@@ -1,8 +1,9 @@
 /* eslint-disable max-classes-per-file */
-import { CreepProfiles, CreepRole, CreepRunner, CreepSpawner } from "prototypes/creep";
+import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { ColonyManager } from "prototypes/colony";
 import { CreepConstants } from "constants/creep-constants";
+import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { MovementSystem } from "systems/movement-system";
 
 export class MinerCreep extends CreepRunner {
@@ -36,8 +37,8 @@ export class MinerCreep extends CreepRunner {
     }
 }
 
-export class MinerCreepSpawner implements CreepSpawner {
-    public createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+export class MinerCreepSpawner extends CreepSpawnerImpl {
+    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
         const colonySpawns: CreepProfiles = {};
         for (const colonySource of colony.systems.energy.systemInfo.sources) {
             if (!colonySource.accessCount) {
@@ -71,7 +72,7 @@ export class MinerCreepSpawner implements CreepSpawner {
             workDuration: 100,
             role: CreepRole.MINER,
         };
-        const creepSpawnManagement: ColonyCreepSpawnManagement = {
+        const creepSpawnManagement: CreepSpawnerProfileInfo = {
             desiredAmount: 0, // TODO: update desired amount
             bodyBlueprint: body,
             memoryBlueprint: memory,

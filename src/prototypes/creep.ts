@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable no-shadow */
-import { ColonyManager } from "./colony";
 import { EnergyTrackingImpl } from "systems/energy-tracking";
 import { MovementSystem } from "systems/movement-system";
 
@@ -46,11 +45,7 @@ export enum CreepRole {
 }
 
 export interface CreepProfiles {
-    [k: string]: ColonyCreepSpawnManagement;
-}
-
-export interface CreepSpawner {
-    createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles;
+    [k: string]: CreepSpawnerProfileInfo;
 }
 
 export abstract class CreepRunner {
@@ -135,12 +130,10 @@ export abstract class CreepRunner {
 
         // Get last action and use to calculate energy flow for energyTrackingInfo
         if (!memory.lastAction) {
-            console.log(`${this.creep.name}: lastAction missing, resetting to idle.`);
             memory.lastAction = CreepWorkPastAction.NONE;
         }
 
         if (!memory.energyTrackingInfo) {
-            console.log(`${this.creep.name}: creating energyTrackingInfo.`);
             memory.energyTrackingInfo = {};
         }
 

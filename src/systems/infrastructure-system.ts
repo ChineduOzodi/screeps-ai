@@ -1,4 +1,5 @@
-import { CreepRole, CreepSpawner } from "prototypes/creep";
+import { CreepRole } from "prototypes/creep";
+import { CreepSpawner } from "prototypes/CreepSpawner";
 
 import { BaseSystemImpl } from "./base-system";
 import { RepairerCreepSpawner } from "creep-roles/repairer-creep";

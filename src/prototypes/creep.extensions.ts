@@ -23,6 +23,9 @@ declare global {
         homeRoomName?: string;
         targetRange?: number;
 
+        /** Total energy cost to spawn this creep. */
+        spawnCost?: number;
+
         // Track Energy Flow
         hasCarryParts?: boolean;
         /** To be used to keep track of last energy amount stored and use it to derive change in energy. */
