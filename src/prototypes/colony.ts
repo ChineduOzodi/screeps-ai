@@ -1,30 +1,46 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+import { CreepRole, CreepStatus } from "./creep";
+
+import { BaseSystem } from "systems/base-system";
 import { BuilderSystem } from "./../systems/builder-system";
-import { InfrastructureSystem } from "../systems/infrastructure-system";
-import { CreepStatus } from "./creep";
 import { DefenseSystem } from "./../systems/defense-system";
 import { EnergySystem } from "./../systems/energy-system";
+import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { MovementSystem } from "systems/movement-system";
+import { SpawningSystem } from "systems/spawning-system";
 import { UpgradeSystem } from "./../systems/upgrade-system";
-import { BaseSystem } from "systems/base-system";
 
-function getSystems(colony: ColonyManager) {
+export interface Systems {
+    energy: EnergySystem;
+    defense: DefenseSystem;
+    infrastructure: InfrastructureSystem;
+    upgrade: UpgradeSystem;
+    builder: BuilderSystem;
+}
+
+function getSystems(colony: ColonyManager): Systems {
     return {
-        "energy": new EnergySystem(colony),
-        "defense": new DefenseSystem(colony),
-        "infrastructure": new InfrastructureSystem(colony),
-        "upgrade": new UpgradeSystem(colony),
-        "builder": new BuilderSystem(colony),
-    }
+        energy: new EnergySystem(colony),
+        defense: new DefenseSystem(colony),
+        infrastructure: new InfrastructureSystem(colony),
+        upgrade: new UpgradeSystem(colony),
+        builder: new BuilderSystem(colony),
+    };
 }
 
 export interface ColonyManager {
     get colonyInfo(): Colony;
+    get systems(): Systems;
 
     getMainRoom(): Room;
     getMainSpawn(): StructureSpawn;
     getColonyCreeps(): ColonyCreeps;
+    getCreepData(name: string): CreepData | undefined;
+    getSpawnQueue(): SpawnRequest[];
     addToSpawnCreepQueue(bodyBlueprint: BodyPartConstant[], memoryBlueprint: AddCreepToQueueOptions): string;
-    getTotalEstimatedEnergyFlowRate(role: string): number;
+    getTotalEstimatedEnergyFlowRate(role: CreepRole): number;
+    /** List version of systems used in colony. */
+    getSystemsList(): BaseSystem[];
 }
 
 export class ColonyManagerImpl implements ColonyManager {
@@ -37,27 +53,28 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public run(): void {
         const systems = this.getSystemsList();
+        const spawnManager = new SpawningSystem(this);
 
         if (!this.colonyInfo.setupComplete) {
             this.colonyInfo.setupComplete = this.initialSetup();
             systems.forEach(x => x.onStart());
         }
 
-        this.creepSpawnManager();
         this.manageEnergyProductionConsumption();
 
         if (this.shouldUpdate()) {
             systems.forEach(x => x.updateProfiles());
         }
 
+        spawnManager.run();
         systems.forEach(x => x.run());
 
         this.creepManager();
         this.visualizeStats();
     }
 
-    private getSystemsList(): BaseSystem[] {
-        const s = (this.systems as { [k: string]: BaseSystem });
+    public getSystemsList(): BaseSystem[] {
+        const s = this.systems as unknown as { [k: string]: BaseSystem };
         const systems = [];
         for (const key in s) {
             systems.push(s[key]);
@@ -67,7 +84,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
     private shouldUpdate(): boolean {
         if (!this.colonyInfo.nextUpdate || this.colonyInfo.nextUpdate < Game.time) {
-            this.colonyInfo.nextUpdate = Game.time + 500;
+            this.colonyInfo.nextUpdate = Game.time + 10;
             return true;
         }
         return false;
@@ -78,15 +95,13 @@ export class ColonyManagerImpl implements ColonyManager {
         room.visual.text(`Colony: ${this.colonyInfo.id}`, 3, 5, { color: "white", font: 1, align: "left" });
 
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
-        const {
-            estimatedEnergyProductionRate,
-            totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage,
-        } = this.systems["energy"].systemInfo;
+        const { estimatedEnergyProductionRate, totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage } =
+            this.systems.energy.systemInfo;
         room.visual.text(
             `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}         Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`,
             3,
             6,
-            textStyle
+            textStyle,
         );
 
         const visualizeSystems = this.getEnergyTrackingSystems();
@@ -95,10 +110,9 @@ export class ColonyManagerImpl implements ColonyManager {
 
     private getEnergyTrackingSystems(): EnergyTrackingSystem[] {
         const systems: EnergyTrackingSystem[] = [];
-        const s = (this.systems as { [k: string]: BaseSystem });
+        const s = this.systems as unknown as { [k: string]: BaseSystem };
 
         for (const key in s) {
-
             const system = s[key];
             if (!system.energyUsageTracking.requestedEnergyUsageWeight) {
                 continue;
@@ -106,8 +120,8 @@ export class ColonyManagerImpl implements ColonyManager {
 
             systems.push({
                 systemName: key,
-                energyTracking: system.energyUsageTracking
-            })
+                energyTracking: system.energyUsageTracking,
+            });
         }
         return systems;
     }
@@ -122,20 +136,20 @@ export class ColonyManagerImpl implements ColonyManager {
                 estimatedEnergyWorkRate,
                 requestedEnergyUsageWeight: requestedEnergyUsagePercentage,
                 actualEnergyUsagePercentage,
-                allowedEnergyWorkRate
+                allowedEnergyWorkRate,
             } = option.energyTracking;
             if (estimatedEnergyWorkRate || requestedEnergyUsagePercentage || actualEnergyUsagePercentage) {
                 room.visual.text(
                     `${option.systemName} - Energy Usage/Allowed: ${estimatedEnergyWorkRate.toFixed(
-                        2
+                        2,
                     )}/${allowedEnergyWorkRate.toFixed(
-                        2
+                        2,
                     )}, Actual/Requested Percent: ${actualEnergyUsagePercentage.toFixed(
-                        2
+                        2,
                     )}/${requestedEnergyUsagePercentage.toFixed(2)}`,
                     3,
                     offset,
-                    textStyle
+                    textStyle,
                 );
                 offset++;
             }
@@ -145,26 +159,40 @@ export class ColonyManagerImpl implements ColonyManager {
     public manageEnergyProductionConsumption(): void {
         this.systems.energy.systemInfo.estimatedEnergyProductionRate =
             this.getTotalEstimatedEnergyFlowRate("harvester");
+        this.systems.energy
+            .getSpawnerProfilesList()
+            .forEach(
+                x =>
+                    (this.systems.energy.systemInfo.estimatedEnergyProductionRate -=
+                        (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
+            );
         this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
         this.setEnergyUsageMod();
 
-        const s = (this.systems as { [k: string]: BaseSystem });
+        const s = this.systems as unknown as { [k: string]: BaseSystem };
 
         for (const key in s) {
-
-            const system = s[key];
-            if (!system.energyUsageTracking.requestedEnergyUsageWeight) {
+            if (key === "energy") {
                 continue;
             }
-
-            this.manageEnergySystem(system.energyUsageTracking, system.getRolesToTrackEnergy());
+            const system = s[key];
+            this.manageEnergySystem(system);
         }
     }
 
-    public manageEnergySystem(energyTracking: EnergyUsageTracking, roles: string[]): void {
+    public manageEnergySystem(system: BaseSystem): void {
+        const roles = system.getRolesToTrackEnergy();
+        const { energyUsageTracking: energyTracking } = system;
+
         energyTracking.estimatedEnergyWorkRate = 0;
 
-        roles.forEach( x => energyTracking.estimatedEnergyWorkRate -= this.getTotalEstimatedEnergyFlowRate(x));
+        roles.forEach(x => (energyTracking.estimatedEnergyWorkRate -= this.getTotalEstimatedEnergyFlowRate(x)));
+        system
+            .getSpawnerProfilesList()
+            .forEach(
+                x => (energyTracking.estimatedEnergyWorkRate += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
+            );
+
         energyTracking.actualEnergyUsagePercentage =
             energyTracking.requestedEnergyUsageWeight * this.systems.energy.systemInfo.energyUsageModifier;
         energyTracking.allowedEnergyWorkRate =
@@ -237,68 +265,6 @@ export class ColonyManagerImpl implements ColonyManager {
         }
     }
 
-    private creepSpawnManager() {
-        const spawn = this.getMainSpawn();
-        if (!spawn || spawn.spawning) {
-            return;
-        }
-
-        const spawnQueue = this.getSpawnQueue();
-        if (spawnQueue.length === 0) {
-            return;
-        }
-
-        const request = spawnQueue[0];
-        const { memory, body } = request;
-        const creepData = this.getCreepData(memory.name);
-        if (!creepData) {
-            console.log(`colony | could not get creep data for ${memory.name}}`);
-        } else {
-            if (creepData.status === CreepStatus.SPAWNING) {
-                creepData.status = CreepStatus.IDLE;
-                spawnQueue.splice(0, 1);
-            } else {
-                const status = spawn.spawnCreep(body, memory.name, { memory });
-                if (status === OK) {
-                    creepData.status = CreepStatus.SPAWNING;
-                } else if (status === ERR_NAME_EXISTS) {
-                    // this should take care of if a name already exists, it goes to the next spawn
-                    console.log(
-                        `colony ${this.colonyInfo.id} | spawn skipping creep since name already exists: ${memory.name}`
-                    );
-                    spawnQueue.splice(0, 1);
-                } else if (status !== ERR_NOT_ENOUGH_ENERGY) {
-                    console.log(`spawn status error: ${status}`);
-                }
-            }
-        }
-    }
-
-    // TODO: Move to energy system and it's own class
-    public createMiner(sourceId: string, energy: number): string {
-        let numberOfParts = Math.floor(energy / 100);
-
-        if (numberOfParts > 7) {
-            numberOfParts = 7;
-        } else if (numberOfParts <= 2) {
-            numberOfParts = 3;
-        }
-
-        const body: BodyPartConstant[] = [];
-        for (let i = 0; i < numberOfParts - 2; i++) {
-            body.push(WORK);
-        }
-        body.push(MOVE);
-        body.push(MOVE);
-
-        const name = this.addToSpawnCreepQueue(body, {
-            role: "miner",
-            workTargetId: sourceId,
-            averageEnergyConsumptionProductionPerTick: 0
-        });
-        return name;
-    }
-
     public addToSpawnCreepQueue(body: BodyPartConstant[], additionalMemory: AddCreepToQueueOptions): string {
         const memory: CreepMemory = {
             ...additionalMemory,
@@ -310,22 +276,19 @@ export class ColonyManagerImpl implements ColonyManager {
         };
         this.getColonyCreeps()[memory.name] = {
             name: memory.name,
-            status: CreepStatus.SPAWN_QUEUE
+            status: CreepStatus.SPAWN_QUEUE,
         };
         this.getSpawnQueue().push({ body, memory });
         return memory.name;
     }
 
     private initialSetup() {
-        this.setDesiredScreepCount("harvester", 2);
-
         // setup main room
-
         const room = this.getMainRoom();
         this.colonyInfo.rooms.push({
             name: room.name,
             isMain: true,
-            alertLevel: 0
+            alertLevel: 0,
         });
 
         // create first container
@@ -346,9 +309,7 @@ export class ColonyManagerImpl implements ColonyManager {
     public getMainSpawn(): StructureSpawn {
         const spawn = Game.getObjectById(this.colonyInfo.mainSpawnId);
         if (!spawn) {
-            throw new Error(
-                `Could not find main spawn "${this.colonyInfo.mainSpawnId}" for ${this.colonyInfo.id}`
-            );
+            throw new Error(`Could not find main spawn "${this.colonyInfo.mainSpawnId}" for ${this.colonyInfo.id}`);
         }
         return spawn;
     }
@@ -359,25 +320,6 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public getId(): string {
         return this.colonyInfo.id;
-    }
-
-    public setDesiredScreepCount(role: string, amount: number): void {
-        this.checkCreepCount(role);
-        this.colonyInfo.screepCount[role].desired = amount;
-    }
-
-    private checkCreepCount(role: string) {
-        if (!this.colonyInfo.screepCount) {
-            this.colonyInfo.screepCount = {};
-        }
-
-        if (!this.colonyInfo.screepCount[role]) {
-            this.colonyInfo.screepCount[role] = {
-                spawning: 0,
-                count: 0,
-                desired: 0
-            };
-        }
     }
 }
 

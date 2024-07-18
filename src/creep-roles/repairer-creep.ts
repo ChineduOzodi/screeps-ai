@@ -1,4 +1,10 @@
-import { CreepRunner } from "prototypes/creep";
+/* eslint-disable max-classes-per-file */
+import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
+
+import { BaseSystemImpl } from "systems/base-system";
+import { ColonyManager } from "prototypes/colony";
+import { CreepConstants } from "constants/creep-constants";
+import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { MovementSystem } from "systems/movement-system";
 
 export class RepairerCreep extends CreepRunner {
@@ -52,6 +58,7 @@ export class RepairerCreep extends CreepRunner {
                     this.transfer(target, RESOURCE_ENERGY) !== OK &&
                     this.build(target as any as ConstructionSite) !== OK
                 ) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     const t: AnyStructure = target as any;
                     const workDuration = t.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10;
                     const range = t.structureType === STRUCTURE_EXTENSION ? 1 : 3;
@@ -64,5 +71,36 @@ export class RepairerCreep extends CreepRunner {
             // find energy
             this.getEnergy();
         }
+    }
+}
+
+export class RepairerCreepSpawner extends CreepSpawnerImpl {
+    public onCreateProfiles(energyCap: number, _colony: ColonyManager): CreepProfiles {
+        const maxCreepCount = 1;
+
+        const creepBodyScale = Math.max(
+            1,
+            Math.floor(
+                energyCap /
+                    (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST),
+            ),
+        );
+        const body = BaseSystemImpl.scaleCreepBody([WORK, CARRY, MOVE], creepBodyScale);
+
+        const memory: AddCreepToQueueOptions = {
+            workAmount: creepBodyScale,
+            averageEnergyConsumptionProductionPerTick: creepBodyScale,
+            workDuration: 2,
+            role: CreepRole.REPAIRER,
+        };
+        const creepSpawnManagement: CreepSpawnerProfileInfo = {
+            desiredAmount: maxCreepCount,
+            bodyBlueprint: body,
+            memoryBlueprint: memory,
+        };
+
+        const profiles: CreepProfiles = {};
+        profiles[CreepRole.REPAIRER] = creepSpawnManagement;
+        return profiles;
     }
 }

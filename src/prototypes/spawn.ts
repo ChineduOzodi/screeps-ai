@@ -21,13 +21,12 @@ export class SpawnExtras {
             id: this.spawn.room.name,
             mainSpawnId: this.spawn.id,
             spawnEnergy: 200,
-            screepCount: {},
             rooms: [],
             creeps: {},
             spawnIndex: 0,
             spawnQueue: [],
             stats: {
-                estimatedEnergyProductionRate: 0
+                estimatedEnergyProductionRate: 0,
             },
             nextUpdate: 0,
         };

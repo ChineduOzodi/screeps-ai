@@ -10,7 +10,7 @@ export class RoomExtras {
         this.visualizeReservations();
         const hostiles = this.room.find(FIND_HOSTILE_CREEPS);
         const towers = this.room.find<StructureTower>(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
+            filter: { structureType: STRUCTURE_TOWER },
         });
 
         // if there are hostiles - attack them
@@ -38,7 +38,7 @@ export class RoomExtras {
                         filter: s =>
                             s.hits < s.hitsMax &&
                             s.structureType !== STRUCTURE_WALL &&
-                            s.structureType !== STRUCTURE_RAMPART
+                            s.structureType !== STRUCTURE_RAMPART,
                     });
                     if (closestDamagedStructure) {
                         tower.repair(closestDamagedStructure);
@@ -68,7 +68,7 @@ export class RoomExtras {
                     this.room.visual.text(
                         reservation.reservations.length.toString(),
                         reservation.pos.x,
-                        reservation.pos.y
+                        reservation.pos.y,
                     );
                 }
             }

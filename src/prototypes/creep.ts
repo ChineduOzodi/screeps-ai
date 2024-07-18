@@ -1,5 +1,52 @@
-import { MovementSystem } from "./../systems/movement-system";
-import { EnergyTrackingImpl } from "systems/energy-system";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable no-shadow */
+import { EnergyTrackingImpl } from "systems/energy-tracking";
+import { MovementSystem } from "systems/movement-system";
+
+// Is mirrored to work in screeps.com, so should update the counterpart when updating this
+export enum CreepStatus {
+    WORKING = "working",
+    IDLE = "idle",
+    SPAWN_QUEUE = "spawn queue",
+    SPAWNING = "spawning",
+}
+
+// Is mirrored to work in screeps.com, so should update the counterpart when updating this
+export enum CreepWorkPastAction {
+    NONE = "none",
+
+    /** Transfer resource from the creep to another object. */
+    TRANSFER = "transfer",
+    HARVEST = "harvest",
+
+    /** Withdraw resources from a structure, a tombstone or a ruin. */
+    WITHDRAW = "withdraw",
+
+    /** Pick up an item (a dropped piece of energy). */
+    PICKUP = "pickup",
+
+    /** Repair a damaged structure using carried energy. */
+    REPAIR = "repair",
+
+    /** Build a structure at the target construction site using carried energy. */
+    BUILD = "build",
+    ATTACK = "attack",
+    UPGRADE_CONTROLLER = "upgrade controller",
+}
+
+export enum CreepRole {
+    REPAIRER = "repairer",
+    BUILDER = "builder",
+    HARVESTER = "harvester",
+    DEFENDER = "defender",
+    UPGRADER = "upgrader",
+    MINER = "miner",
+}
+
+export interface CreepProfiles {
+    [k: string]: CreepSpawnerProfileInfo;
+}
 
 export abstract class CreepRunner {
     public creep: Creep;
@@ -83,12 +130,10 @@ export abstract class CreepRunner {
 
         // Get last action and use to calculate energy flow for energyTrackingInfo
         if (!memory.lastAction) {
-            console.log(`${this.creep.name}: lastAction missing, resetting to idle.`);
             memory.lastAction = CreepWorkPastAction.NONE;
         }
 
         if (!memory.energyTrackingInfo) {
-            console.log(`${this.creep.name}: creating energyTrackingInfo.`);
             memory.energyTrackingInfo = {};
         }
 
@@ -138,7 +183,7 @@ export abstract class CreepRunner {
         if (!target) {
             this.removeTarget();
         }
-        return target as any;
+        return target as any as TargetType;
     }
 
     protected removeTarget() {
@@ -171,7 +216,7 @@ export abstract class CreepRunner {
         return this.creep.pos.findClosestByPath(FIND_TOMBSTONES, {
             filter: stone => {
                 return stone.store[RESOURCE_ENERGY] >= minEnergy;
-            }
+            },
         });
     }
 
@@ -179,7 +224,7 @@ export abstract class CreepRunner {
         return this.creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
             filter: resource => {
                 return resource.amount >= minEnergy && resource.resourceType === RESOURCE_ENERGY;
-            }
+            },
         });
     }
 
@@ -192,7 +237,7 @@ export abstract class CreepRunner {
                         structure.structureType === STRUCTURE_STORAGE) &&
                     structure.store[RESOURCE_ENERGY] >= minEnergy
                 );
-            }
+            },
         });
     }
 
@@ -204,7 +249,7 @@ export abstract class CreepRunner {
                     structure.structureType === STRUCTURE_SPAWN &&
                     structure.store.energy === structure.store.getCapacity(RESOURCE_ENERGY)
                 );
-            }
+            },
         });
     }
 
@@ -212,7 +257,7 @@ export abstract class CreepRunner {
         return this.creep.pos.findClosestByPath(FIND_SOURCES, {
             filter: s => {
                 return s.energy >= minEnergy;
-            }
+            },
         });
     }
 
@@ -223,7 +268,7 @@ export abstract class CreepRunner {
                     structure.structureType === STRUCTURE_EXTENSION &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) >= minFreeSpace
                 );
-            }
+            },
         });
     }
 
@@ -234,7 +279,7 @@ export abstract class CreepRunner {
      */
     protected findMostDamagedStructure(maxHitPointPercent: number) {
         const targets = this.creep.room.find(FIND_STRUCTURES, {
-            filter: object => object.hits < object.hitsMax * maxHitPointPercent
+            filter: object => object.hits < object.hitsMax * maxHitPointPercent,
         });
 
         targets.sort((a, b) => a.hits - b.hits);
@@ -312,7 +357,11 @@ export abstract class CreepRunner {
         }
     }
 
-    protected withdraw(target: TargetType, resourceType: ResourceConstant, amount?: number | undefined): ScreepsReturnCode {
+    protected withdraw(
+        target: TargetType,
+        resourceType: ResourceConstant,
+        amount?: number | undefined,
+    ): ScreepsReturnCode {
         const actionStatus = this.creep.withdraw(target as any, resourceType, amount);
         if (actionStatus === OK) {
             this.setAction(CreepWorkPastAction.WITHDRAW);
@@ -320,7 +369,11 @@ export abstract class CreepRunner {
         return actionStatus;
     }
 
-    protected transfer(target: TargetType, resourceType: ResourceConstant, amount?: number | undefined): ScreepsReturnCode {
+    protected transfer(
+        target: TargetType,
+        resourceType: ResourceConstant,
+        amount?: number | undefined,
+    ): ScreepsReturnCode {
         const actionStatus = this.creep.transfer(target as any, resourceType, amount);
         if (actionStatus === OK) {
             this.setAction(CreepWorkPastAction.TRANSFER);
@@ -375,35 +428,4 @@ export abstract class CreepRunner {
         }
         return actionStatus;
     }
-}
-
-// Is mirrored to work in screeps.com, so should update the counterpart when updating this
-export enum CreepStatus {
-    WORKING = "working",
-    IDLE = "idle",
-    SPAWN_QUEUE = "spawn queue",
-    SPAWNING = "spawning"
-}
-
-// Is mirrored to work in screeps.com, so should update the counterpart when updating this
-export enum CreepWorkPastAction {
-    NONE = "none",
-
-    /** Transfer resource from the creep to another object. */
-    TRANSFER = "transfer",
-    HARVEST = "harvest",
-
-    /** Withdraw resources from a structure, a tombstone or a ruin. */
-    WITHDRAW = "withdraw",
-
-    /** Pick up an item (a dropped piece of energy). */
-    PICKUP = "pickup",
-
-    /** Repair a damaged structure using carried energy. */
-    REPAIR = "repair",
-
-    /** Build a structure at the target construction site using carried energy. */
-    BUILD = "build",
-    ATTACK = "attack",
-    UPGRADE_CONTROLLER = "upgrade controller",
 }
