@@ -58,7 +58,7 @@ export class BuilderCreep extends CreepRunner {
 
             if (target) {
                 if (this.build(target) === ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration, 3);
+                    this.moveToWithReservation(target, creep.memory.workDuration, 3);
                 }
             }
         } else {

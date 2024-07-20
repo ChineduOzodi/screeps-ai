@@ -15,6 +15,7 @@ export enum CreepStatus {
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
 export enum CreepWorkPastAction {
     NONE = "none",
+    MOVE = "move",
 
     /** Transfer resource from the creep to another object. */
     TRANSFER = "transfer",
@@ -32,7 +33,7 @@ export enum CreepWorkPastAction {
     /** Build a structure at the target construction site using carried energy. */
     BUILD = "build",
     ATTACK = "attack",
-    UPGRADE_CONTROLLER = "upgrade controller",
+    UPGRADE_CONTROLLER = "upgrade",
 }
 
 export enum CreepRole {
@@ -141,22 +142,21 @@ export abstract class CreepRunner {
         const energyTracking = new EnergyTrackingImpl(memory.energyTrackingInfo);
 
         energyTracking.onTickFlow(flow);
-
-        // Reset action so it is only counted once.
-        memory.lastAction = CreepWorkPastAction.NONE;
     }
 
-    private setAction(action: CreepWorkPastAction) {
-        this.creep.memory.lastAction = action;
-        if (action !== CreepWorkPastAction.NONE && this.creep.memory.lastAction !== action) {
+    public setAction(action: CreepWorkPastAction) {
+        if (this.creep.memory.lastAction !== action) {
             this.creep.say(action);
         }
+        this.creep.memory.lastAction = action;
     }
 
     /** What to count in energyFlow calculations based on the type of creep. */
     public getTrackedEnergyFlow(lastAction: CreepWorkPastAction, energyFlow: number): number {
         switch (lastAction) {
             case CreepWorkPastAction.NONE:
+                return 0;
+            case CreepWorkPastAction.MOVE:
                 return 0;
             case CreepWorkPastAction.TRANSFER:
                 return 0;
@@ -172,6 +172,16 @@ export abstract class CreepRunner {
             this.creep.memory.movementSystem = MovementSystem.createMovementSystem(this.creep.pos);
         }
         return this.creep.memory.movementSystem;
+    }
+
+    protected moveToWithReservation(
+        target: _HasRoomPosition & _HasId,
+        workDuration: number,
+        range = 1,
+        ignoreRoles?: string[],
+    ) {
+        this.setAction(CreepWorkPastAction.MOVE);
+        MovementSystem.moveToWithReservation(this.creep, target, workDuration, range, ignoreRoles);
     }
 
     protected getTarget(): TargetType {
@@ -350,7 +360,7 @@ export abstract class CreepRunner {
                 this.pickup(targetAction) !== OK &&
                 this.harvest(targetAction) !== OK
             ) {
-                MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration * 0.5);
+                this.moveToWithReservation(target, creep.memory.workDuration * 0.5);
             }
         } else {
             creep.say("Can't find energy");

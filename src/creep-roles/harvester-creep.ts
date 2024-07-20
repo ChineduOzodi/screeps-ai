@@ -32,10 +32,7 @@ export class HarvesterCreep extends CreepRunner {
             // moves to source
             if (source) {
                 if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, source, memory.workDuration, undefined, [
-                        "builder",
-                        "upgrader",
-                    ]);
+                    this.moveToWithReservation(source, memory.workDuration, undefined, ["builder", "upgrader"]);
                 }
             } else {
                 creep.say(`can't find source in room`);
@@ -79,7 +76,7 @@ export class HarvesterCreep extends CreepRunner {
             }
             if (target) {
                 if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    MovementSystem.moveToWithReservation(creep, target, 2);
+                    this.moveToWithReservation(target, 2);
                 }
             }
         }
@@ -172,7 +169,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
                 partCountMod = pPartCountMod;
                 energyProductionPerTick = pEnergyProductionPerTick;
             } else {
-                console.log(`pPPT < pPT: ${pEnergyProductionPerTick} < ${energyProductionPerTick}, breaking from loop`);
+                // console.log(`pPPT < pPT: ${pEnergyProductionPerTick} < ${energyProductionPerTick}, breaking from loop`);
                 break;
             }
             if (count >= 100) {
