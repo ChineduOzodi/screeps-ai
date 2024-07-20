@@ -26,10 +26,7 @@ export class MinerCreep extends CreepRunner {
 
         if (source) {
             if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-                MovementSystem.moveToWithReservation(creep, source, memory.workDuration, undefined, [
-                    "builder",
-                    "upgrader",
-                ]);
+                this.moveToWithReservation(source, memory.workDuration, undefined, ["builder", "upgrader"]);
             }
         } else {
             creep.say(`can't find source in room`);

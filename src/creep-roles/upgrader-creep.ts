@@ -30,7 +30,7 @@ export class UpgraderCreep extends CreepRunner {
             }
 
             if (this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-                MovementSystem.moveToWithReservation(creep, creep.room.controller, creep.memory.workDuration, 3);
+                this.moveToWithReservation(creep.room.controller, creep.memory.workDuration, 3);
             }
         } else {
             // Find energy

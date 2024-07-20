@@ -14,14 +14,8 @@ export class RepairerCreep extends CreepRunner {
 
     public override onRun(): void {
         const { creep, memory } = this;
-
-        if (this.switchFromWorkingToNotWorkingOutOfEnergy()) {
-            creep.say("r: refilling");
-        }
-
-        if (this.switchFromNotWorkingToWorkingFullEnergy()) {
-            creep.say("r: working");
-        }
+        this.switchFromWorkingToNotWorkingOutOfEnergy();
+        this.switchFromNotWorkingToWorkingFullEnergy();
 
         if (memory.working) {
             let target = this.getTarget();
@@ -62,9 +56,7 @@ export class RepairerCreep extends CreepRunner {
                     const t: AnyStructure = target as any;
                     const workDuration = t.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10;
                     const range = t.structureType === STRUCTURE_EXTENSION ? 1 : 3;
-                    MovementSystem.moveToWithReservation(creep, target, workDuration, range);
-                } else {
-                    creep.say("acting");
+                    this.moveToWithReservation(target, workDuration, range);
                 }
             }
         } else {

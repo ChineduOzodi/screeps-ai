@@ -29,7 +29,7 @@ export class DefenderCreep extends CreepRunner {
 
         if (target) {
             if (this.attack(target) === ERR_NOT_IN_RANGE) {
-                MovementSystem.moveToWithReservation(creep, target, creep.memory.workDuration);
+                this.moveToWithReservation(target, creep.memory.workDuration);
             }
         }
     }
