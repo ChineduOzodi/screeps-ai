@@ -1,6 +1,5 @@
 interface Colony {
     id: string;
-    spawnIndex: number;
     setupComplete?: boolean;
     spawnEnergy: number;
     creeps: ColonyCreeps | undefined;

@@ -268,7 +268,7 @@ export class ColonyManagerImpl implements ColonyManager {
     public addToSpawnCreepQueue(body: BodyPartConstant[], additionalMemory: AddCreepToQueueOptions): string {
         const memory: CreepMemory = {
             ...additionalMemory,
-            name: `${this.colonyInfo.id}-${additionalMemory.role}-${this.colonyInfo.spawnIndex++}`,
+            name: this.createUniqueCreepName(`${this.colonyInfo.id}-${additionalMemory.role}`),
             colonyId: this.colonyInfo.id,
             working: false,
             movementSystem: MovementSystem.createMovementSystem(this.getMainSpawn().pos),
@@ -280,6 +280,18 @@ export class ColonyManagerImpl implements ColonyManager {
         };
         this.getSpawnQueue().push({ body, memory });
         return memory.name;
+    }
+
+    private createUniqueCreepName(name: string): string {
+        let index = 1;
+        while (index < 1000) {
+            const newName = `${name}-${index}`;
+            if (!(newName in Game.creeps) && !(newName in this.getColonyCreeps())) {
+                return newName;
+            }
+            index++;
+        }
+        throw new Error(`Could not create unique creep name for ${name}`);
     }
 
     private initialSetup() {

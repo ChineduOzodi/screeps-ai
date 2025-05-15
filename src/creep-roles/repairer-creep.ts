@@ -19,7 +19,12 @@ export class RepairerCreep extends CreepRunner {
 
         if (memory.working) {
             let target = this.getTarget();
-            if (target && (!this.targetNeedsRepair(target) || this.targetIsStructureExtensionFullEnergy(target))) {
+            if (target && !this.targetIsValidHealerAlternative(target) && !this.targetNeedsRepair(target)) {
+                this.removeTarget();
+                return;
+            }
+
+            if (this.targetIsStructureExtensionFullEnergy(target)) {
                 this.removeTarget();
                 return;
             }
@@ -63,6 +68,10 @@ export class RepairerCreep extends CreepRunner {
             // find energy
             this.getEnergy();
         }
+    }
+
+    public targetIsValidHealerAlternative(target: _HasId & _HasRoomPosition): boolean {
+        return target instanceof ConstructionSite || target instanceof StructureSpawn || target instanceof StructureExtension;
     }
 }
 

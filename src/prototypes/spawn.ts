@@ -23,7 +23,6 @@ export class SpawnExtras {
             spawnEnergy: 200,
             rooms: [],
             creeps: {},
-            spawnIndex: 0,
             spawnQueue: [],
             stats: {
                 estimatedEnergyProductionRate: 0,
