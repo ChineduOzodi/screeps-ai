@@ -24,11 +24,11 @@ export default {
     output: {
         file: "dist/main.js",
         format: "cjs",
-        sourcemap: 'inline', // Changed from true to 'inline'
+        sourcemap: true,
     },
 
     plugins: [
-        // clear({ targets: ["dist"] }),
+        clear({ targets: ["dist"] }),
         resolve(),
         commonjs(),
         typescript({ tsconfig: "./tsconfig.json" }),

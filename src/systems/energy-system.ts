@@ -15,6 +15,7 @@ export class EnergySystem extends BaseSystemImpl {
                 energyUsageModifier: 1,
                 estimatedEnergyProductionRate: 0,
                 totalEnergyUsagePercentageAllowed: 0,
+                storedEnergyPercent: 0,
                 creepSpawnersInfo: {},
             };
             this.setSources();

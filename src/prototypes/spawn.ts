@@ -5,17 +5,14 @@ export class SpawnExtras {
     }
 
     public run(): void {
-        if (!this.spawn.memory.colonyId) {
+        const { colonyId } = this.spawn.memory;
+        if (!colonyId || !Memory.colonies[colonyId] || !Game.getObjectById(Memory.colonies[colonyId]?.mainSpawnId)) {
             this.initialRoomSetup();
         }
     }
 
     /** Creates a colony for the room. */
     private initialRoomSetup(): void {
-        if (this.spawn.memory.colonyId) {
-            console.log("room already setup, colony id:", this.spawn.memory.colonyId);
-            return;
-        }
         console.log("Creating initial colony");
         const colony: Colony = {
             id: this.spawn.room.name,

@@ -1,6 +1,8 @@
 import { SourceMapConsumer } from "source-map";
 import _ from "lodash";
 
+const enableSourceMaps = false;
+
 export class ErrorMapper {
     // Cache consumer
     private static _consumer?: SourceMapConsumer;
@@ -75,7 +77,8 @@ export class ErrorMapper {
                 loop();
             } catch (e) {
                 if (e instanceof Error) {
-                    if ("sim" in Game.rooms) {
+                    if ("sim" in Game.rooms || !enableSourceMaps) {
+                        // running in simulator or source maps are disabled
                         const message = `Source maps don't work in the simulator - displaying original error`;
                         console.log(`<span style='color:red'>${message}<br>${_.escape(e.stack)}</span>`);
                     } else {
