@@ -95,10 +95,10 @@ export class ColonyManagerImpl implements ColonyManager {
         room.visual.text(`Colony: ${this.colonyInfo.id}`, 3, 5, { color: "white", font: 1, align: "left" });
 
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
-        const { estimatedEnergyProductionRate, totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage } =
+        const { estimatedEnergyProductionRate, storedEnergyPercent, totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage } =
             this.systems.energy.systemInfo;
         room.visual.text(
-            `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}         Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}`,
+            `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}         Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}    Energy Stored Percent: ${storedEnergyPercent.toFixed(2)}`,
             3,
             6,
             textStyle,
@@ -166,7 +166,15 @@ export class ColonyManagerImpl implements ColonyManager {
                     (this.systems.energy.systemInfo.estimatedEnergyProductionRate -=
                         (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
             );
-        this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
+        const storedEnergyPercent = this.getStoredEnergyPercent();
+        if (storedEnergyPercent > 0.9) {
+            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.5;
+        } else if (storedEnergyPercent > 0.8) {
+            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1;
+        } else {
+            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
+        }
+        this.systems.energy.systemInfo.storedEnergyPercent = storedEnergyPercent;
         this.setEnergyUsageMod();
 
         const s = this.systems as unknown as { [k: string]: BaseSystem };
@@ -178,6 +186,30 @@ export class ColonyManagerImpl implements ColonyManager {
             const system = s[key];
             this.manageEnergySystem(system);
         }
+    }
+
+    public getStoredEnergyPercent(): number {
+        if (!this.colonyInfo.containerId) {
+            this.colonyInfo.containerId = this.getMainSpawn().pos.findClosestByRange<StructureContainer>(FIND_MY_STRUCTURES)?.id;
+        }
+        if (!this.colonyInfo.containerId) {
+            return 0;
+        }
+
+        const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
+        if (!container) {
+            return 0;
+        }
+
+        let energy = container.store[RESOURCE_ENERGY];
+        let capacity = container.store.getCapacity(RESOURCE_ENERGY);
+
+        if (this.getMainRoom().storage) {
+            energy += this.getMainRoom().storage?.store[RESOURCE_ENERGY] || 0;
+            capacity += this.getMainRoom().storage?.store?.getCapacity(RESOURCE_ENERGY) || 0;
+        }
+
+        return energy / capacity;
     }
 
     public manageEnergySystem(system: BaseSystem): void {

@@ -2,6 +2,7 @@ interface Colony {
     id: string;
     setupComplete?: boolean;
     spawnEnergy: number;
+    containerId?: Id<StructureContainer>;
     creeps: ColonyCreeps | undefined;
     rooms: RoomData[];
     mainSpawnId: Id<StructureSpawn>;
@@ -35,6 +36,7 @@ interface ColonyEnergyManagement extends BaseSystemInfo {
     estimatedEnergyProductionRate: number;
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
+    storedEnergyPercent: number;
 }
 
 interface ColonyInfrastructureManagement extends BaseSystemInfo {}
