@@ -3,7 +3,6 @@ import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 import { ColonyManager } from "prototypes/colony";
 import { CreepConstants } from "constants/creep-constants";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { MovementSystem } from "systems/movement-system";
 import { SpawnerUtils } from "utils/spawner-utils";
 
 export class HarvesterCreep extends CreepRunner {

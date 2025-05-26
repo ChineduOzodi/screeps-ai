@@ -219,7 +219,7 @@ export abstract class CreepRunner {
             return false;
         }
 
-        return t.store.getFreeCapacity(RESOURCE_ENERGY) === 0;
+        return t.store?.getFreeCapacity(RESOURCE_ENERGY) === 0;
     }
 
     protected findClosestTombstone(minEnergy: number) {
