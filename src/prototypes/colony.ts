@@ -60,6 +60,10 @@ export class ColonyManagerImpl implements ColonyManager {
             systems.forEach(x => x.onStart());
         }
 
+        if (!this.colonyInfo.level) {
+            this.colonyInfo.level = this.getMainRoom().controller?.level || 0;
+        }
+
         if (this.colonyInfo.level < (this.getMainRoom().controller?.level || 0)) {
             this.colonyInfo.level++;
             systems.forEach(x => x.onLevelUp(this.colonyInfo.level));
