@@ -90,7 +90,7 @@ export class BuilderSystem extends BaseSystemImpl {
         // Unlocks 5 containers and roads.
 
         this.constructFirstContainer();
-        this.buildRoadsAroundSpawn();
+        this.buildRoadsAroundPosition(this.colony.getMainSpawn().pos);
         this.buildRoadsToEnergySources();
         this.buildRoadsToController();
     }
@@ -104,17 +104,25 @@ export class BuilderSystem extends BaseSystemImpl {
         }
     }
 
-    private buildRoadsAroundSpawn(): void {
-        const mainRoom = this.colony.getMainRoom();
-        const spawn = this.colony.getMainSpawn();
+    private buildRoadsAroundPosition(pos: RoomPosition): void {
+        // Build roads around the tower
         const roadPositions = [
-            new RoomPosition(spawn.pos.x + 1, spawn.pos.y, spawn.pos.roomName),
-            new RoomPosition(spawn.pos.x - 1, spawn.pos.y, spawn.pos.roomName),
-            new RoomPosition(spawn.pos.x, spawn.pos.y + 1, spawn.pos.roomName),
-            new RoomPosition(spawn.pos.x, spawn.pos.y - 1, spawn.pos.roomName),
+            new RoomPosition(pos.x + 1, pos.y, pos.roomName),
+            new RoomPosition(pos.x - 1, pos.y, pos.roomName),
+            new RoomPosition(pos.x, pos.y + 1, pos.roomName),
+            new RoomPosition(pos.x, pos.y - 1, pos.roomName),
+            new RoomPosition(pos.x + 1, pos.y + 1, pos.roomName),
+            new RoomPosition(pos.x - 1, pos.y - 1, pos.roomName),
+            new RoomPosition(pos.x + 1, pos.y - 1, pos.roomName),
+            new RoomPosition(pos.x - 1, pos.y + 1, pos.roomName),
         ];
         for (const pos of roadPositions) {
-            mainRoom.createConstructionSite(pos, STRUCTURE_ROAD);
+            const result = pos.createConstructionSite(STRUCTURE_ROAD);
+            if (result === OK) {
+                console.log(`SUCCESS: Placed road construction site at ${pos.x},${pos.y}`);
+            } else {
+                console.log(`WARN: Failed to place road construction site at ${pos.x},${pos.y}: ${result}`);
+            }
         }
     }
 
@@ -202,33 +210,27 @@ export class BuilderSystem extends BaseSystemImpl {
             return true;
         };
 
-        const primarySpotCandidates = [
-            { dx: 0, dy: -3 },  // Top
-            { dx: -3, dy: 0 },  // Left
-            { dx: 0, dy: 3 },   // Bottom
-            // { dx: 3, dy: 0 }, // Right - uncomment if needed
-        ];
-
-        const diagonalFallbackOffsets = [
-            { ddx: -2, ddy: 2 }, { ddx: -2, ddy: -2 }
+        const spotCandidates = [
+            { dx: 0, dy: -4 },  // Top
+            { dx: -2, dy: -6 },  // Top-Left Diagonal
+            { dx: 2, dy: -6 },  // Top-Right Diagonal
+            { dx: 0, dy: -8 }, // Far Top
+            { dx: -4, dy: 0 },  // Left
+            { dx: -6, dy: -2 }, // Left-Top Diagonal
+            { dx: -6, dy: 2 },  // Left-Bottom Diagonal
+            { dx: -8, dy: 0 },  // Far Left
+            { dx: 0, dy: 4 },   // Bottom
+            { dx: -2, dy: 6 },  // Bottom-Left Diagonal
+            { dx: 2, dy: 6 },   // Bottom-Right Diagonal
+            { dx: 0, dy: 8 },   // Far Bottom
+            // { dx: 4, dy: 0 }, // Right - uncomment if needed
         ];
 
         // Check primary spots
-        for (const pDelta of primarySpotCandidates) {
+        for (const pDelta of spotCandidates) {
             const candidateCenter = new RoomPosition(spawnPos.x + pDelta.dx, spawnPos.y + pDelta.dy, roomName);
             if (isClusterValidAtCenter(candidateCenter)) {
                 return candidateCenter;
-            }
-        }
-
-        // If primary spots failed, check diagonal fallbacks for each primary spot
-        for (const pDelta of primarySpotCandidates) {
-            const initialFailedSpot = new RoomPosition(spawnPos.x + pDelta.dx, spawnPos.y + pDelta.dy, roomName);
-            for (const dFallback of diagonalFallbackOffsets) {
-                const candidateCenter = new RoomPosition(initialFailedSpot.x + dFallback.ddx, initialFailedSpot.y + dFallback.ddy, roomName);
-                if (isClusterValidAtCenter(candidateCenter)) {
-                    return candidateCenter;
-                }
             }
         }
 
@@ -291,6 +293,20 @@ export class BuilderSystem extends BaseSystemImpl {
         }
     }
 
+    private buildStructure(structureType: BuildableStructureConstant, pos: RoomPosition, buildRoadsAround: boolean = false): void {
+        const result = pos.createConstructionSite(structureType);
+        if (result === OK) {
+            console.log(`SUCCESS: Placed ${structureType} construction site at ${pos.x},${pos.y}`);
+        } else {
+            console.log(`WARN: Failed to place ${structureType} construction site at ${pos.x},${pos.y}: ${result}`);
+        }
+
+        if (!buildRoadsAround) {
+            return;
+        }
+        this.buildRoadsAroundPosition(pos);
+    }
+
     private buildFirstTower(): void {
         const mainRoom = this.colony.getMainRoom();
         const spawn = this.colony.getMainSpawn();
@@ -301,31 +317,10 @@ export class BuilderSystem extends BaseSystemImpl {
         }
 
         const towerPosition = new RoomPosition(spawn.pos.x + 2, spawn.pos.y + 2, spawn.pos.roomName);
-        const result = mainRoom.createConstructionSite(towerPosition, STRUCTURE_TOWER);
-        if (result === OK) {
-            console.log(`SUCCESS: Placed first tower construction site at ${towerPosition.x},${towerPosition.y}`);
+        if (this.isTileClearForStructure(towerPosition, mainRoom, true)) {
+            this.buildStructure(STRUCTURE_TOWER, towerPosition, true);
         } else {
-            console.log(`WARN: Failed to place first tower construction site at ${towerPosition.x},${towerPosition.y}: ${result}`);
-        }
-
-        // Build roads around the tower
-        const roadPositions = [
-            new RoomPosition(towerPosition.x + 1, towerPosition.y, towerPosition.roomName),
-            new RoomPosition(towerPosition.x - 1, towerPosition.y, towerPosition.roomName),
-            new RoomPosition(towerPosition.x, towerPosition.y + 1, towerPosition.roomName),
-            new RoomPosition(towerPosition.x, towerPosition.y - 1, towerPosition.roomName),
-            new RoomPosition(towerPosition.x + 1, towerPosition.y + 1, towerPosition.roomName),
-            new RoomPosition(towerPosition.x - 1, towerPosition.y - 1, towerPosition.roomName),
-            new RoomPosition(towerPosition.x + 1, towerPosition.y - 1, towerPosition.roomName),
-            new RoomPosition(towerPosition.x - 1, towerPosition.y + 1, towerPosition.roomName),
-        ];
-        for (const pos of roadPositions) {
-            const result = pos.createConstructionSite(STRUCTURE_ROAD);
-            if (result === OK) {
-                console.log(`SUCCESS: Placed road construction site at ${pos.x},${pos.y}`);
-            } else {
-                console.log(`WARN: Failed to place road construction site at ${pos.x},${pos.y}: ${result}`);
-            }
+            console.log(`WARN: Tower position at ${towerPosition.x},${towerPosition.y} is not clear.`);
         }
     }
 
