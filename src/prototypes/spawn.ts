@@ -13,10 +13,11 @@ export class SpawnExtras {
 
     /** Creates a colony for the room. */
     private initialRoomSetup(): void {
-        console.log("Creating initial colony");
+        console.log("Creating initial colony in room:", this.spawn.room.name);
         const colony: Colony = {
             id: this.spawn.room.name,
             mainSpawnId: this.spawn.id,
+            level: 0,
             spawnEnergy: 200,
             rooms: [],
             creeps: {},

@@ -218,7 +218,7 @@ export abstract class CreepRunner {
         if (typeof t.structureType === "undefined" || t.structureType !== STRUCTURE_EXTENSION) {
             return false;
         }
-
+        // Structure can be an extension but will have undefined store if it is not constructed yet.
         return t.store?.getFreeCapacity(RESOURCE_ENERGY) === 0;
     }
 

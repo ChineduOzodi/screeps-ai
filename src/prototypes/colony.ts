@@ -60,6 +60,11 @@ export class ColonyManagerImpl implements ColonyManager {
             systems.forEach(x => x.onStart());
         }
 
+        if (this.colonyInfo.level < (this.getMainRoom().controller?.level || 0)) {
+            this.colonyInfo.level++;
+            systems.forEach(x => x.onLevelUp(this.colonyInfo.level));
+        }
+
         this.manageEnergyProductionConsumption();
 
         if (this.shouldUpdate()) {
@@ -334,11 +339,6 @@ export class ColonyManagerImpl implements ColonyManager {
             isMain: true,
             alertLevel: 0,
         });
-
-        // create first container
-        const spawn = this.getMainSpawn();
-        const pos = new RoomPosition(spawn.pos.x + 2, spawn.pos.y, spawn.pos.roomName);
-        room.createConstructionSite(pos, STRUCTURE_CONTAINER);
         return true;
     }
 
@@ -351,9 +351,12 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public getMainSpawn(): StructureSpawn {
-        const spawn = Game.getObjectById(this.colonyInfo.mainSpawnId);
+        let spawn = Game.getObjectById(this.colonyInfo.mainSpawnId);
         if (!spawn) {
-            throw new Error(`Could not find main spawn "${this.colonyInfo.mainSpawnId}" for ${this.colonyInfo.id}`);
+            console.warn(`Colony ${this.colonyInfo.id} does not have a main spawn set, resetting spawn.`);
+            const mainRoom = this.getMainRoom();
+            spawn = mainRoom.find(FIND_MY_SPAWNS)[0];
+            this.colonyInfo.mainSpawnId = spawn.id;
         }
         return spawn;
     }

@@ -14,7 +14,7 @@ export interface BaseSystem {
 
     run(): void;
 
-    /** What happens when the room controller levels up. */
+    /** What happens when the room controller levels up. The same level could happen more than once, if a room level drops.*/
     onLevelUp(level: number): void;
 
     /** Functionality to update profiles of creeps to be spawned by the spawning system. Primarily invoked by colony manager. */

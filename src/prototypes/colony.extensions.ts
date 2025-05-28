@@ -1,6 +1,7 @@
 interface Colony {
     id: string;
     setupComplete?: boolean;
+    level: number;
     spawnEnergy: number;
     containerId?: Id<StructureContainer>;
     creeps: ColonyCreeps | undefined;
