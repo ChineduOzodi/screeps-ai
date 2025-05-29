@@ -308,10 +308,22 @@ export abstract class CreepRunner {
         }
 
         const buildQueue = colony.builderManagement?.buildQueue;
-        if (buildQueue && buildQueue.length > 0) {
-            return Game.getObjectById(buildQueue[0]);
+        if (!buildQueue || buildQueue.length === 0) {
+            return null;
         }
-        return null;
+
+        const nonRoadConstructionSites = buildQueue.filter(
+            siteId => {
+                const site = Game.getObjectById(siteId);
+                return site && site.structureType !== STRUCTURE_ROAD;
+            },
+        );
+
+        if (nonRoadConstructionSites.length > 0) {
+            return Game.getObjectById(nonRoadConstructionSites[0]);
+        }
+        // If all sites are roads, return the first one.
+        return Game.getObjectById(buildQueue[0]);
     }
 
     protected findClosestHostile() {

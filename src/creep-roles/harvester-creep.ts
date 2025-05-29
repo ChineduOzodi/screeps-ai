@@ -73,10 +73,10 @@ export class HarvesterCreep extends CreepRunner {
                     },
                 });
             }
-            if (target) {
-                if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    this.moveToWithReservation(target, 2);
-                }
+            if (target && this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.moveToWithReservation(target, 2);
+            } else if (creep.room.controller && this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+                this.moveToWithReservation(creep.room.controller, creep.memory.workDuration, 3);
             }
         }
     }
