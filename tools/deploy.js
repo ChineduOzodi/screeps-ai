@@ -62,8 +62,12 @@ if (fs.existsSync(DIST_MAP)) {
 }
 
 const modules = {
-  main: mainContent
+  main: mainContent,
 };
+
+if (mapContent) {
+  modules["main.js.map"] = "module.exports = " + mapContent + ";";
+}
 
 // API Request
 const postData = {

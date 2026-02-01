@@ -51,6 +51,11 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public run(): void {
+        if (!this.getMainRoom()) {
+            console.log(`No vision of colony room ${this.colonyInfo.id}, removing from memory...`);
+            delete Memory.colonies[this.colonyInfo.id];
+            return;
+        }
         const systems = this.getSystemsList();
         const spawnManager = new SpawningSystem(this);
 
