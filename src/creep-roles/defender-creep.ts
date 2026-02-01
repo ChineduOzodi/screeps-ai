@@ -3,7 +3,7 @@ import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { ColonyManager } from "prototypes/colony";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { MovementSystem } from "systems/movement-system";
+import { Movement } from "infrastructure/movement";
 
 const BASE_DEFENDER = [TOUGH, MOVE, ATTACK];
 
@@ -77,7 +77,7 @@ export class DefenderCreepSpawner extends CreepSpawnerImpl {
             desiredAmount: 0,
             bodyBlueprint: body,
             memoryBlueprint: memory,
-            important: true,
+            priority: 10,
         };
 
         return creepSpawnManagement;

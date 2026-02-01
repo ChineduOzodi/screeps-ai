@@ -1,5 +1,5 @@
-import { EnergyTrackingImpl } from "systems/energy-tracking";
-import { MovementSystem } from "systems/movement-system";
+import { EnergyTrackingImpl } from "infrastructure/energy-tracking";
+import { Movement } from "infrastructure/movement";
 
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
 export enum CreepStatus {
@@ -166,7 +166,7 @@ export abstract class CreepRunner {
 
     public getMovementSystem(): CreepMovementSystem {
         if (!this.creep.memory.movementSystem) {
-            this.creep.memory.movementSystem = MovementSystem.createMovementSystem(this.creep.pos);
+            this.creep.memory.movementSystem = Movement.createMovementSystem(this.creep.pos);
         }
         return this.creep.memory.movementSystem;
     }
@@ -178,7 +178,7 @@ export abstract class CreepRunner {
         ignoreRoles?: string[],
     ) {
         this.setAction(CreepWorkPastAction.MOVE);
-        MovementSystem.moveToWithReservation(this.creep, target, workDuration, range, ignoreRoles);
+        Movement.moveToWithReservation(this.creep, target, workDuration, range, ignoreRoles);
     }
 
     protected getTarget(): TargetType {

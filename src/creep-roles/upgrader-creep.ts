@@ -3,7 +3,7 @@ import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { ColonyManager } from "prototypes/colony";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { MovementSystem } from "systems/movement-system";
+import { Movement } from "infrastructure/movement";
 
 export class UpgraderCreep extends CreepRunner {
     public override onRun(): void {
@@ -65,7 +65,6 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
         };
 
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
-            creepNames: [],
             desiredAmount: 1,
             bodyBlueprint: body,
             memoryBlueprint: memory,

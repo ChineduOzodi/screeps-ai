@@ -1,7 +1,6 @@
 import { ColonyManager } from "prototypes/colony";
-import { CreepRole } from "prototypes/creep";
 
-export class SpawningSystem {
+export class Spawning {
     private colony: ColonyManager;
 
     public constructor(colony: ColonyManager) {
@@ -10,57 +9,32 @@ export class SpawningSystem {
 
     public run(): void {
         for (const system of this.colony.getSystemsList()) {
-            for (const name in system.systemInfo.creepSpawnersInfo) {
-                const creepSpawner = system.systemInfo.creepSpawnersInfo[name];
-                this.cleanupCreepNames(creepSpawner);
-                this.spawnManagement(creepSpawner);
+            const profiles = system.getSpawnerProfilesList();
+            for (const profile of profiles) {
+                  this.manageSpawnProfile(profile);
             }
         }
-        this.creepSpawnManager();
+        this.processSpawnQueue();
     }
 
-    private cleanupCreepNames(creepSpawnManagement: CreepSpawnerProfileInfo) {
-        if (!creepSpawnManagement.creepNames) {
-            creepSpawnManagement.creepNames = [];
-        }
-        for (let i = creepSpawnManagement.creepNames.length - 1; i >= 0; i--) {
-            const creepName = creepSpawnManagement.creepNames[i];
-            if (creepName in Game.creeps) {
-                continue;
-            }
-            if (creepName in this.colony.getColonyCreeps()) {
-                continue;
-            }
-
-            creepSpawnManagement.creepNames.splice(i, 1);
-            console.log(`Removing dead/missing creep name: ${creepName}`);
-        }
-    }
-
-    private spawnManagement(oldCreepSpawn: CreepSpawnerProfileInfo) {
-        if (!oldCreepSpawn.desiredAmount) {
+    private manageSpawnProfile(profile: CreepSpawnerProfileInfo) {
+        if (!profile.desiredAmount || !profile.memoryBlueprint || !profile.bodyBlueprint) {
             return;
         }
-        if (!oldCreepSpawn.creepNames) {
-            oldCreepSpawn.creepNames = [];
-        }
 
-        if (oldCreepSpawn.creepNames.length < oldCreepSpawn.desiredAmount) {
-            const { bodyBlueprint, memoryBlueprint } = oldCreepSpawn;
-            if (!bodyBlueprint || !memoryBlueprint) {
-                console.log(`ERROR: spawner missing body blueprint or memory blueprint.`);
-                return;
+        const role = profile.memoryBlueprint.role;
+        const currentCount = this.colony.getCreepCount(role);
+
+        if (currentCount < profile.desiredAmount) {
+            const options = { ...profile.memoryBlueprint };
+            if (profile.priority !== undefined) {
+                options.priority = profile.priority;
             }
-            const creepName = this.colony.addToSpawnCreepQueue(bodyBlueprint, memoryBlueprint);
-            if (oldCreepSpawn.important) {
-                oldCreepSpawn.creepNames.unshift(creepName);
-            } else {
-                oldCreepSpawn.creepNames.push(creepName);
-            }
+            this.colony.addToSpawnCreepQueue(profile.bodyBlueprint, options);
         }
     }
 
-    private creepSpawnManager() {
+    private processSpawnQueue() {
         const spawn = this.colony.getMainSpawn();
         if (!spawn || spawn.spawning) {
             return;

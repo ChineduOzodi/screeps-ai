@@ -30,6 +30,10 @@ export interface BaseSystem {
      * @param role role to count.
      */
     getRoleCount(role: CreepRole): number;
+
+    getGoapGoals(state: any): any[];
+
+    getGoapActions(): any[];
 }
 
 export abstract class BaseSystemImpl implements BaseSystem {
@@ -37,9 +41,22 @@ export abstract class BaseSystemImpl implements BaseSystem {
     public abstract get energyUsageTracking(): EnergyUsageTracking;
 
     protected colony: ColonyManager;
+    protected defaultEnergyWeight: number = 0;
 
     public constructor(colony: ColonyManager) {
         this.colony = colony;
+    }
+
+    public setEnergyBudgetWeight(weight: number): void {
+        this.energyUsageTracking.requestedEnergyUsageWeight = weight;
+    }
+
+    public getGoapGoals(state: any): any[] {
+        return [];
+    }
+
+    public getGoapActions(): any[] {
+        return [];
     }
 
     protected get room() {
@@ -55,41 +72,34 @@ export abstract class BaseSystemImpl implements BaseSystem {
     }
 
     public updateProfiles(): void {
-        const creepSpawners = this.getCreepSpawners();
-        for (const spawner of creepSpawners) {
-            const profiles = spawner.createProfiles(this.energyUsageTracking.allowedEnergyWorkRate, this.colony);
-            for (const name in profiles) {
-                this.systemInfo.creepSpawnersInfo[name] = {
-                    ...profiles[name],
-                    creepNames: this.systemInfo.creepSpawnersInfo[name]?.creepNames || [],
-                };
-            }
-        }
+        // Deprecated: Profiles are now generated dynamically in getSpawnerProfilesList
     }
 
     public getSpawnerProfilesList(): CreepSpawnerProfileInfo[] {
+        const creepSpawners = this.getCreepSpawners();
         const profiles: CreepSpawnerProfileInfo[] = [];
-        for (const name in this.systemInfo.creepSpawnersInfo) {
-            const profile = this.systemInfo.creepSpawnersInfo[name];
-            profiles.push(profile);
+
+        for (const spawner of creepSpawners) {
+             const spawnerProfiles = spawner.createProfiles(this.energyUsageTracking.allowedEnergyWorkRate, this.colony);
+             for (const name in spawnerProfiles) {
+                 profiles.push(spawnerProfiles[name]);
+             }
         }
         return profiles;
     }
 
     public getRoleCount(role: CreepRole): number {
-        const profiles = this.getSpawnerProfilesList();
-        let count = 0;
-        for (const profile of profiles) {
-            if (profile.memoryBlueprint?.role !== role) {
-                continue;
-            }
-            count += profile.creepNames?.length || 0;
-        }
-        return count;
+        return this.colony.getCreepCount(role);
     }
 
     public abstract onStart(): void;
-    public abstract run(): void;
+    /**
+     * Main run loop for the system.
+     * Derived classes should call super.run() to ensure energy weights are reset for the next tick.
+     */
+    public run(): void {
+        this.energyUsageTracking.requestedEnergyUsageWeight = this.defaultEnergyWeight;
+    }
     public abstract onLevelUp(level: number): void;
     public abstract getRolesToTrackEnergy(): CreepRole[];
     public abstract getCreepSpawners(): CreepSpawner[];

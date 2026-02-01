@@ -1,10 +1,10 @@
-import { PathfindingSystem } from "./pathfinding-system";
+import { PathfindingUtils } from "../utils/pathfinding-utils";
 
-export class MovementSystem {
+export class Movement {
     public static run(creep: Creep): void {
         const ticksToLive = creep.ticksToLive ? creep.ticksToLive : 0;
         if (!creep.memory.movementSystem) {
-            creep.memory.movementSystem = MovementSystem.createMovementSystem(creep.pos);
+            creep.memory.movementSystem = Movement.createMovementSystem(creep.pos);
         }
 
         if (
@@ -15,7 +15,7 @@ export class MovementSystem {
             creep.memory.movementSystem.pathStuck++;
         } else {
             if (creep.memory.movementSystem.idleReserved) {
-                PathfindingSystem.unreservePosition(creep, creep.room, creep.memory.movementSystem.previousPos);
+                PathfindingUtils.unreservePosition(creep, creep.room, creep.memory.movementSystem.previousPos);
                 creep.memory.movementSystem.idleReserved = false;
             }
             creep.memory.movementSystem.idle = 0;
@@ -25,9 +25,9 @@ export class MovementSystem {
 
         if (
             creep.memory.movementSystem.idle >= 10 &&
-            PathfindingSystem.checkReservationAvailable(creep.room, creep.pos, Game.time, Game.time + 1)
+            PathfindingUtils.checkReservationAvailable(creep.room, creep.pos, Game.time, Game.time + 1)
         ) {
-            PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
+            PathfindingUtils.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
             creep.memory.movementSystem.idleReserved = true;
         }
 
@@ -58,12 +58,12 @@ export class MovementSystem {
                     if (status !== OK && status !== ERR_TIRED && status !== ERR_BUSY) {
                         // console.log(`${creep.name}: resetting path due to error: ${status}`);
                         creep.say(`resetting`);
-                        PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
+                        PathfindingUtils.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
                         creep.memory.movementSystem.pathStuck = 0;
                         // reserve current location
-                        PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
+                        PathfindingUtils.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
                         creep.memory.movementSystem.idleReserved = true;
                     }
 
@@ -72,12 +72,12 @@ export class MovementSystem {
                         creep.memory.movementSystem.path
                     ) {
                         creep.say("path stuck");
-                        PathfindingSystem.unreservePosition(creep, creep.room, lastPathStep);
+                        PathfindingUtils.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
                         creep.memory.movementSystem.pathStuck = Math.random() * 3;
                         // reserve current location
-                        PathfindingSystem.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
+                        PathfindingUtils.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
                         creep.memory.movementSystem.idleReserved = true;
                     }
                 }
@@ -121,7 +121,7 @@ export class MovementSystem {
             creep.memory.movementSystem.reservationStartTime = startTime;
             creep.memory.movementSystem.reservationEndTime = endTime;
 
-            PathfindingSystem.reserveLocation(creep, path[path.length - 1], startTime, endTime);
+            PathfindingUtils.reserveLocation(creep, path[path.length - 1], startTime, endTime);
         } else {
             console.log(`movement-system | creep ${creep.id} could not move because no movement system`);
         }
@@ -132,7 +132,7 @@ export class MovementSystem {
             return;
         }
 
-        PathfindingSystem.unreservePosition(creep, creep.room, creep.pos);
+        PathfindingUtils.unreservePosition(creep, creep.room, creep.pos);
         const path = creep.pos.findPathTo(target, {
             range,
             ignoreCreeps: true,
@@ -149,7 +149,7 @@ export class MovementSystem {
                         if (reservation.reservations) {
                             const ticksToLive = creep.ticksToLive ? creep.ticksToLive : 0;
                             if (
-                                !PathfindingSystem.checkReservationAvailable(
+                                !PathfindingUtils.checkReservationAvailable(
                                     room,
                                     reservation.pos,
                                     Game.time,
@@ -186,8 +186,8 @@ export class MovementSystem {
             return;
         }
 
-        PathfindingSystem.unreservePosition(creep, creep.room, creep.pos);
-        const pathInfo = PathfindingSystem.findPathWithReservation(creep, target, range, workDuration, ignoreRoles);
+        PathfindingUtils.unreservePosition(creep, creep.room, creep.pos);
+        const pathInfo = PathfindingUtils.findPathWithReservation(creep, target, range, workDuration, ignoreRoles);
 
         if (pathInfo.path && pathInfo.path.length > 0) {
             this.moveToTargetByPathWithReservation(

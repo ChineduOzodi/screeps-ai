@@ -14,6 +14,7 @@ declare global {
     type TargetType = (_HasId & _HasRoomPosition) | null;
 
     interface AddCreepToQueueOptions {
+        priority?: number;
         averageEnergyConsumptionProductionPerTick: number;
         role: CreepRole;
 

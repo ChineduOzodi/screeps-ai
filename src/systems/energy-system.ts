@@ -3,6 +3,9 @@ import { CreepRole } from "prototypes/creep";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
 
+import { Action, Goal, WorldState } from "goap/types";
+import { HarvestEnergyAction } from "goap/actions/colony-management-actions";
+
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
  */
@@ -16,7 +19,6 @@ export class EnergySystem extends BaseSystemImpl {
                 estimatedEnergyProductionRate: 0,
                 totalEnergyUsagePercentageAllowed: 0,
                 storedEnergyPercent: 0,
-                creepSpawnersInfo: {},
             };
             this.setSources();
         }
@@ -39,6 +41,7 @@ export class EnergySystem extends BaseSystemImpl {
         // Make sure system info is initiated
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         this.systemInfo;
+        this.defaultEnergyWeight = 1.0;
     }
 
     private setSources() {
@@ -54,7 +57,9 @@ export class EnergySystem extends BaseSystemImpl {
         });
     }
 
-    public override run(): void {}
+    public override run(): void {
+        super.run();
+    }
 
     public override onLevelUp(_level: number): void {}
 
@@ -68,5 +73,19 @@ export class EnergySystem extends BaseSystemImpl {
 
     public noEnergyCollectors(): boolean {
         return this.getRoleCount(CreepRole.HARVESTER) === 0 && this.getRoleCount(CreepRole.MINER) === 0;
+    }
+
+    public override getGoapGoals(state: WorldState): Goal[] {
+        const priority = !state['hasEnergy'] ? 100 : 20;
+        const goals: Goal[] = [{
+            name: "Harvest Energy",
+            priority: priority,
+            desiredState: { hasEnergy: true }
+        }];
+        return goals;
+    }
+
+    public override getGoapActions(): Action[] {
+        return [new HarvestEnergyAction(this.colony)];
     }
 }

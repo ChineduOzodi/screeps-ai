@@ -1,6 +1,6 @@
 import { Game, Memory } from "./mock";
 
-import { EnergyTrackingImpl } from "systems/energy-tracking";
+import { EnergyTrackingImpl } from "infrastructure/energy-tracking";
 import { assert } from "chai";
 import { loop } from "../../src/main";
 

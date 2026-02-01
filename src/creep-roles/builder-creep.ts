@@ -2,7 +2,6 @@
 import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 import { ColonyManager } from "prototypes/colony";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { MovementSystem } from "systems/movement-system";
 
 const MAX_BUILDERS = 3;
 
@@ -70,7 +69,8 @@ export class BuilderCreep extends CreepRunner {
 
 export class BuilderCreepSpawner extends CreepSpawnerImpl {
     public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
-        const { buildQueue } = colony.systems.builder.systemInfo;
+        // Fallback to empty queue if builderManagement is not initialized
+        const buildQueue = colony.colonyInfo.builderManagement?.buildQueue || [];
         const profile = this.createProfile(energyCap, colony);
         if (buildQueue.length === 0) {
             profile.desiredAmount = 0;

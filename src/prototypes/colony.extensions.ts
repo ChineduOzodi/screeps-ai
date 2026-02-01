@@ -15,12 +15,12 @@ interface Colony {
     builderManagement?: ColonyBuilderManagement;
     defenseManagement?: ColonyDefenseManagement;
     infrastructureManagement?: ColonyInfrastructureManagement;
+    goapManagement?: ColonyGoapManagement;
 }
 
 interface BaseSystemInfo {
     nextUpdate: number;
     energyUsageTracking?: EnergyUsageTracking;
-    creepSpawnersInfo: { [k: string]: CreepSpawnerProfileInfo };
 }
 
 interface ColonyDefenseManagement extends BaseSystemInfo {}
@@ -40,6 +40,11 @@ interface ColonyEnergyManagement extends BaseSystemInfo {
 }
 
 interface ColonyInfrastructureManagement extends BaseSystemInfo {}
+
+interface ColonyGoapManagement extends BaseSystemInfo {
+    activeGoalName?: string;
+    planActionNames?: string[];
+}
 
 interface EnergyUsageTracking {
     estimatedEnergyWorkRate: number;
@@ -65,10 +70,10 @@ interface ColonySource {
 
 interface CreepSpawnerProfileInfo {
     desiredAmount?: number;
-    creepNames?: string[];
+
     bodyBlueprint?: BodyPartConstant[];
     memoryBlueprint?: AddCreepToQueueOptions;
-    important?: boolean;
+    priority?: number;
     /** Cost to spawn profile. A positive number. */
     spawnCostPerTick?: number;
 }
@@ -78,6 +83,7 @@ interface ColonyStats {}
 interface SpawnRequest {
     body: BodyPartConstant[];
     memory: CreepMemory;
+    priority: number;
 }
 
 interface ColonyCreeps {

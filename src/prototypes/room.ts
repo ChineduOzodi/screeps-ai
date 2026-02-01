@@ -1,4 +1,4 @@
-import { PathfindingSystem } from "./../systems/pathfinding-system";
+import { PathfindingUtils } from "../utils/pathfinding-utils";
 export class RoomExtras {
     public room: Room;
 
@@ -60,7 +60,7 @@ export class RoomExtras {
 
         for (const position in this.room.memory.positionReservations) {
             const reservation = this.room.memory.positionReservations[position];
-            PathfindingSystem.unreservePositions(this.room, reservation.pos);
+            PathfindingUtils.unreservePositions(this.room, reservation.pos);
 
             if (reservation.reservations.length > 0) {
                 this.room.visual.circle(reservation.pos.x, reservation.pos.y);

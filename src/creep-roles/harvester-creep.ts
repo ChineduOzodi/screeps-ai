@@ -211,7 +211,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
             desiredAmount: Math.min(maxCreepCount, sourceEnergyProductionPerTick / energyProductionPerTick),
             bodyBlueprint: body,
             memoryBlueprint: memory,
-            important: true,
+            priority: 9,
         };
 
         return creepSpawnManagement;

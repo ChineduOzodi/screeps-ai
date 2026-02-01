@@ -5,7 +5,7 @@ import { BaseSystemImpl } from "systems/base-system";
 import { ColonyManager } from "prototypes/colony";
 import { CreepConstants } from "constants/creep-constants";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { MovementSystem } from "systems/movement-system";
+import { Movement } from "infrastructure/movement";
 
 export class RepairerCreep extends CreepRunner {
     public constructor(creep: Creep) {

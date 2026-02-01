@@ -3,7 +3,7 @@ import { BuilderCreep } from "creep-roles/builder-creep";
 import { DefenderCreep } from "creep-roles/defender-creep";
 import { HarvesterCreep } from "creep-roles/harvester-creep";
 import { MinerCreep } from "creep-roles/miner-creep";
-import { MovementSystem } from "systems/movement-system";
+import { Movement } from "infrastructure/movement";
 import { RepairerCreep } from "./../creep-roles/repairer-creep";
 import { UpgraderCreep } from "creep-roles/upgrader-creep";
 
@@ -24,7 +24,7 @@ export class CreepManagement {
         }
 
         creepRunner.run();
-        MovementSystem.run(creep);
+        Movement.run(creep);
     }
 
     public static getCreepRunner(creep: Creep): CreepRunner | undefined {

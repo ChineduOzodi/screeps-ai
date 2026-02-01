@@ -1,4 +1,4 @@
-export class PathfindingSystem {
+export class PathfindingUtils {
     public static findPathWithReservation(
         creep: Creep,
         target: RoomPosition | _HasRoomPosition,
@@ -30,7 +30,7 @@ export class PathfindingSystem {
                 const room = Game.rooms[roomName];
                 if (!room) return;
 
-                PathfindingSystem.checkRoomReservationSetup(room);
+                PathfindingUtils.checkRoomReservationSetup(room);
 
                 if (creep.room.memory.positionReservations) {
                     const keys = Object.keys(creep.room.memory.positionReservations);
@@ -40,7 +40,7 @@ export class PathfindingSystem {
 
                         if (reservation.reservations) {
                             if (
-                                !PathfindingSystem.checkReservationAvailable(
+                                !PathfindingUtils.checkReservationAvailable(
                                     room,
                                     reservation.pos,
                                     startTime,

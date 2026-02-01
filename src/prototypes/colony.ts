@@ -5,9 +5,10 @@ import { BuilderSystem } from "./../systems/builder-system";
 import { DefenseSystem } from "./../systems/defense-system";
 import { EnergySystem } from "./../systems/energy-system";
 import { InfrastructureSystem } from "../systems/infrastructure-system";
-import { MovementSystem } from "systems/movement-system";
-import { SpawningSystem } from "systems/spawning-system";
+import { Movement } from "infrastructure/movement";
+import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
+import { GoapSystem } from "../systems/goap-system";
 
 export interface Systems {
     energy: EnergySystem;
@@ -15,6 +16,7 @@ export interface Systems {
     infrastructure: InfrastructureSystem;
     upgrade: UpgradeSystem;
     builder: BuilderSystem;
+    goap: GoapSystem;
 }
 
 function getSystems(colony: ColonyManager): Systems {
@@ -24,6 +26,7 @@ function getSystems(colony: ColonyManager): Systems {
         infrastructure: new InfrastructureSystem(colony),
         upgrade: new UpgradeSystem(colony),
         builder: new BuilderSystem(colony),
+        goap: new GoapSystem(colony),
     };
 }
 
@@ -38,6 +41,7 @@ export interface ColonyManager {
     getSpawnQueue(): SpawnRequest[];
     addToSpawnCreepQueue(bodyBlueprint: BodyPartConstant[], memoryBlueprint: AddCreepToQueueOptions): string;
     getTotalEstimatedEnergyFlowRate(role: CreepRole): number;
+    getCreepCount(role: CreepRole): number;
     /** List version of systems used in colony. */
     getSystemsList(): BaseSystem[];
 }
@@ -57,7 +61,7 @@ export class ColonyManagerImpl implements ColonyManager {
             return;
         }
         const systems = this.getSystemsList();
-        const spawnManager = new SpawningSystem(this);
+        const spawnManager = new Spawning(this);
 
         if (!this.colonyInfo.setupComplete) {
             this.colonyInfo.setupComplete = this.initialSetup();
@@ -122,6 +126,8 @@ export class ColonyManagerImpl implements ColonyManager {
 
         const visualizeSystems = this.getEnergyTrackingSystems();
         this.visualizeSystems(visualizeSystems);
+        this.visualizeSpawnQueue();
+        this.visualizeGoapStats();
     }
 
     private getEnergyTrackingSystems(): EnergyTrackingSystem[] {
@@ -169,6 +175,51 @@ export class ColonyManagerImpl implements ColonyManager {
                 );
                 offset++;
             }
+        }
+    }
+
+    private visualizeSpawnQueue(): void {
+        const room = this.getMainRoom();
+        const queue = this.getSpawnQueue();
+        const x = 35;
+        let y = 3;
+
+        room.visual.text("Spawn Queue:", x, y++, { align: 'left', color: '#aaaaaa', opacity: 0.8 });
+
+        if (queue.length === 0) {
+            room.visual.text("- Empty -", x, y++, { align: 'left', font: 0.5, color: '#666666' });
+        }
+
+        for (let i = 0; i < Math.min(queue.length, 10); i++) {
+            const item = queue[i];
+            room.visual.text(`[${item.priority}] ${item.memory.role}`, x, y++, { align: 'left', font: 0.5, opacity: 0.8 });
+        }
+    }
+
+    private visualizeGoapStats(): void {
+        const room = this.getMainRoom();
+        const goap = this.systems.goap;
+        const x = 3;
+        let y = 15;
+
+        room.visual.text("GOAP State:", x, y++, { align: 'left', color: '#aaaaaa', opacity: 0.8 });
+        const goal = goap.activeGoal;
+        if (goal) {
+             room.visual.text(`Goal: ${goal.name}`, x, y++, { align: 'left', font: 0.7, color: '#00ff00' });
+             room.visual.text(`Priority: ${goal.priority}`, x, y++, { align: 'left', font: 0.5, color: '#cccccc' });
+        } else {
+             room.visual.text(`Goal: None`, x, y++, { align: 'left', font: 0.7, color: '#ff6666' });
+        }
+
+        const plan = goap.activePlan;
+        if (plan && plan.length > 0) {
+            y += 0.5;
+            room.visual.text(`Current Plan:`, x, y++, { align: 'left', font: 0.6, color: '#aaaaaa' });
+            plan.forEach((action, idx) => {
+                 let color = '#ffffff';
+                 if (idx === 0) color = '#ffff00'; // Highlight current action
+                 room.visual.text(`${idx + 1}. ${action.name}`, x + 0.5, y++, { align: 'left', font: 0.5, color: color });
+            });
         }
     }
 
@@ -259,6 +310,12 @@ export class ColonyManagerImpl implements ColonyManager {
         return totalEnergyConsumptionProductionRate;
     }
 
+    public getCreepCount(role: CreepRole): number {
+        const aliveCount = this.getCreeps().filter(x => x.memory.role === role).length;
+        const spawnQueueCount = this.getSpawnQueue().filter(x => x.memory.role === role).length;
+        return aliveCount + spawnQueueCount;
+    }
+
     public setEnergyUsageMod(): void {
         const systems = this.getEnergyTrackingSystems();
         let totalPercentEnergyRequested = 0;
@@ -320,15 +377,35 @@ export class ColonyManagerImpl implements ColonyManager {
             name: this.createUniqueCreepName(`${this.colonyInfo.id}-${additionalMemory.role}`),
             colonyId: this.colonyInfo.id,
             working: false,
-            movementSystem: MovementSystem.createMovementSystem(this.getMainSpawn().pos),
+            movementSystem: Movement.createMovementSystem(this.getMainSpawn().pos),
             workDuration: additionalMemory?.workDuration ? additionalMemory?.workDuration : 5,
         };
         this.getColonyCreeps()[memory.name] = {
             name: memory.name,
             status: CreepStatus.SPAWN_QUEUE,
         };
-        this.getSpawnQueue().push({ body, memory });
+        const priority = additionalMemory.priority !== undefined ? additionalMemory.priority : 0;
+        this.getSpawnQueue().push({ body, memory, priority });
+        this.getSpawnQueue().sort((a, b) => b.priority - a.priority);
         return memory.name;
+    }
+
+    public updateSpawnRequestPriority(name: string, priority: number): void {
+        const queue = this.getSpawnQueue();
+        const request = queue.find(x => x.memory.name === name);
+        if (request) {
+            request.priority = priority;
+            queue.sort((a, b) => b.priority - a.priority);
+        }
+    }
+
+    public removeSpawnRequest(name: string): void {
+        const queue = this.getSpawnQueue();
+        const index = queue.findIndex(x => x.memory.name === name);
+        if (index !== -1) {
+            queue.splice(index, 1);
+            delete this.getColonyCreeps()[name];
+        }
     }
 
     private createUniqueCreepName(name: string): string {
