@@ -42,7 +42,6 @@ export class CreepManagement {
             case CreepRole.MINER:
                 return new MinerCreep(creep);
             default:
-                // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
                 console.log(`ERROR: creep (${creep.name}) role "${creep.memory.role}" not setup`);
                 return;
         }

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable no-shadow */
 import { EnergyTrackingImpl } from "systems/energy-tracking";
 import { MovementSystem } from "systems/movement-system";
 
@@ -312,12 +309,10 @@ export abstract class CreepRunner {
             return null;
         }
 
-        const nonRoadConstructionSites = buildQueue.filter(
-            siteId => {
-                const site = Game.getObjectById(siteId);
-                return site && site.structureType !== STRUCTURE_ROAD;
-            },
-        );
+        const nonRoadConstructionSites = buildQueue.filter(siteId => {
+            const site = Game.getObjectById(siteId);
+            return site && site.structureType !== STRUCTURE_ROAD;
+        });
 
         if (nonRoadConstructionSites.length > 0) {
             return Game.getObjectById(nonRoadConstructionSites[0]);
@@ -363,7 +358,6 @@ export abstract class CreepRunner {
         }
 
         if (target) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const targetAction = target as any;
 
             if (
@@ -379,11 +373,7 @@ export abstract class CreepRunner {
         }
     }
 
-    protected withdraw(
-        target: TargetType,
-        resourceType: ResourceConstant,
-        amount?: number | undefined,
-    ): ScreepsReturnCode {
+    protected withdraw(target: TargetType, resourceType: ResourceConstant, amount?: number): ScreepsReturnCode {
         const actionStatus = this.creep.withdraw(target as any, resourceType, amount);
         if (actionStatus === OK) {
             this.setAction(CreepWorkPastAction.WITHDRAW);
@@ -391,11 +381,7 @@ export abstract class CreepRunner {
         return actionStatus;
     }
 
-    protected transfer(
-        target: TargetType,
-        resourceType: ResourceConstant,
-        amount?: number | undefined,
-    ): ScreepsReturnCode {
+    protected transfer(target: TargetType, resourceType: ResourceConstant, amount?: number): ScreepsReturnCode {
         const actionStatus = this.creep.transfer(target as any, resourceType, amount);
         if (actionStatus === OK) {
             this.setAction(CreepWorkPastAction.TRANSFER);

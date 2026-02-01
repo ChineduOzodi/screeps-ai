@@ -23,7 +23,6 @@ interface BaseSystemInfo {
     creepSpawnersInfo: { [k: string]: CreepSpawnerProfileInfo };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ColonyDefenseManagement extends BaseSystemInfo {}
 
 interface ColonyBuilderManagement extends BaseSystemInfo {
@@ -74,7 +73,6 @@ interface CreepSpawnerProfileInfo {
     spawnCostPerTick?: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ColonyStats {}
 
 interface SpawnRequest {

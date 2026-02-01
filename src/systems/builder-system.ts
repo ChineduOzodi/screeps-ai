@@ -116,12 +116,12 @@ export class BuilderSystem extends BaseSystemImpl {
             new RoomPosition(pos.x + 1, pos.y - 1, pos.roomName),
             new RoomPosition(pos.x - 1, pos.y + 1, pos.roomName),
         ];
-        for (const pos of roadPositions) {
-            const result = pos.createConstructionSite(STRUCTURE_ROAD);
+        for (const roadPos of roadPositions) {
+            const result = roadPos.createConstructionSite(STRUCTURE_ROAD);
             if (result === OK) {
-                console.log(`SUCCESS: Placed road construction site at ${pos.x},${pos.y}`);
+                console.log(`SUCCESS: Placed road construction site at ${roadPos.x},${roadPos.y}`);
             } else {
-                console.log(`WARN: Failed to place road construction site at ${pos.x},${pos.y}: ${result}`);
+                console.log(`WARN: Failed to place road construction site at ${roadPos.x},${roadPos.y}: ${result}`);
             }
         }
     }
@@ -132,7 +132,6 @@ export class BuilderSystem extends BaseSystemImpl {
 
         const sources = mainRoom.find(FIND_SOURCES);
         for (const source of sources) {
-
             this.buildRoads(spawn.pos, source.pos, 1);
         }
     }
@@ -150,7 +149,7 @@ export class BuilderSystem extends BaseSystemImpl {
         const path = startPos.findPathTo(endPos, {
             ignoreCreeps: true,
             ignoreDestructibleStructures: true,
-            range: range,
+            range,
             swampCost: 2,
         });
 
@@ -163,7 +162,8 @@ export class BuilderSystem extends BaseSystemImpl {
     }
 
     private isTileClearForStructure(pos: RoomPosition, room: Room, ignoreRoads: boolean = false): boolean {
-        if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) { // Stay away from room edges for multi-tile patterns
+        if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) {
+            // Stay away from room edges for multi-tile patterns
             return false;
         }
         const terrain = room.getTerrain();
@@ -171,14 +171,16 @@ export class BuilderSystem extends BaseSystemImpl {
             return false;
         }
 
-        const existingStructures = room.lookForAt(LOOK_STRUCTURES, pos).filter(
-            structure => structure.structureType !== STRUCTURE_ROAD || !ignoreRoads);
+        const existingStructures = room
+            .lookForAt(LOOK_STRUCTURES, pos)
+            .filter(structure => structure.structureType !== STRUCTURE_ROAD || !ignoreRoads);
         if (existingStructures.length > 0) {
             return false;
         }
 
-        const existingConstructionSites = room.lookForAt(LOOK_CONSTRUCTION_SITES, pos).filter(
-            site => site.structureType !== STRUCTURE_ROAD || !ignoreRoads);
+        const existingConstructionSites = room
+            .lookForAt(LOOK_CONSTRUCTION_SITES, pos)
+            .filter(site => site.structureType !== STRUCTURE_ROAD || !ignoreRoads);
         if (existingConstructionSites.length > 0) {
             return false;
         }
@@ -191,11 +193,21 @@ export class BuilderSystem extends BaseSystemImpl {
         const roomName = room.name;
 
         const extensionOffsets = [
-            { x: 0, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
+            { x: 0, y: 0 },
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: 0 },
         ];
         const roadOffsets = [
-            { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
-            { x: 0, y: -2 }, { x: 0, y: 2 }, { x: -2, y: 0 }, { x: 2, y: 0 }
+            { x: -1, y: -1 },
+            { x: 1, y: -1 },
+            { x: -1, y: 1 },
+            { x: 1, y: 1 },
+            { x: 0, y: -2 },
+            { x: 0, y: 2 },
+            { x: -2, y: 0 },
+            { x: 2, y: 0 },
         ];
 
         const isClusterValidAtCenter = (center: RoomPosition): boolean => {
@@ -211,18 +223,18 @@ export class BuilderSystem extends BaseSystemImpl {
         };
 
         const spotCandidates = [
-            { dx: 0, dy: -4 },  // Top
-            { dx: -2, dy: -6 },  // Top-Left Diagonal
-            { dx: 2, dy: -6 },  // Top-Right Diagonal
+            { dx: 0, dy: -4 }, // Top
+            { dx: -2, dy: -6 }, // Top-Left Diagonal
+            { dx: 2, dy: -6 }, // Top-Right Diagonal
             { dx: 0, dy: -8 }, // Far Top
-            { dx: -4, dy: 0 },  // Left
+            { dx: -4, dy: 0 }, // Left
             { dx: -6, dy: -2 }, // Left-Top Diagonal
-            { dx: -6, dy: 2 },  // Left-Bottom Diagonal
-            { dx: -8, dy: 0 },  // Far Left
-            { dx: 0, dy: 4 },   // Bottom
-            { dx: -2, dy: 6 },  // Bottom-Left Diagonal
-            { dx: 2, dy: 6 },   // Bottom-Right Diagonal
-            { dx: 0, dy: 8 },   // Far Bottom
+            { dx: -6, dy: 2 }, // Left-Bottom Diagonal
+            { dx: -8, dy: 0 }, // Far Left
+            { dx: 0, dy: 4 }, // Bottom
+            { dx: -2, dy: 6 }, // Bottom-Left Diagonal
+            { dx: 2, dy: 6 }, // Bottom-Right Diagonal
+            { dx: 0, dy: 8 }, // Far Bottom
             // { dx: 4, dy: 0 }, // Right - uncomment if needed
         ];
 
@@ -240,11 +252,21 @@ export class BuilderSystem extends BaseSystemImpl {
     private buildExtensionCluster(centerPos: RoomPosition, room: Room): void {
         const roomName = room.name;
         const extensionOffsets = [
-            { x: 0, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
+            { x: 0, y: 0 },
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: 0 },
         ];
         const roadOffsets = [
-            { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
-            { x: 0, y: -2 }, { x: 0, y: 2 }, { x: -2, y: 0 }, { x: 2, y: 0 }
+            { x: -1, y: -1 },
+            { x: 1, y: -1 },
+            { x: -1, y: 1 },
+            { x: 1, y: 1 },
+            { x: 0, y: -2 },
+            { x: 0, y: 2 },
+            { x: -2, y: 0 },
+            { x: 2, y: 0 },
         ];
 
         for (const offset of extensionOffsets) {
@@ -260,12 +282,14 @@ export class BuilderSystem extends BaseSystemImpl {
         for (const offset of roadOffsets) {
             const pos = new RoomPosition(centerPos.x + offset.x, centerPos.y + offset.y, roomName);
             const result = pos.createConstructionSite(STRUCTURE_ROAD);
-             if (result === OK) {
+            if (result === OK) {
                 console.log(`SUCCESS: Placing road CS at ${pos.x},${pos.y}`);
             } else {
                 // It's possible a road was planned by another part of the system (e.g. onLevelOne)
                 // or a road already exists. This might not always be a hard error.
-                console.log(`INFO: Failed to place road CS at ${pos.x},${pos.y}: ${result}. May already exist or be planned.`);
+                console.log(
+                    `INFO: Failed to place road CS at ${pos.x},${pos.y}: ${result}. May already exist or be planned.`,
+                );
             }
         }
     }
@@ -281,19 +305,27 @@ export class BuilderSystem extends BaseSystemImpl {
             return;
         }
 
-        console.log(`INFO: Colony ${this.colony.colonyInfo.id} reached RCL 2. Attempting to build first extension cluster.`);
+        console.log(
+            `INFO: Colony ${this.colony.colonyInfo.id} reached RCL 2. Attempting to build first extension cluster.`,
+        );
 
         const clusterCenterPosition = this.findSuitableExtensionClusterPosition(spawn, mainRoom);
 
         if (clusterCenterPosition) {
-            console.log(`INFO: Found suitable position for extension cluster at ${clusterCenterPosition.x},${clusterCenterPosition.y}`);
+            console.log(
+                `INFO: Found suitable position for extension cluster at ${clusterCenterPosition.x},${clusterCenterPosition.y}`,
+            );
             this.buildExtensionCluster(clusterCenterPosition, mainRoom);
         } else {
             console.log("WARN: Could not find a suitable position for the first extension cluster at RCL 2.");
         }
     }
 
-    private buildStructure(structureType: BuildableStructureConstant, pos: RoomPosition, buildRoadsAround: boolean = false): void {
+    private buildStructure(
+        structureType: BuildableStructureConstant,
+        pos: RoomPosition,
+        buildRoadsAround: boolean = false,
+    ): void {
         const result = pos.createConstructionSite(structureType);
         if (result === OK) {
             console.log(`SUCCESS: Placed ${structureType} construction site at ${pos.x},${pos.y}`);
@@ -330,12 +362,16 @@ export class BuilderSystem extends BaseSystemImpl {
         const mainRoom = this.colony.getMainRoom();
         const spawn = this.colony.getMainSpawn();
 
-        console.log(`INFO: Colony ${this.colony.colonyInfo.id} reached RCL 3. Attempting to build second extension cluster.`);
+        console.log(
+            `INFO: Colony ${this.colony.colonyInfo.id} reached RCL 3. Attempting to build second extension cluster.`,
+        );
 
         const clusterCenterPosition = this.findSuitableExtensionClusterPosition(spawn, mainRoom);
 
         if (clusterCenterPosition) {
-            console.log(`INFO: Found suitable position for extension cluster at ${clusterCenterPosition.x},${clusterCenterPosition.y}`);
+            console.log(
+                `INFO: Found suitable position for extension cluster at ${clusterCenterPosition.x},${clusterCenterPosition.y}`,
+            );
             this.buildExtensionCluster(clusterCenterPosition, mainRoom);
         } else {
             console.log("WARN: Could not find a suitable position for the first extension cluster at RCL 3.");

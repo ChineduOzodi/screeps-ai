@@ -57,7 +57,6 @@ export class RepairerCreep extends CreepRunner {
                     this.transfer(target, RESOURCE_ENERGY) !== OK &&
                     this.build(target as any as ConstructionSite) !== OK
                 ) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     const t: AnyStructure = target as any;
                     const workDuration = t.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10;
                     const range = t.structureType === STRUCTURE_EXTENSION ? 1 : 3;
@@ -71,7 +70,11 @@ export class RepairerCreep extends CreepRunner {
     }
 
     public targetIsValidHealerAlternative(target: _HasId & _HasRoomPosition): boolean {
-        return target instanceof ConstructionSite || target instanceof StructureSpawn || target instanceof StructureExtension;
+        return (
+            target instanceof ConstructionSite ||
+            target instanceof StructureSpawn ||
+            target instanceof StructureExtension
+        );
     }
 }
 

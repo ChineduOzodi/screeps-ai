@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { CreepRole, CreepStatus } from "./creep";
 
 import { BaseSystem } from "systems/base-system";
@@ -104,8 +103,11 @@ export class ColonyManagerImpl implements ColonyManager {
         room.visual.text(`Colony: ${this.colonyInfo.id}`, 3, 5, { color: "white", font: 1, align: "left" });
 
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
-        const { estimatedEnergyProductionRate, storedEnergyPercent, totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage } =
-            this.systems.energy.systemInfo;
+        const {
+            estimatedEnergyProductionRate,
+            storedEnergyPercent,
+            totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage,
+        } = this.systems.energy.systemInfo;
         room.visual.text(
             `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}         Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}    Energy Stored Percent: ${storedEnergyPercent.toFixed(2)}`,
             3,
@@ -199,7 +201,8 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public getStoredEnergyPercent(): number {
         if (!this.colonyInfo.containerId) {
-            this.colonyInfo.containerId = this.getMainSpawn().pos.findClosestByRange<StructureContainer>(FIND_MY_STRUCTURES)?.id;
+            this.colonyInfo.containerId =
+                this.getMainSpawn().pos.findClosestByRange<StructureContainer>(FIND_MY_STRUCTURES)?.id;
         }
         if (!this.colonyInfo.containerId) {
             return 0;

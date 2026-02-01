@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ColonyManager, ColonyManagerImpl } from "prototypes/colony";
 import { Game, Memory } from "./mock";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";

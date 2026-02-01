@@ -83,7 +83,12 @@ export class SpawningSystem {
         this.spawnCreep(spawn, spawnQueue, body, memory);
     }
 
-    private spawnCreep(spawn: StructureSpawn, spawnQueue: SpawnRequest[], body: BodyPartConstant[], memory: CreepMemory) {
+    private spawnCreep(
+        spawn: StructureSpawn,
+        spawnQueue: SpawnRequest[],
+        body: BodyPartConstant[],
+        memory: CreepMemory,
+    ) {
         const status = spawn.spawnCreep(body, memory.name, { memory });
         switch (status) {
             case OK:
