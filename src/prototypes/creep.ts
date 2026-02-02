@@ -1,4 +1,3 @@
-import { EnergyTrackingImpl } from "infrastructure/energy-tracking";
 import { Movement } from "infrastructure/movement";
 
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
@@ -73,9 +72,6 @@ export abstract class CreepRunner {
             return;
         }
 
-        if (this.hasCarryCapacity()) {
-            this.trackCreepEnergyFlow();
-        }
 
         this.onRun();
     }
@@ -106,63 +102,6 @@ export abstract class CreepRunner {
         return false;
     }
 
-    private hasCarryCapacity() {
-        if (typeof this.creep.memory.hasCarryParts === "undefined") {
-            this.creep.memory.hasCarryParts = this.creep.getActiveBodyparts("carry") > 0;
-        }
-        return this.creep.memory.hasCarryParts;
-    }
-
-    private trackCreepEnergyFlow() {
-        const { memory } = this.creep;
-        if (typeof memory.lastEnergyAmount === "undefined") {
-            memory.lastEnergyAmount = 0;
-            memory.energyFlow = 0;
-            return;
-        }
-
-        // Calculate energy difference between last tick and use as energy flow.
-        const energy = this.creep.store.getUsedCapacity(RESOURCE_ENERGY);
-        memory.energyFlow = energy - memory.lastEnergyAmount;
-        memory.lastEnergyAmount = energy;
-
-        // Get last action and use to calculate energy flow for energyTrackingInfo
-        if (!memory.lastAction) {
-            memory.lastAction = CreepWorkPastAction.NONE;
-        }
-
-        if (!memory.energyTrackingInfo) {
-            memory.energyTrackingInfo = {};
-        }
-
-        const flow = this.getTrackedEnergyFlow(memory.lastAction, memory.energyFlow);
-        const energyTracking = new EnergyTrackingImpl(memory.energyTrackingInfo);
-
-        energyTracking.onTickFlow(flow);
-    }
-
-    public setAction(action: CreepWorkPastAction) {
-        if (this.creep.memory.lastAction !== action) {
-            this.creep.say(action);
-        }
-        this.creep.memory.lastAction = action;
-    }
-
-    /** What to count in energyFlow calculations based on the type of creep. */
-    public getTrackedEnergyFlow(lastAction: CreepWorkPastAction, energyFlow: number): number {
-        switch (lastAction) {
-            case CreepWorkPastAction.NONE:
-                return 0;
-            case CreepWorkPastAction.MOVE:
-                return 0;
-            case CreepWorkPastAction.TRANSFER:
-                return 0;
-            case CreepWorkPastAction.WITHDRAW:
-                return 0;
-            default:
-                return energyFlow;
-        }
-    }
 
     public getMovementSystem(): CreepMovementSystem {
         if (!this.creep.memory.movementSystem) {
@@ -177,7 +116,6 @@ export abstract class CreepRunner {
         range = 1,
         ignoreRoles?: string[],
     ) {
-        this.setAction(CreepWorkPastAction.MOVE);
         Movement.moveToWithReservation(this.creep, target, workDuration, range, ignoreRoles);
     }
 
@@ -376,7 +314,7 @@ export abstract class CreepRunner {
     protected withdraw(target: TargetType, resourceType: ResourceConstant, amount?: number): ScreepsReturnCode {
         const actionStatus = this.creep.withdraw(target as any, resourceType, amount);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.WITHDRAW);
+            // this.setAction(CreepWorkPastAction.WITHDRAW);
         }
         return actionStatus;
     }
@@ -384,7 +322,7 @@ export abstract class CreepRunner {
     protected transfer(target: TargetType, resourceType: ResourceConstant, amount?: number): ScreepsReturnCode {
         const actionStatus = this.creep.transfer(target as any, resourceType, amount);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.TRANSFER);
+            // this.setAction(CreepWorkPastAction.TRANSFER);
         }
         return actionStatus;
     }
@@ -392,7 +330,7 @@ export abstract class CreepRunner {
     protected pickup(target: TargetType): -8 | CreepActionReturnCode {
         const actionStatus = this.creep.pickup(target as any);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.PICKUP);
+            // this.setAction(CreepWorkPastAction.PICKUP);
         }
         return actionStatus;
     }
@@ -400,7 +338,7 @@ export abstract class CreepRunner {
     protected harvest(target: TargetType): -5 | -6 | CreepActionReturnCode {
         const actionStatus = this.creep.harvest(target as any);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.HARVEST);
+            // this.setAction(CreepWorkPastAction.HARVEST);
         }
         return actionStatus;
     }
@@ -408,7 +346,7 @@ export abstract class CreepRunner {
     protected repair(target: TargetType): -6 | CreepActionReturnCode {
         const actionStatus = this.creep.repair(target as any);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.REPAIR);
+            // this.setAction(CreepWorkPastAction.REPAIR);
         }
         return actionStatus;
     }
@@ -416,7 +354,7 @@ export abstract class CreepRunner {
     protected build(target: TargetType): -6 | -14 | CreepActionReturnCode {
         const actionStatus = this.creep.build(target as any);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.BUILD);
+            // this.setAction(CreepWorkPastAction.BUILD);
         }
         return actionStatus;
     }
@@ -424,7 +362,7 @@ export abstract class CreepRunner {
     protected attack(target: TargetType): CreepActionReturnCode {
         const actionStatus = this.creep.attack(target as any);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.ATTACK);
+            // this.setAction(CreepWorkPastAction.ATTACK);
         }
         return actionStatus;
     }
@@ -432,7 +370,7 @@ export abstract class CreepRunner {
     protected upgradeController(target: TargetType): ScreepsReturnCode {
         const actionStatus = this.creep.upgradeController(target as any);
         if (actionStatus === OK) {
-            this.setAction(CreepWorkPastAction.UPGRADE_CONTROLLER);
+            // this.setAction(CreepWorkPastAction.UPGRADE_CONTROLLER);
         }
         return actionStatus;
     }

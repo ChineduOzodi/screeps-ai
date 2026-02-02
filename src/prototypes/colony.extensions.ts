@@ -55,12 +55,6 @@ interface EnergyUsageTracking {
     actualEnergyUsagePercentage: number;
 }
 
-interface EnergyTrackingInfo {
-    /** How many ticks has been counted so far. */
-    count?: number;
-    average?: number;
-    total?: number;
-}
 
 interface ColonySource {
     sourceId: Id<Source>;

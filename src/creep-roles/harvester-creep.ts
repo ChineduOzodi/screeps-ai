@@ -1,9 +1,8 @@
 /* eslint-disable max-classes-per-file */
 import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 import { ColonyManager } from "prototypes/colony";
-import { CreepConstants } from "constants/creep-constants";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { SpawnerUtils } from "utils/spawner-utils";
+import { EnergyCalculator } from "utils/energy-calculator";
 
 export class HarvesterCreep extends CreepRunner {
     public constructor(creep: Creep) {
@@ -86,16 +85,14 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
     public onCreateProfiles(_energyRateCap: number, colony: ColonyManager): CreepProfiles {
         const profiles: CreepProfiles = {};
         for (const colonySource of colony.systems.energy.systemInfo.sources) {
-            if (!colonySource.accessCount) {
-                colonySource.accessCount = 1;
-            }
             const spawn = colony.getMainSpawn();
             const profileName = `${CreepRole.HARVESTER}-${colonySource.sourceId}`;
+            // Use current energy for spawning if no harvesters exist to jumpstart
             let energy = spawn.room.energyCapacityAvailable;
             if (colony.systems.energy.noEnergyCollectors()) {
                 energy = spawn.room.energyAvailable;
             }
-            profiles[profileName] = this.createHarvesterProfile(spawn, colonySource, energy);
+            profiles[profileName] = this.createHarvesterProfile(spawn, colonySource, energy, colony);
         }
         return profiles;
     }
@@ -104,116 +101,113 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         spawn: StructureSpawn,
         colonySource: ColonySource,
         energyCap: number,
+        colony: ColonyManager
     ): CreepSpawnerProfileInfo {
         const { sourceId, accessCount } = colonySource;
         const source = Game.getObjectById<Source>(sourceId);
         if (!source) {
             throw new Error(`Source not found with given id: ${sourceId}`);
         }
-        const target = spawn;
-        const path = target.pos.findPathTo(source, { ignoreCreeps: true, range: 1 });
 
-        const sourceEnergyProductionPerTick = source.energyCapacity / ENERGY_REGEN_TIME; // how much energy produced per tick
-        const travelTime = path.length * 3; // distance to source and back
-
-        const body: BodyPartConstant[] = [];
-
-        let workPartCount = 1;
-        let carryPartCount = 1;
-        let movePartCount = 1;
-
-        let totalCost =
-            CreepConstants.WORK_PART_COST * workPartCount +
-            CreepConstants.CARRY_PART_COST * carryPartCount +
-            CreepConstants.MOVE_PART_COST * movePartCount;
-
-        let partCountMod = Math.floor(energyCap / totalCost);
-
-        let energyProductionPerTick = SpawnerUtils.getEnergyProductionPerTick(
-            workPartCount * partCountMod,
-            carryPartCount * partCountMod,
-            travelTime,
-        );
-
-        let count = 0;
-
-        while (true) {
-            count++;
-            const pWorkPartCount = 1;
-            const pCarryPartCount = carryPartCount + 2;
-            const pMovePartCount = movePartCount + 1;
-            const pTotalCost =
-                CreepConstants.WORK_PART_COST * pWorkPartCount +
-                CreepConstants.CARRY_PART_COST * pCarryPartCount +
-                CreepConstants.MOVE_PART_COST * pMovePartCount;
-
-            if (pTotalCost > energyCap) {
-                // pTotalCost greater than energy available, breaking
-                break;
-            }
-
-            const pPartCountMod = Math.floor(energyCap / pTotalCost);
-
-            const pEnergyProductionPerTick = SpawnerUtils.getEnergyProductionPerTick(
-                pWorkPartCount * pPartCountMod,
-                pCarryPartCount * pPartCountMod,
-                travelTime,
-            );
-
-            if (pEnergyProductionPerTick > energyProductionPerTick) {
-                workPartCount = pWorkPartCount;
-                carryPartCount = pCarryPartCount;
-                movePartCount = pMovePartCount;
-                totalCost = pTotalCost;
-                partCountMod = pPartCountMod;
-                energyProductionPerTick = pEnergyProductionPerTick;
-            } else {
-                // console.log(`pPPT < pPT: ${pEnergyProductionPerTick} < ${energyProductionPerTick}, breaking from loop`);
-                break;
-            }
-            if (count >= 100) {
-                console.log(`stuck in while loop, breaking`);
-                break;
-            }
+        // Determine Dropoff
+        let dropoff: Structure | null = null;
+        if (colony.colonyInfo.containerId) {
+             const container = Game.getObjectById<StructureContainer>(colony.colonyInfo.containerId);
+             if (container) dropoff = container;
         }
+        // Fallback to spawn if no container/storage
+        if (!dropoff && colony.getMainRoom().storage) dropoff = colony.getMainRoom().storage || null;
+        if (!dropoff) dropoff = spawn;
 
-        for (let i = 0; i < workPartCount * partCountMod; i++) {
-            body.push(WORK);
-        }
-        for (let i = 0; i < carryPartCount * partCountMod; i++) {
-            body.push(CARRY);
-        }
-        for (let i = 0; i < movePartCount * partCountMod; i++) {
-            body.push(MOVE);
-        }
+        // Pathing
+        const distToSource = EnergyCalculator.calculateTravelTime(dropoff.pos, source.pos);
+        const distToDropoff = distToSource; // Round trip assumption
 
-        const sourceHarvestDuration = (carryPartCount * partCountMod * 50) / (workPartCount * partCountMod * 2);
-        const maxCreepCount = Math.min(
-            5,
-            Math.max(
-                1,
-                Math.round(
-                    (travelTime / SpawnerUtils.getTimeEnergyProductionFullLoad(workPartCount, carryPartCount)) *
-                        accessCount +
-                        0.3,
-                ),
-            ),
-        );
+        // Optimize Body
+        const bestBody = this.findBestHarvesterBody(energyCap, distToSource, distToDropoff);
+        const productionPerTick = EnergyCalculator.calculateHarvesterProductionPerTick(bestBody, distToSource, distToDropoff);
+
+        // Calculate Desired Amount
+        // Limit 1: Source Regeneration (3000 energy / 300 ticks = 10 energy/tick, or 4000/300 if center room)
+        const sourceRegen = source.energyCapacity / ENERGY_REGEN_TIME;
+        const requiredCreepsForRegen = productionPerTick > 0 ? Math.ceil(sourceRegen / productionPerTick) : 0;
+
+        // Limit 2: Available Slots
+        // If no storage, leave room for other roles? User said "Before first storage... share... After... max out"
+        // For now, hard cap at accessCount.
+        // TODO: Dynamic "sharing" logic if needed.
+        const maxCreepsBySlots = accessCount;
+
+        const desiredAmount = Math.min(requiredCreepsForRegen, maxCreepsBySlots);
 
         const memory: AddCreepToQueueOptions = {
             workTargetId: source.id,
-            workAmount: workPartCount,
-            averageEnergyConsumptionProductionPerTick: energyProductionPerTick,
-            workDuration: sourceHarvestDuration,
+            workAmount: bestBody.filter(p => p === WORK).length,
+            averageEnergyConsumptionProductionPerTick: productionPerTick,
+            // Estimated time: Fill up -> Travel -> Drop -> Travel back
+            workDuration: 1500, // Just use lifetime for now, or re-calculate cycle?
             role: CreepRole.HARVESTER,
         };
-        const creepSpawnManagement: CreepSpawnerProfileInfo = {
-            desiredAmount: Math.min(maxCreepCount, sourceEnergyProductionPerTick / energyProductionPerTick),
-            bodyBlueprint: body,
+
+        return {
+            desiredAmount: desiredAmount,
+            bodyBlueprint: bestBody,
             memoryBlueprint: memory,
             priority: 9,
         };
+    }
 
-        return creepSpawnManagement;
+    private findBestHarvesterBody(energyCap: number, distToSource: number, distToDropoff: number): BodyPartConstant[] {
+        // Simple optimization: Try different ratios of WORK/CARRY/MOVE
+        // For a harvester traveling:
+        // Needs MOVE to move (1 MOVE per 2 parts on road, 1 per 1 on plain/swamp)
+        // Needs WORK to harvest.
+        // Needs CARRY to transport.
+        // Strategy: Iterate increasing size.
+
+        let bestBody: BodyPartConstant[] = [WORK, CARRY, MOVE];
+        let bestRate = 0;
+
+        // Try various configurations. This is a heuristic search.
+        // Build base unit: [WORK, CARRY, MOVE] costs 200.
+        // Or [WORK, CARRY, CARRY, MOVE, MOVE] costs 300.
+        // We iterate "scale" of body.
+
+        // Heuristic: 1 WORK, N CARRY, M MOVE?
+        // Since we travel, CARRY is important.
+
+        // Let's just try scaling a balanced transport harvester body
+        // [WORK, CARRY, CARRY, MOVE, MOVE] (Cost 300) -> Good for moving
+        // [WORK, WORK, CARRY, MOVE] (Cost 300) -> Slower?
+
+        // Brute force "reasonable" combinations?
+        // Let's stick to the previous iterative logic but properly evaluating with EnergyCalculator
+
+        let work = 1;
+        let carry = 1;
+        let move = 1;
+
+        // Max parts 50
+        for (let w = 1; w <= 5; w++) { // Don't need too many work parts if traveling far, mostly need carry
+             for (let c = 1; c <= 20; c++) {
+                 for (let m = 1; m <= 20; m++) {
+                     const cost = w * 100 + c * 50 + m * 50;
+                     if (cost > energyCap) break;
+                     if (w + c + m > 50) break;
+
+                     const body: BodyPartConstant[] = [];
+                     for(let i=0; i<w; i++) body.push(WORK);
+                     for(let i=0; i<c; i++) body.push(CARRY);
+                     for(let i=0; i<m; i++) body.push(MOVE);
+
+                     const rate = EnergyCalculator.calculateHarvesterProductionPerTick(body, distToSource, distToDropoff);
+                     if (rate > bestRate) {
+                         bestRate = rate;
+                         bestBody = body;
+                     }
+                 }
+             }
+        }
+        return bestBody;
     }
 }

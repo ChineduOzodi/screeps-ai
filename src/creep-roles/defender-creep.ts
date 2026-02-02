@@ -3,7 +3,7 @@ import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { ColonyManager } from "prototypes/colony";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { Movement } from "infrastructure/movement";
+import { EnergyCalculator } from "utils/energy-calculator";
 
 const BASE_DEFENDER = [TOUGH, MOVE, ATTACK];
 
@@ -67,11 +67,14 @@ export class DefenderCreepSpawner extends CreepSpawnerImpl {
         const numberOfParts = Math.max(1, Math.floor(energy / CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_DEFENDER)));
         const body = CreepSpawnerImpl.multiplyBody(BASE_DEFENDER, numberOfParts);
 
+        const cost = EnergyCalculator.calculateBodyCost(body);
+        const consumption = cost / CREEP_LIFE_TIME;
+
         const memory: AddCreepToQueueOptions = {
             homeRoomName: roomName,
             workDuration: 5,
             role: CreepRole.DEFENDER,
-            averageEnergyConsumptionProductionPerTick: 0,
+            averageEnergyConsumptionProductionPerTick: consumption,
         };
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
             desiredAmount: 0,

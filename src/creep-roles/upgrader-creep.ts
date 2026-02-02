@@ -1,9 +1,8 @@
 /* eslint-disable max-classes-per-file */
 import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
-
 import { ColonyManager } from "prototypes/colony";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { Movement } from "infrastructure/movement";
+import { EnergyCalculator } from "utils/energy-calculator";
 
 export class UpgraderCreep extends CreepRunner {
     public override onRun(): void {
@@ -40,38 +39,94 @@ export class UpgraderCreep extends CreepRunner {
 }
 
 export class UpgraderCreepSpawner extends CreepSpawnerImpl {
-    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
-        const energyUsagePerCreep = -colony.getTotalEstimatedEnergyFlowRate(CreepRole.UPGRADER);
-        let desiredAmount = 1;
-        if (energyUsagePerCreep > 0) {
-            desiredAmount = Math.min(4, Math.max(1, Math.floor(energyCap / energyUsagePerCreep)));
+    public onCreateProfiles(energyBudgetRate: number, colony: ColonyManager): CreepProfiles {
+        // Find path metrics
+        const room = colony.getMainRoom();
+        const controller = room.controller;
+        if (!controller) return {};
+
+        // Find dropoff/pickup
+        // If storage exists, use that. Else find closest source.
+        let sourcePos = room.storage?.pos;
+        if (!sourcePos) {
+             const sources = colony.systems.energy.systemInfo.sources;
+             if (sources && sources.length > 0) {
+                 // Simple closest source logic
+                 let bestSource = sources[0];
+                 let bestDist = Infinity;
+                 for (const s of sources) {
+                     const sPos = new RoomPosition(s.position.x, s.position.y, s.position.roomName);
+                     const dist = EnergyCalculator.calculateTravelTime(controller.pos, sPos);
+                     if (dist < bestDist) {
+                         bestDist = dist;
+                         bestSource = s;
+                     }
+                 }
+                 const p = bestSource.position;
+                 sourcePos = new RoomPosition(p.x, p.y, p.roomName);
+             }        }
+
+        if (!sourcePos) throw new Error(`No source found for ${controller.id}`); // Should not happen if room works
+
+        const distToSource = EnergyCalculator.calculateTravelTime(controller.pos, sourcePos);
+
+        // Define Body
+        // Simple scaling body for now: [WORK, CARRY, MOVE] ratio
+        // Upgrader: Needs consistent efficient transfer.
+        // Pre-Link: Travel. WORK parts should drain CARRY roughly when needed?
+        // Actually, just maximize WORK per tick given the budget.
+
+        // Let's create a dynamic body based on room capacity (max size creep) AND budget rate
+        const roomCapacity = room.energyCapacityAvailable;
+        const body = this.createUpgraderBody(roomCapacity, distToSource);
+
+        const consumptionPerTick = EnergyCalculator.calculateWorkerConsumptionPerTick(body, distToSource, 1); // 1 energy per tick per work (upgrade)
+
+        let desiredAmount = 0;
+        if (consumptionPerTick > 0 && energyBudgetRate > 0) {
+             desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
         }
 
-        const body: BodyPartConstant[] = [];
-
-        body.push(WORK);
-        body.push(CARRY);
-        body.push(CARRY);
-        body.push(MOVE);
-        body.push(MOVE);
-
-        const energyUsePerTick = UPGRADE_CONTROLLER_POWER * 1;
+        // Hard cap for controller slots? Usually 1-2 heavy upgraders is enough, or swarm for early RCL.
+        // Limit to reasonable number to avoid CPU spam
+        desiredAmount = Math.min(desiredAmount, 3); // Cap at 3 for now
 
         const memory: AddCreepToQueueOptions = {
-            workTargetId: colony.getMainRoom().controller?.id,
-            workDuration: (CARRY_CAPACITY * 2) / energyUsePerTick,
-            averageEnergyConsumptionProductionPerTick: energyUsePerTick,
+            workTargetId: controller.id,
+            // Estimated time per cycle
+            // workDuration is used for internal reservation or timeouts, maybe just lifetime?
+            workDuration: 1500,
+            averageEnergyConsumptionProductionPerTick: consumptionPerTick,
             role: CreepRole.UPGRADER,
         };
 
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
-            desiredAmount: 1,
+            desiredAmount: desiredAmount,
             bodyBlueprint: body,
             memoryBlueprint: memory,
+            priority: 5, // Lower than harvester
         };
 
         const profiles: CreepProfiles = {};
         profiles[CreepRole.UPGRADER] = creepSpawnManagement;
         return profiles;
+    }
+
+    private createUpgraderBody(energyCap: number, distance: number): BodyPartConstant[] {
+         // Simple builder: 1 WORK, 1 CARRY, 1 MOVE = 200
+         // Optimization: If close, more WORK. If far, more CARRY?
+         // For now, linear scaling [WORK, CARRY, MOVE]
+
+         const unitCost = 200;
+         const maxUnits = Math.floor(energyCap / unitCost);
+         const units = Math.min(maxUnits, 16); // Cap size at something reasonable (16*3 = 48 parts)
+
+         const body: BodyPartConstant[] = [];
+         for(let i=0; i<units; i++) {
+             body.push(WORK);
+             body.push(CARRY);
+             body.push(MOVE);
+         }
+         return body;
     }
 }

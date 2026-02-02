@@ -2,8 +2,7 @@
 import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 import { ColonyManager } from "prototypes/colony";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-
-const MAX_BUILDERS = 3;
+import { EnergyCalculator } from "utils/energy-calculator";
 
 const BASE_BUILDER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
 const BASE_BUILDER_COST: number = CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_BUILDER_BODY);
@@ -68,59 +67,96 @@ export class BuilderCreep extends CreepRunner {
 }
 
 export class BuilderCreepSpawner extends CreepSpawnerImpl {
-    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+    public onCreateProfiles(energyBudgetRate: number, colony: ColonyManager): CreepProfiles {
         // Fallback to empty queue if builderManagement is not initialized
         const buildQueue = colony.colonyInfo.builderManagement?.buildQueue || [];
-        const profile = this.createProfile(energyCap, colony);
+
         if (buildQueue.length === 0) {
-            profile.desiredAmount = 0;
+            const profiles: CreepProfiles = {};
+            profiles[CreepRole.BUILDER] = {
+                desiredAmount: 0,
+                bodyBlueprint: [],
+                memoryBlueprint: {
+                    averageEnergyConsumptionProductionPerTick: 0,
+                    role: CreepRole.BUILDER
+                } as any,
+                spawnCostPerTick: 0
+            };
+            return profiles;
         }
 
-        const profiles: CreepProfiles = {};
-        profiles[CreepRole.BUILDER] = profile;
-        return profiles;
-    }
+        // Find dropoff/pickup (Source or Storage)
+        const room = colony.getMainRoom();
 
-    private createProfile(energyCap: number, colony: ColonyManager): CreepSpawnerProfileInfo {
-        const energyCapacityAvailable = colony.getMainSpawn().room.energyCapacityAvailable;
-        let body: BodyPartConstant[] = [];
-        const energyUsagePerCreep = -colony.getTotalEstimatedEnergyFlowRate(CreepRole.BUILDER);
-        let bodyCost = 0;
-        let bodyMultiplier = 0;
-        let bodyMultiplierPerTick = 0;
-
-        if (energyCapacityAvailable < BASE_BUILDER_COST) {
-            bodyCost = MIN_BUILDER_COST;
-            bodyMultiplier = Math.floor(energyCapacityAvailable / bodyCost);
-            bodyMultiplierPerTick = Math.floor(energyCap / (MIN_BUILDER_COST_PER_TICK + energyUsagePerCreep));
-            body = CreepSpawnerImpl.multiplyBody(MIN_BUILDER_BODY, Math.min(bodyMultiplier, bodyMultiplierPerTick));
-        } else {
-            bodyCost = BASE_BUILDER_COST;
-            bodyMultiplier = Math.floor(energyCapacityAvailable / bodyCost);
-            bodyMultiplierPerTick = Math.floor(energyCap / (BASE_BUILDER_COST_PER_TICK + energyUsagePerCreep));
-            body = CreepSpawnerImpl.multiplyBody(BASE_BUILDER_BODY, Math.min(bodyMultiplier, bodyMultiplierPerTick));
+         // If storage exists, use that. Else find closest source.
+        let sourcePos = room.storage?.pos;
+        if (!sourcePos) {
+             const sources = colony.systems.energy.systemInfo.sources;
+             if (sources && sources.length > 0) {
+                 // Pick first source for estimation
+                 const p = sources[0].position;
+                 sourcePos = new RoomPosition(p.x, p.y, p.roomName);
+             }
         }
-        const workCount = body.filter(x => x === WORK).reduce((a, b) => a + 1, 0);
-        const carryCount = body.filter(x => x === CARRY).reduce((a, b) => a + 1, 0);
-        const energyUsePerTick = BUILD_POWER * workCount;
+
+        if (!sourcePos) return {};
+
+        // Find Construction Site (First in queue)
+        let workPos = sourcePos;
+        const siteId = buildQueue[0];
+        const site = Game.getObjectById<ConstructionSite>(siteId);
+        if (site) workPos = site.pos;
+
+        const distToSource = EnergyCalculator.calculateTravelTime(workPos, sourcePos);
+
+        // Body Logic
+        const energyCap = room.energyCapacityAvailable;
+        const body = this.createBuilderBody(energyCap);
+
+        const consumptionPerTick = EnergyCalculator.calculateWorkerConsumptionPerTick(body, distToSource, 5); // 5 energy per tick per work (build)
+
+        let desiredAmount = 0;
+        if (consumptionPerTick > 0 && energyBudgetRate > 0) {
+             desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
+        }
+
+        // Cap reasonable builders
+        desiredAmount = Math.min(desiredAmount, 3);
 
         const memory: AddCreepToQueueOptions = {
-            workDuration: (CARRY_CAPACITY * carryCount) / energyUsePerTick,
+            workDuration: 1500,
             role: CreepRole.BUILDER,
-            averageEnergyConsumptionProductionPerTick: energyUsePerTick,
+            averageEnergyConsumptionProductionPerTick: consumptionPerTick,
         };
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
             bodyBlueprint: body,
             memoryBlueprint: memory,
-            desiredAmount: Math.max(
-                1,
-                Math.min(
-                    MAX_BUILDERS,
-                    Math.floor(bodyMultiplierPerTick / Math.min(bodyMultiplier, bodyMultiplierPerTick)),
-                ),
-            ),
+            desiredAmount: desiredAmount,
         };
 
-        return creepSpawnManagement;
+        const profiles: CreepProfiles = {};
+        profiles[CreepRole.BUILDER] = creepSpawnManagement;
+        return profiles;
+    }
+
+    private createBuilderBody(energyCap: number): BodyPartConstant[] {
+        // [WORK, CARRY, CARRY, MOVE, MOVE] = 300
+        const unitCost = 300;
+        const maxUnits = Math.floor(energyCap / unitCost);
+        const units = Math.min(maxUnits, 10);
+
+        const body: BodyPartConstant[] = [];
+        for(let i=0; i<units; i++) {
+            body.push(WORK);
+            body.push(CARRY);
+            body.push(CARRY);
+            body.push(MOVE);
+            body.push(MOVE);
+        }
+
+        // Fallback for small rooms
+        if (body.length === 0) return [WORK, CARRY, MOVE]; // 200 cost
+
+        return body;
     }
 }

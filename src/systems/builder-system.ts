@@ -30,7 +30,6 @@ export class BuilderSystem extends BaseSystemImpl {
     }
 
     public override onStart(): void {
-        this.defaultEnergyWeight = 0.5;
         this.updateBuildQueue();
     }
     public override run(): void {
@@ -38,7 +37,10 @@ export class BuilderSystem extends BaseSystemImpl {
         this.updateBuildQueue();
     }
 
-    public override onLevelUp(level: number): void {}
+    public constructor(colony: any) {
+        super(colony);
+        this.defaultEnergyWeight = 0.5;
+    }
 
     public override getCreepSpawners(): CreepSpawner[] {
         return [new BuilderCreepSpawner()];

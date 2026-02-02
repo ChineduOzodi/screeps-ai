@@ -241,9 +241,6 @@ export class GoapSystem extends BaseSystemImpl {
         return true;
     }
 
-    public override onLevelUp(level: number): void {
-        // Not used.
-    }
     public override updateProfiles(): void {}
     public override getRolesToTrackEnergy(): any[] { return []; }
     public override getCreepSpawners(): CreepSpawner[] {

@@ -3,9 +3,8 @@ import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
 
 import { BaseSystemImpl } from "systems/base-system";
 import { ColonyManager } from "prototypes/colony";
-import { CreepConstants } from "constants/creep-constants";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { Movement } from "infrastructure/movement";
+import { EnergyCalculator } from "utils/energy-calculator";
 
 export class RepairerCreep extends CreepRunner {
     public constructor(creep: Creep) {
@@ -79,26 +78,48 @@ export class RepairerCreep extends CreepRunner {
 }
 
 export class RepairerCreepSpawner extends CreepSpawnerImpl {
-    public onCreateProfiles(energyCap: number, _colony: ColonyManager): CreepProfiles {
-        const maxCreepCount = 1;
+    public onCreateProfiles(energyBudgetRate: number, colony: ColonyManager): CreepProfiles {
+        // Find most damaged structure, or assume average
+        const room = colony.getMainRoom();
 
-        const creepBodyScale = Math.max(
-            1,
-            Math.floor(
-                energyCap /
-                    (CreepConstants.WORK_PART_COST + CreepConstants.CARRY_PART_COST + CreepConstants.MOVE_PART_COST),
-            ),
-        );
-        const body = BaseSystemImpl.scaleCreepBody([WORK, CARRY, MOVE], creepBodyScale);
+        let targetPos = room.storage?.pos;
+        if (!targetPos) {
+             const sources = colony.systems.energy.systemInfo.sources;
+             if (sources && sources.length > 0) {
+                 const p = sources[0].position;
+                 targetPos = new RoomPosition(p.x, p.y, p.roomName);
+             }
+        }
+        if (!targetPos) return {};
+
+        // Find dist from spawn/storage
+        let sourcePos = room.storage?.pos || room.find(FIND_SOURCES)[0]?.pos;
+        let dist = 20; // fallback
+        if (targetPos && sourcePos) {
+            dist = EnergyCalculator.calculateTravelTime(sourcePos, targetPos);
+        }
+
+        const energyCap = room.energyCapacityAvailable;
+        const body = this.createRepairerBody(energyCap);
+
+        const consumptionPerTick = EnergyCalculator.calculateWorkerConsumptionPerTick(body, dist, 1);
+
+        let desiredAmount = 0;
+        if (consumptionPerTick > 0 && energyBudgetRate > 0) {
+             desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
+        }
+
+        // Cap repairers to avoid spam since they are highly efficient
+        desiredAmount = Math.min(desiredAmount, 2);
 
         const memory: AddCreepToQueueOptions = {
-            workAmount: creepBodyScale,
-            averageEnergyConsumptionProductionPerTick: creepBodyScale,
-            workDuration: 2,
+            workAmount: body.filter(p => p === WORK).length,
+            averageEnergyConsumptionProductionPerTick: consumptionPerTick,
+            workDuration: 1500,
             role: CreepRole.REPAIRER,
         };
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
-            desiredAmount: maxCreepCount,
+            desiredAmount: desiredAmount,
             bodyBlueprint: body,
             memoryBlueprint: memory,
         };
@@ -106,5 +127,20 @@ export class RepairerCreepSpawner extends CreepSpawnerImpl {
         const profiles: CreepProfiles = {};
         profiles[CreepRole.REPAIRER] = creepSpawnManagement;
         return profiles;
+    }
+
+    private createRepairerBody(energyCap: number): BodyPartConstant[] {
+        // [WORK, CARRY, MOVE]
+        const unitCost = 200;
+        const maxUnits = Math.floor(energyCap / unitCost);
+        const units = Math.min(maxUnits, 8); // Repairers don't need to be huge
+
+        const body: BodyPartConstant[] = [];
+        for(let i=0; i<units; i++) {
+            body.push(WORK);
+            body.push(CARRY);
+            body.push(MOVE);
+        }
+        return body;
     }
 }

@@ -44,6 +44,8 @@ export interface ColonyManager {
     getCreepCount(role: CreepRole): number;
     /** List version of systems used in colony. */
     getSystemsList(): BaseSystem[];
+    getCreeps(): Creep[];
+    removeSpawnRequest(name: string): void;
 }
 
 export class ColonyManagerImpl implements ColonyManager {
@@ -70,11 +72,6 @@ export class ColonyManagerImpl implements ColonyManager {
 
         if (!this.colonyInfo.level) {
             this.colonyInfo.level = this.getMainRoom().controller?.level || 0;
-        }
-
-        if (this.colonyInfo.level < (this.getMainRoom().controller?.level || 0)) {
-            this.colonyInfo.level++;
-            systems.forEach(x => x.onLevelUp(this.colonyInfo.level));
         }
 
         this.manageEnergyProductionConsumption();
@@ -117,10 +114,20 @@ export class ColonyManagerImpl implements ColonyManager {
             storedEnergyPercent,
             totalEnergyUsagePercentageAllowed: totalEnergyUsagePercentage,
         } = this.systems.energy.systemInfo;
+
+        const gross = (this.systems.energy.systemInfo as any).grossProduction || 0;
+        const upkeep = (this.systems.energy.systemInfo as any).upkeep || 0;
+
         room.visual.text(
-            `Energy Production Estimate: ${estimatedEnergyProductionRate.toFixed(2)}         Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}    Energy Stored Percent: ${storedEnergyPercent.toFixed(2)}`,
+            `Net Energy: ${estimatedEnergyProductionRate.toFixed(2)} (Gross: ${gross.toFixed(2)} - Upkeep: ${upkeep.toFixed(2)})`,
             3,
             6,
+            textStyle,
+        );
+        room.visual.text(
+            `Energy Usage Percent: ${totalEnergyUsagePercentage.toFixed(2)}    Energy Stored Percent: ${storedEnergyPercent.toFixed(2)}`,
+            3,
+            7,
             textStyle,
         );
 
@@ -136,7 +143,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
         for (const key in s) {
             const system = s[key];
-            if (!system.energyUsageTracking.requestedEnergyUsageWeight) {
+            if (!system.energyUsageTracking.requestedEnergyUsageWeight && system.energyUsageTracking.estimatedEnergyWorkRate === 0) {
                 continue;
             }
 
@@ -151,7 +158,12 @@ export class ColonyManagerImpl implements ColonyManager {
     private visualizeSystems(options: EnergyTrackingSystem[]): void {
         const room = this.getMainRoom();
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
-        let offset = 7;
+        let offset = 8; // Adjusted offset since we added a line
+
+        let totalRequestedWeight = 0;
+        options.forEach(o => totalRequestedWeight += o.energyTracking.requestedEnergyUsageWeight);
+
+        room.visual.text(`Total Requested Weight: ${totalRequestedWeight.toFixed(2)}`, 3, offset++, { color: "#cccccc", font: 0.5, align: "left" });
 
         for (const option of options) {
             const {
@@ -160,19 +172,31 @@ export class ColonyManagerImpl implements ColonyManager {
                 actualEnergyUsagePercentage,
                 allowedEnergyWorkRate,
             } = option.energyTracking;
+
             if (estimatedEnergyWorkRate || requestedEnergyUsagePercentage || actualEnergyUsagePercentage) {
+                const y = offset;
+                // System Name
+                room.visual.text(`${option.systemName}`, 3, y, textStyle);
+
+                // Draw bar for usage/allowed
+                const barWidth = 10;
+                const usagePercent = allowedEnergyWorkRate > 0 ? Math.min(estimatedEnergyWorkRate / allowedEnergyWorkRate, 1) : 0;
+                const barColor = estimatedEnergyWorkRate > allowedEnergyWorkRate ? '#ff0000' : '#00ff00';
+
+                room.visual.rect(10, y - 0.6, barWidth, 0.6, { fill: '#333333', opacity: 0.5 });
+                if (usagePercent > 0) {
+                     room.visual.rect(10, y - 0.6, barWidth * usagePercent, 0.6, { fill: barColor, opacity: 0.8 });
+                }
+
+                // Stats text
                 room.visual.text(
-                    `${option.systemName} - Energy Usage/Allowed: ${estimatedEnergyWorkRate.toFixed(
-                        2,
-                    )}/${allowedEnergyWorkRate.toFixed(
-                        2,
-                    )}, Actual/Requested Percent: ${actualEnergyUsagePercentage.toFixed(
-                        2,
-                    )}/${requestedEnergyUsagePercentage.toFixed(2)}`,
-                    3,
-                    offset,
-                    textStyle,
+                    `Use/Allow: ${estimatedEnergyWorkRate.toFixed(1)}/${allowedEnergyWorkRate.toFixed(1)}  ` +
+                    `Req/Act %: ${(requestedEnergyUsagePercentage * 100).toFixed(0)}%/${(actualEnergyUsagePercentage * 100).toFixed(0)}%`,
+                    10 + barWidth + 1,
+                    y,
+                    { ...textStyle, color: "#aaaaaa" }
                 );
+
                 offset++;
             }
         }
@@ -224,15 +248,20 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public manageEnergyProductionConsumption(): void {
-        this.systems.energy.systemInfo.estimatedEnergyProductionRate =
-            this.getTotalEstimatedEnergyFlowRate("harvester");
+        const gross = this.systems.energy.getTheoreticalGrossProduction();
+        let upkeep = 0;
+
         this.systems.energy
             .getSpawnerProfilesList()
             .forEach(
                 x =>
-                    (this.systems.energy.systemInfo.estimatedEnergyProductionRate -=
-                        (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
+                    (upkeep += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
             );
+
+        this.systems.energy.systemInfo.estimatedEnergyProductionRate = gross - upkeep;
+        (this.systems.energy.systemInfo as any).grossProduction = gross;
+        (this.systems.energy.systemInfo as any).upkeep = upkeep;
+
         const storedEnergyPercent = this.getStoredEnergyPercent();
         if (storedEnergyPercent > 0.9) {
             this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.5;
@@ -286,7 +315,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
         energyTracking.estimatedEnergyWorkRate = 0;
 
-        roles.forEach(x => (energyTracking.estimatedEnergyWorkRate -= this.getTotalEstimatedEnergyFlowRate(x)));
+        roles.forEach(x => (energyTracking.estimatedEnergyWorkRate += this.getTotalEstimatedEnergyFlowRate(x)));
         system
             .getSpawnerProfilesList()
             .forEach(
@@ -304,7 +333,7 @@ export class ColonyManagerImpl implements ColonyManager {
         const creeps = this.getCreeps().filter(x => x.memory.role === role);
 
         creeps.forEach(creep => {
-            totalEnergyConsumptionProductionRate += creep.memory.energyTrackingInfo?.average || 0;
+            totalEnergyConsumptionProductionRate += creep.memory.averageEnergyConsumptionProductionPerTick || 0;
         });
 
         return totalEnergyConsumptionProductionRate;
@@ -428,7 +457,28 @@ export class ColonyManagerImpl implements ColonyManager {
             isMain: true,
             alertLevel: 0,
         });
+        // Check for existing creeps that belong to this colony (recovery from memory wipe)
+        this.scanForCreeps();
+
         return true;
+    }
+
+    private scanForCreeps(): void {
+        console.log(`Scanning for orphaned creeps in colony ${this.colonyInfo.id}...`);
+        const colonyCreeps = this.getColonyCreeps();
+        for (const name in Game.creeps) {
+            const creep = Game.creeps[name];
+            if (creep.memory.colonyId === this.colonyInfo.id) {
+                if (!colonyCreeps[name]) {
+                    console.log(`Adopting orphaned creep: ${name}`);
+                     colonyCreeps[name] = {
+                        name: name,
+                        id: creep.id,
+                        status: CreepStatus.WORKING, // Assume working, systems will sort it out
+                    };
+                }
+            }
+        }
     }
 
     public getScreepRoom(name: string): RoomData | undefined {

@@ -1,11 +1,10 @@
-import { CreepRole, CreepStatus, CreepWorkPastAction } from "./creep";
+import { CreepRole, CreepStatus } from "./creep";
 
 declare global {
     interface CreepMemory extends AddCreepToQueueOptions {
         name: string;
         colonyId: string;
         movementSystem?: CreepMovementSystem;
-        energyTrackingInfo?: EnergyTrackingInfo;
         targetId?: string; // TODO: convert to Id<Tombstone | StructureExtension | AnyStructure | Resource<ResourceConstant> | Source | ConstructionSite<BuildableStructureConstant> or _HasId
         working: boolean;
         workDuration: number;
@@ -26,15 +25,6 @@ declare global {
 
         /** Total energy cost to spawn this creep. */
         spawnCost?: number;
-
-        // Track Energy Flow
-        hasCarryParts?: boolean;
-        /** To be used to keep track of last energy amount stored and use it to derive change in energy. */
-        lastEnergyAmount?: number;
-        /** Energy flow derived from change in lastEnergyAmount. */
-        energyFlow?: number;
-        /** Used to track what action the creep performed last to apply correct energy flow calculations. */
-        lastAction?: CreepWorkPastAction;
     }
 
     interface CreepMovementSystem {

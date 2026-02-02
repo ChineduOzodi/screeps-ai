@@ -22,7 +22,7 @@ export class InfrastructureSystem extends BaseSystemImpl {
             this.systemInfo.energyUsageTracking = {
                 actualEnergyUsagePercentage: 0,
                 estimatedEnergyWorkRate: 0,
-                requestedEnergyUsageWeight: 0.25,
+                requestedEnergyUsageWeight: 0,
                 allowedEnergyWorkRate: 0,
             };
         }
@@ -30,14 +30,38 @@ export class InfrastructureSystem extends BaseSystemImpl {
     }
 
     public override onStart(): void {
-        this.defaultEnergyWeight = 0.1;
+    }
+
+    public constructor(colony: any) {
+        super(colony);
+        this.defaultEnergyWeight = 0.5;
     }
 
     public override run(): void {
         super.run();
+        this.checkRepairNeeds();
     }
 
-    public override onLevelUp(_level: number): void {}
+    private checkRepairNeeds(): void {
+        if (Game.time % 50 !== 0) {
+            return;
+        }
+
+        const room = this.colony.getMainRoom();
+        if (!room) {
+            return;
+        }
+
+        const targets = room.find(FIND_STRUCTURES, {
+            filter: object => object.hits < object.hitsMax,
+        });
+
+        if (targets.length > 0) {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0.25;
+        } else {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0;
+        }
+    }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
         return [CreepRole.REPAIRER];

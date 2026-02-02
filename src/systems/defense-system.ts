@@ -30,14 +30,23 @@ export class DefenseSystem extends BaseSystemImpl {
     }
 
     public override onStart(): void {
-        this.defaultEnergyWeight = 0;
+    }
+
+    public constructor(colony: any) {
+        super(colony);
+        this.defaultEnergyWeight = 0.5;
     }
 
     public override run(): void {
         super.run();
+        const room = this.colony.getMainRoom();
+        const hostiles = room.find(FIND_HOSTILE_CREEPS);
+        if (hostiles.length > 0) {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 10;
+        } else {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0;
+        }
     }
-
-    public override onLevelUp(_level: number): void {}
 
     public override getCreepSpawners(): CreepSpawner[] {
         return [new DefenderCreepSpawner()];

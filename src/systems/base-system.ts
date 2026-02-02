@@ -14,9 +14,6 @@ export interface BaseSystem {
 
     run(): void;
 
-    /** What happens when the room controller levels up. The same level could happen more than once, if a room level drops.*/
-    onLevelUp(level: number): void;
-
     /** Functionality to update profiles of creeps to be spawned by the spawning system. Primarily invoked by colony manager. */
     updateProfiles(): void;
 
@@ -82,10 +79,57 @@ export abstract class BaseSystemImpl implements BaseSystem {
         for (const spawner of creepSpawners) {
              const spawnerProfiles = spawner.createProfiles(this.energyUsageTracking.allowedEnergyWorkRate, this.colony);
              for (const name in spawnerProfiles) {
-                 profiles.push(spawnerProfiles[name]);
+                 const profile = spawnerProfiles[name];
+                 profiles.push(profile);
+
+                 // Pruning Logic
+                 this.pruneSpawnQueue(profile);
              }
         }
         return profiles;
+    }
+
+    private pruneSpawnQueue(profile: CreepSpawnerProfileInfo): void {
+        if (!profile.memoryBlueprint || typeof profile.desiredAmount === 'undefined') {
+            return;
+        }
+        const desired = profile.desiredAmount;
+        const role = profile.memoryBlueprint.role;
+        const targetId = profile.memoryBlueprint.workTargetId;
+
+        // Count Alive
+        const aliveCreeps = this.colony.getCreeps().filter(c => {
+            if (c.memory.role !== role) return false;
+            // Strict check for Harvesters (unique per source)
+            if (targetId && c.memory.workTargetId !== targetId) return false;
+            return true;
+        });
+
+        // Count Queued
+        const spawnQueue = this.colony.getSpawnQueue();
+        const queuedItems = spawnQueue.filter(req => {
+            if (req.memory.role !== role) return false;
+            if (targetId && req.memory.workTargetId !== targetId) return false;
+            return true;
+        });
+
+        const total = aliveCreeps.length + queuedItems.length;
+        let excess = total - desired;
+
+        if (excess > 0) {
+            // Remove from queue, starting from lowest priority (end of list usually, but queue is sorted High->Low)
+            // So we want to remove from the end/bottom.
+
+            // Find items to remove
+            // Sort matching queued items by priority (Ascending) so we remove lowest first
+            queuedItems.sort((a, b) => a.priority - b.priority);
+
+            for (const item of queuedItems) {
+                if (excess <= 0) break;
+                this.colony.removeSpawnRequest(item.memory.name);
+                excess--;
+            }
+        }
     }
 
     public getRoleCount(role: CreepRole): number {
@@ -100,7 +144,6 @@ export abstract class BaseSystemImpl implements BaseSystem {
     public run(): void {
         this.energyUsageTracking.requestedEnergyUsageWeight = this.defaultEnergyWeight;
     }
-    public abstract onLevelUp(level: number): void;
     public abstract getRolesToTrackEnergy(): CreepRole[];
     public abstract getCreepSpawners(): CreepSpawner[];
 }

@@ -29,13 +29,16 @@ export class UpgradeSystem extends BaseSystemImpl {
     }
 
     public override onStart(): void {
+    }
+
+    public constructor(colony: any) {
+        super(colony);
         this.defaultEnergyWeight = 0.5;
     }
 
     public override run(): void {
         super.run();
     }
-    public override onLevelUp(_level: number): void {}
 
     public override getCreepSpawners(): CreepSpawner[] {
         return [new UpgraderCreepSpawner()];
