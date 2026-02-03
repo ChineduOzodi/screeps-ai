@@ -28,8 +28,7 @@ export class UpgradeSystem extends BaseSystemImpl {
         return this.systemInfo.energyUsageTracking;
     }
 
-    public override onStart(): void {
-    }
+    public override onStart(): void {}
 
     public constructor(colony: any) {
         super(colony);
@@ -49,15 +48,17 @@ export class UpgradeSystem extends BaseSystemImpl {
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {
-        const rcl = (state['rcl'] as number);
+        const rcl = state.rcl as number;
         if (rcl >= 8) return [];
 
         // Always aim for next level.
-        const goals: Goal[] = [{
-            name: `Upgrade Controller to ${rcl + 1}`,
-            priority: 20, // Lower than defense/harvest/maintenance usually
-            desiredState: { rcl: rcl + 1 }
-        }];
+        const goals: Goal[] = [
+            {
+                name: `Upgrade Controller to ${rcl + 1}`,
+                priority: 20, // Lower than defense/harvest/maintenance usually
+                desiredState: { rcl: rcl + 1 },
+            },
+        ];
         return goals;
     }
 

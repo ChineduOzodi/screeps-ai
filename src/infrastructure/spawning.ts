@@ -11,7 +11,7 @@ export class Spawning {
         for (const system of this.colony.getSystemsList()) {
             const profiles = system.getSpawnerProfilesList();
             for (const profile of profiles) {
-                  this.manageSpawnProfile(profile);
+                this.manageSpawnProfile(profile);
             }
         }
         this.processSpawnQueue();

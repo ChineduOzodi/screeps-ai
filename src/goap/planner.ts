@@ -21,7 +21,7 @@ export class Planner {
             state: { ...currentState },
             g: 0,
             h: this.calculateHeuristic(currentState, goal.desiredState),
-            f: 0
+            f: 0,
         };
         startNode.f = startNode.h;
         openSet.push(startNode);
@@ -54,12 +54,12 @@ export class Planner {
                 const h = this.calculateHeuristic(newState, goal.desiredState);
 
                 const neighbor: Node = {
-                    action: action,
+                    action,
                     parent: currentNode,
                     state: newState,
-                    g: g,
-                    h: h,
-                    f: g + h
+                    g,
+                    h,
+                    f: g + h,
                 };
 
                 // Ideally verify if we have a better path to this state in openSet
@@ -75,14 +75,14 @@ export class Planner {
             const expected = preconditions[key];
             const actual = state[key];
 
-            if (typeof expected === 'boolean') {
+            if (typeof expected === "boolean") {
                 if (actual !== expected) return false;
-            } else if (typeof expected === 'number') {
+            } else if (typeof expected === "number") {
                 // Basic implementation: Numbers must be >= expected for preconditions? Or exact?
                 // Usually for resources, it's >=.
                 // For now strict equality unless we define types.
                 // Let's assume strict equality for simplicity in v1.
-                if (typeof actual !== 'number' || actual < expected) return false;
+                if (typeof actual !== "number" || actual < expected) return false;
             }
         }
         return true;
@@ -92,10 +92,10 @@ export class Planner {
         for (const key in goalState) {
             const expected = goalState[key];
             const actual = state[key];
-             if (typeof expected === 'boolean') {
+            if (typeof expected === "boolean") {
                 if (actual !== expected) return false;
-            } else if (typeof expected === 'number') {
-                if (typeof actual !== 'number' || actual < expected) return false;
+            } else if (typeof expected === "number") {
+                if (typeof actual !== "number" || actual < expected) return false;
             }
         }
         return true;
@@ -105,14 +105,14 @@ export class Planner {
         const newState = { ...state };
         for (const key in effects) {
             const effect = effects[key];
-             if (typeof effect === 'number' && typeof newState[key] === 'number') {
+            if (typeof effect === "number" && typeof newState[key] === "number") {
                 // Determine if effects are additive or replacements?
                 // Standard GOAP usually replaces state for booleans.
                 // For numbers, it could be confusing.
                 // Let's assume replacement for now to keep it deterministic.
                 newState[key] = effect;
             } else {
-                 newState[key] = effect;
+                newState[key] = effect;
             }
         }
         return newState;

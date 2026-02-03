@@ -72,31 +72,31 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
         const buildQueue = colony.colonyInfo.builderManagement?.buildQueue || [];
 
         if (buildQueue.length === 0) {
-            const profiles: CreepProfiles = {};
-            profiles[CreepRole.BUILDER] = {
+            const emptyProfiles: CreepProfiles = {};
+            emptyProfiles[CreepRole.BUILDER] = {
                 desiredAmount: 0,
                 bodyBlueprint: [],
                 memoryBlueprint: {
                     averageEnergyConsumptionProductionPerTick: 0,
-                    role: CreepRole.BUILDER
+                    role: CreepRole.BUILDER,
                 } as any,
-                spawnCostPerTick: 0
+                spawnCostPerTick: 0,
             };
-            return profiles;
+            return emptyProfiles;
         }
 
         // Find dropoff/pickup (Source or Storage)
         const room = colony.getMainRoom();
 
-         // If storage exists, use that. Else find closest source.
+        // If storage exists, use that. Else find closest source.
         let sourcePos = room.storage?.pos;
         if (!sourcePos) {
-             const sources = colony.systems.energy.systemInfo.sources;
-             if (sources && sources.length > 0) {
-                 // Pick first source for estimation
-                 const p = sources[0].position;
-                 sourcePos = new RoomPosition(p.x, p.y, p.roomName);
-             }
+            const sources = colony.systems.energy.systemInfo.sources;
+            if (sources && sources.length > 0) {
+                // Pick first source for estimation
+                const p = sources[0].position;
+                sourcePos = new RoomPosition(p.x, p.y, p.roomName);
+            }
         }
 
         if (!sourcePos) return {};
@@ -117,7 +117,7 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
 
         let desiredAmount = 0;
         if (consumptionPerTick > 0 && energyBudgetRate > 0) {
-             desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
+            desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
         }
 
         // Cap reasonable builders
@@ -131,7 +131,7 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
             bodyBlueprint: body,
             memoryBlueprint: memory,
-            desiredAmount: desiredAmount,
+            desiredAmount,
         };
 
         const profiles: CreepProfiles = {};
@@ -146,7 +146,7 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
         const units = Math.min(maxUnits, 10);
 
         const body: BodyPartConstant[] = [];
-        for(let i=0; i<units; i++) {
+        for (let i = 0; i < units; i++) {
             body.push(WORK);
             body.push(CARRY);
             body.push(CARRY);

@@ -1,4 +1,4 @@
-
+/* eslint-disable max-classes-per-file */
 import { Action, WorldState } from "../types";
 import { ColonyManager } from "../../prototypes/colony";
 import { ConstructionUtils } from "../../utils/construction-utils";
@@ -24,17 +24,19 @@ export class BuildExtensionsAction implements Action {
 
     get preconditions(): WorldState {
         return {
-            rcl: this.getRequiredRCL()
+            rcl: this.getRequiredRCL(),
         };
     }
 
     get effects(): WorldState {
         return {
-            extensions: this.targetCount
+            extensions: this.targetCount,
         };
     }
 
-    getCost() { return this.cost; }
+    getCost() {
+        return this.cost;
+    }
 
     isValid() {
         // Can only build if we are at required RCL
@@ -48,7 +50,7 @@ export class BuildExtensionsAction implements Action {
         if (!room || !spawn) return true;
 
         const currentExtensions = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_EXTENSION }
+            filter: { structureType: STRUCTURE_EXTENSION },
         }).length;
 
         if (currentExtensions >= this.targetCount) {
@@ -57,16 +59,16 @@ export class BuildExtensionsAction implements Action {
 
         // Check for construction sites
         const currentSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.my
+            filter: s => s.structureType === STRUCTURE_EXTENSION && s.my,
         }).length;
 
         if (currentExtensions + currentSites < this.targetCount) {
-             // Place more sites
-             console.log(`GOAP: Placing extension sites to reach ${this.targetCount}`);
-             const center = ConstructionUtils.findSuitableExtensionClusterPosition(spawn, room);
-             if (center) {
-                 ConstructionUtils.buildExtensionCluster(center, room);
-             }
+            // Place more sites
+            console.log(`GOAP: Placing extension sites to reach ${this.targetCount}`);
+            const center = ConstructionUtils.findSuitableExtensionClusterPosition(spawn, room);
+            if (center) {
+                ConstructionUtils.buildExtensionCluster(center, room);
+            }
         }
 
         // If sites exist, we wait for builders (managed by GoapSystem spawning builders)
@@ -85,19 +87,23 @@ export class BuildRoadsAction implements Action {
 
     get preconditions(): WorldState {
         return {
-            rcl: 1
+            rcl: 1,
         };
     }
 
     get effects(): WorldState {
         return {
-            hasRoads: true
+            hasRoads: true,
         };
     }
 
-    getCost() { return this.cost; }
+    getCost() {
+        return this.cost;
+    }
 
-    isValid() { return true; }
+    isValid() {
+        return true;
+    }
 
     execute(): boolean {
         this.colony.systems.builder.setEnergyBudgetWeight(1.0);
@@ -120,7 +126,7 @@ export class BuildRoadsAction implements Action {
 
         // Check if all roads are built (no construction sites for roads)
         const roadSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: { structureType: STRUCTURE_ROAD }
+            filter: { structureType: STRUCTURE_ROAD },
         });
 
         if (roadSites.length === 0) {
@@ -149,9 +155,13 @@ export class BuildContainerAction implements Action {
         return { hasContainer: true };
     }
 
-    getCost() { return this.cost; }
+    getCost() {
+        return this.cost;
+    }
 
-    isValid() { return true; }
+    isValid() {
+        return true;
+    }
 
     execute(): boolean {
         this.colony.systems.builder.setEnergyBudgetWeight(1.0);
@@ -188,10 +198,12 @@ export class BuildTowerAction implements Action {
         return { hasTower: true };
     }
 
-    getCost() { return this.cost; }
+    getCost() {
+        return this.cost;
+    }
 
     isValid() {
-         return (this.colony.getMainRoom().controller?.level || 0) >= 3;
+        return (this.colony.getMainRoom().controller?.level || 0) >= 3;
     }
 
     execute(): boolean {
@@ -204,7 +216,7 @@ export class BuildTowerAction implements Action {
         if (towers.length > 0) return true;
 
         const sites = room.find(FIND_CONSTRUCTION_SITES, { filter: { structureType: STRUCTURE_TOWER } });
-         if (sites.length === 0) {
+        if (sites.length === 0) {
             ConstructionUtils.buildFirstTower(spawn);
         }
 

@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 import { Action, WorldState } from "../types";
 import { ColonyManager } from "../../prototypes/colony";
 
@@ -53,8 +54,8 @@ export class MaintainStructuresAction implements Action {
 
 export class UpgradeControllerAction implements Action {
     public cost = 30; // Higher cost means we prefer other critical tasks if possible?
-    public preconditions: WorldState = { }; // Preconditions depend on specific RCL goals
-    public effects: WorldState = { }; // Effects depend on specific RCL goals
+    public preconditions: WorldState = {}; // Preconditions depend on specific RCL goals
+    public effects: WorldState = {}; // Effects depend on specific RCL goals
     public name = "UpgradeControllerAction";
 
     // Dynamic effects based on target?

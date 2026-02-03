@@ -55,7 +55,6 @@ interface EnergyUsageTracking {
     actualEnergyUsagePercentage: number;
 }
 
-
 interface ColonySource {
     sourceId: Id<Source>;
     position: RoomPosition;

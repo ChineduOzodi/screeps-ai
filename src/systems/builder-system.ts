@@ -2,7 +2,12 @@ import { BaseSystemImpl } from "./base-system";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";
 import { CreepRole } from "prototypes/creep";
 import { CreepSpawner } from "prototypes/CreepSpawner";
-import { BuildExtensionsAction, BuildRoadsAction, BuildContainerAction, BuildTowerAction } from "goap/actions/infrastructure-actions";
+import {
+    BuildContainerAction,
+    BuildExtensionsAction,
+    BuildRoadsAction,
+    BuildTowerAction,
+} from "goap/actions/infrastructure-actions";
 import { Action, Goal, WorldState } from "goap/types";
 
 export class BuilderSystem extends BaseSystemImpl {
@@ -11,7 +16,6 @@ export class BuilderSystem extends BaseSystemImpl {
             this.colony.colonyInfo.builderManagement = {
                 nextUpdate: Game.time,
                 buildQueue: [],
-
             };
         }
         return this.colony.colonyInfo.builderManagement;
@@ -52,10 +56,9 @@ export class BuilderSystem extends BaseSystemImpl {
 
     private updateBuildQueue(): void {
         if (!this.colony.colonyInfo.builderManagement) {
-             this.colony.colonyInfo.builderManagement = {
+            this.colony.colonyInfo.builderManagement = {
                 nextUpdate: Game.time,
                 buildQueue: [],
-
             };
         }
 
@@ -75,45 +78,45 @@ export class BuilderSystem extends BaseSystemImpl {
         const goals: Goal[] = [
             {
                 name: "Build Extensions to 5",
-                priority: this.getNumber(state, 'rcl') >= 2 && this.getNumber(state, 'extensions') < 5 ? 100 : 0,
-                desiredState: { extensions: 5 }
+                priority: this.getNumber(state, "rcl") >= 2 && this.getNumber(state, "extensions") < 5 ? 100 : 0,
+                desiredState: { extensions: 5 },
             },
             {
                 name: "Build Extensions to 10",
-                priority: this.getNumber(state, 'rcl') >= 3 && this.getNumber(state, 'extensions') < 10 ? 100 : 0,
-                desiredState: { extensions: 10 }
+                priority: this.getNumber(state, "rcl") >= 3 && this.getNumber(state, "extensions") < 10 ? 100 : 0,
+                desiredState: { extensions: 10 },
             },
             {
                 name: "Build First Container",
-                priority: this.getNumber(state, 'rcl') >= 1 && !state['hasContainer'] ? 50 : 0,
-                desiredState: { hasContainer: true }
+                priority: this.getNumber(state, "rcl") >= 1 && !state.hasContainer ? 50 : 0,
+                desiredState: { hasContainer: true },
             },
             {
                 name: "Build Roads",
-                priority: this.getNumber(state, 'rcl') >= 2 && !state['hasRoads'] ? 40 : 0,
-                desiredState: { hasRoads: true }
+                priority: this.getNumber(state, "rcl") >= 2 && !state.hasRoads ? 40 : 0,
+                desiredState: { hasRoads: true },
             },
             {
                 name: "Build Tower",
-                priority: this.getNumber(state, 'rcl') >= 3 && !state['hasTower'] ? 80 : 0,
-                desiredState: { hasTower: true }
-            }
+                priority: this.getNumber(state, "rcl") >= 3 && !state.hasTower ? 80 : 0,
+                desiredState: { hasTower: true },
+            },
         ];
         return goals;
     }
 
     public override getGoapActions(): Action[] {
-         return [
-             new BuildExtensionsAction(this.colony, 5),
-             new BuildExtensionsAction(this.colony, 10),
-             new BuildRoadsAction(this.colony),
-             new BuildContainerAction(this.colony),
-             new BuildTowerAction(this.colony)
+        return [
+            new BuildExtensionsAction(this.colony, 5),
+            new BuildExtensionsAction(this.colony, 10),
+            new BuildRoadsAction(this.colony),
+            new BuildContainerAction(this.colony),
+            new BuildTowerAction(this.colony),
         ];
     }
 
     private getNumber(state: WorldState, key: string): number {
         const val = state[key];
-        return typeof val === 'number' ? val : 0;
+        return typeof val === "number" ? val : 0;
     }
 }

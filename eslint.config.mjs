@@ -93,7 +93,7 @@ export default [
       "one-var": ["error", "never"],
       // "quote-props": "off", // Handled by Prettier
       radix: "error",
-      "sort-imports": "warn",
+      "sort-imports": "off",
       "spaced-comment": "error",
     },
   }

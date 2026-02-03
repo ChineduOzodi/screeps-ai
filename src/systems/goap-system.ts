@@ -35,11 +35,11 @@ export class GoapSystem extends BaseSystemImpl {
 
     public override get energyUsageTracking() {
         return {
-             desiredAmount: 0,
-             estimatedEnergyWorkRate: 0,
-             requestedEnergyUsageWeight: 0, // Request energy based on current action?
-             allowedEnergyWorkRate: 0,
-             actualEnergyUsagePercentage: 0
+            desiredAmount: 0,
+            estimatedEnergyWorkRate: 0,
+            requestedEnergyUsageWeight: 0, // Request energy based on current action?
+            allowedEnergyWorkRate: 0,
+            actualEnergyUsagePercentage: 0,
         };
     }
 
@@ -70,42 +70,52 @@ export class GoapSystem extends BaseSystemImpl {
             const currentPriority = this.currentGoal ? this.currentGoal.priority : -1;
             const newPriority = bestGoal ? bestGoal.priority : -1;
 
-            if (bestGoal && (newPriority > currentPriority || !this.currentGoal || (bestGoal.name === this.currentGoal.name && this.currentPlan.length === 0))) {
-                 // But wait, if we have a current plan, we might not want to switch unless priority is significantly higher?
-                 // For now, strict priority.
-                 if (!this.currentGoal || bestGoal.name !== this.currentGoal.name || Game.time - this.lastPlanAttempt > 10) {
+            if (
+                bestGoal &&
+                (newPriority > currentPriority ||
+                    !this.currentGoal ||
+                    (bestGoal.name === this.currentGoal.name && this.currentPlan.length === 0))
+            ) {
+                // But wait, if we have a current plan, we might not want to switch unless priority is significantly higher?
+                // For now, strict priority.
+                if (
+                    !this.currentGoal ||
+                    bestGoal.name !== this.currentGoal.name ||
+                    Game.time - this.lastPlanAttempt > 10
+                ) {
                     this.lastPlanAttempt = Game.time;
                     const actions = this.getAvailableActions();
                     const plan = this.planner.plan(state, bestGoal, actions);
 
                     if (plan) {
-                         console.log(`New plan for ${bestGoal.name}: ${plan.map(a => a.name).join(' -> ')}`);
-                         this.currentGoal = bestGoal;
-                         this.currentPlan = plan;
-                         this.saveState();
+                        console.log(`New plan for ${bestGoal.name}: ${plan.map(a => a.name).join(" -> ")}`);
+                        this.currentGoal = bestGoal;
+                        this.currentPlan = plan;
+                        this.saveState();
                     } else {
-                         // Log only occasionally
-                         if (Game.time % 50 === 0) {
+                        // Log only occasionally
+                        if (Game.time % 50 === 0) {
                             console.log(`Could not find plan for ${bestGoal.name}`);
-                         }
+                        }
                     }
-                 }
+                }
             }
         }
 
         // 3. Execute current action
         if (this.currentPlan.length > 0) {
             const action = this.currentPlan[0];
-            if (action.isValid() && this.arePreconditionsMet(state, action.preconditions)) { // Re-check preconditions
+            if (action.isValid() && this.arePreconditionsMet(state, action.preconditions)) {
+                // Re-check preconditions
                 console.log(`Executing action: ${action.name}`);
                 const complete = action.execute();
                 if (complete) {
-                     this.currentPlan.shift(); // Remove completed action
-                     this.saveState();
+                    this.currentPlan.shift(); // Remove completed action
+                    this.saveState();
                 }
             } else {
-                 console.log(`Action ${action.name} invalid or preconditions not met. Re-planning.`);
-                 this.clearState();
+                console.log(`Action ${action.name} invalid or preconditions not met. Re-planning.`);
+                this.clearState();
             }
         }
     }
@@ -177,14 +187,14 @@ export class GoapSystem extends BaseSystemImpl {
         return {
             hasSpawn: spawns > 0,
             rcl: controller?.level || 0,
-            extensions: extensions,
+            extensions,
             hasConstructionSites: constructionSites > 0,
             isSafe: enemies === 0,
             hasContainer: containers > 0,
             hasTower: towers > 0,
             hasRoads: roads > 5, // Arbitrary threshold to say "we have roads"
             structuresRepaired: damage === 0,
-            hasEnergy: hasEnergy,
+            hasEnergy,
         };
     }
 
@@ -220,9 +230,9 @@ export class GoapSystem extends BaseSystemImpl {
     private isGoalSatisfied(goal: Goal, state: WorldState): boolean {
         for (const key in goal.desiredState) {
             // Special handling for >= logic if needed, but for now exact match or boolean true
-            if (typeof goal.desiredState[key] === 'boolean') {
+            if (typeof goal.desiredState[key] === "boolean") {
                 if (state[key] !== goal.desiredState[key]) return false;
-            } else if (typeof goal.desiredState[key] === 'number') {
+            } else if (typeof goal.desiredState[key] === "number") {
                 if ((state[key] as number) < (goal.desiredState[key] as number)) return false;
             }
         }
@@ -231,9 +241,9 @@ export class GoapSystem extends BaseSystemImpl {
 
     // Helper for preconditions
     private arePreconditionsMet(state: WorldState, preconditions: WorldState): boolean {
-         for (const key in preconditions) {
-            if (typeof preconditions[key] === 'number') {
-                 if ((state[key] as number) < (preconditions[key] as number)) return false;
+        for (const key in preconditions) {
+            if (typeof preconditions[key] === "number") {
+                if ((state[key] as number) < (preconditions[key] as number)) return false;
             } else {
                 if (state[key] !== preconditions[key]) return false;
             }
@@ -242,7 +252,9 @@ export class GoapSystem extends BaseSystemImpl {
     }
 
     public override updateProfiles(): void {}
-    public override getRolesToTrackEnergy(): any[] { return []; }
+    public override getRolesToTrackEnergy(): any[] {
+        return [];
+    }
     public override getCreepSpawners(): CreepSpawner[] {
         return [];
     }

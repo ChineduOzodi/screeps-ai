@@ -22,7 +22,7 @@ export class EnergyCalculator {
     public static calculateTravelTime(origin: RoomPosition, destination: RoomPosition): number {
         const path = origin.findPathTo(destination, {
             ignoreCreeps: true,
-            range: 1
+            range: 1,
         });
         return path.length;
     }
@@ -34,7 +34,7 @@ export class EnergyCalculator {
     public static calculateHarvesterProductionPerTick(
         body: BodyPartConstant[],
         distanceToSource: number,
-        distanceToDropoff: number
+        distanceToDropoff: number,
     ): number {
         const workParts = body.filter(p => p === WORK).length;
         const carryParts = body.filter(p => p === CARRY).length;
@@ -62,7 +62,7 @@ export class EnergyCalculator {
     public static calculateWorkerConsumptionPerTick(
         body: BodyPartConstant[],
         distanceToSource: number,
-        workActionCost: number = 1 // 1 for upgrade/repair, 5 for build
+        workActionCost: number = 1, // 1 for upgrade/repair, 5 for build
     ): number {
         const workParts = body.filter(p => p === WORK).length;
         const carryParts = body.filter(p => p === CARRY).length;

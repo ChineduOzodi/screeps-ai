@@ -77,20 +77,20 @@ export abstract class BaseSystemImpl implements BaseSystem {
         const profiles: CreepSpawnerProfileInfo[] = [];
 
         for (const spawner of creepSpawners) {
-             const spawnerProfiles = spawner.createProfiles(this.energyUsageTracking.allowedEnergyWorkRate, this.colony);
-             for (const name in spawnerProfiles) {
-                 const profile = spawnerProfiles[name];
-                 profiles.push(profile);
+            const spawnerProfiles = spawner.createProfiles(this.energyUsageTracking.allowedEnergyWorkRate, this.colony);
+            for (const name in spawnerProfiles) {
+                const profile = spawnerProfiles[name];
+                profiles.push(profile);
 
-                 // Pruning Logic
-                 this.pruneSpawnQueue(profile);
-             }
+                // Pruning Logic
+                this.pruneSpawnQueue(profile);
+            }
         }
         return profiles;
     }
 
     private pruneSpawnQueue(profile: CreepSpawnerProfileInfo): void {
-        if (!profile.memoryBlueprint || typeof profile.desiredAmount === 'undefined') {
+        if (!profile.memoryBlueprint || typeof profile.desiredAmount === "undefined") {
             return;
         }
         const desired = profile.desiredAmount;

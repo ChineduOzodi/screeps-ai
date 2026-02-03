@@ -29,8 +29,7 @@ export class InfrastructureSystem extends BaseSystemImpl {
         return this.systemInfo.energyUsageTracking;
     }
 
-    public override onStart(): void {
-    }
+    public override onStart(): void {}
 
     public constructor(colony: any) {
         super(colony);
@@ -72,11 +71,13 @@ export class InfrastructureSystem extends BaseSystemImpl {
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {
-        const goals: Goal[] = [{
-            name: "Maintain Structures",
-            priority: state['structuresRepaired'] === false ? 50 : 0,
-            desiredState: { structuresRepaired: true }
-        }];
+        const goals: Goal[] = [
+            {
+                name: "Maintain Structures",
+                priority: state.structuresRepaired === false ? 50 : 0,
+                desiredState: { structuresRepaired: true },
+            },
+        ];
         return goals;
     }
 

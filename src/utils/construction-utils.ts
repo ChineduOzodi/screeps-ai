@@ -1,6 +1,4 @@
-
 export class ConstructionUtils {
-
     public static isTileClearForStructure(pos: RoomPosition, room: Room, ignoreRoads: boolean = false): boolean {
         if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) {
             return false;
@@ -167,11 +165,11 @@ export class ConstructionUtils {
         spawn.room.createConstructionSite(containerPos, STRUCTURE_CONTAINER);
     }
 
-     public static buildFirstTower(spawn: StructureSpawn): void {
+    public static buildFirstTower(spawn: StructureSpawn): void {
         const towerPosition = new RoomPosition(spawn.pos.x + 2, spawn.pos.y + 2, spawn.pos.roomName);
         if (ConstructionUtils.isTileClearForStructure(towerPosition, spawn.room, true)) {
-             towerPosition.createConstructionSite(STRUCTURE_TOWER);
-             ConstructionUtils.buildRoadsAroundPosition(towerPosition);
+            towerPosition.createConstructionSite(STRUCTURE_TOWER);
+            ConstructionUtils.buildRoadsAroundPosition(towerPosition);
         }
     }
 }

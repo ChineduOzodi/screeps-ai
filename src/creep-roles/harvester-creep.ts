@@ -101,7 +101,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         spawn: StructureSpawn,
         colonySource: ColonySource,
         energyCap: number,
-        colony: ColonyManager
+        colony: ColonyManager,
     ): CreepSpawnerProfileInfo {
         const { sourceId, accessCount } = colonySource;
         const source = Game.getObjectById<Source>(sourceId);
@@ -112,8 +112,8 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         // Determine Dropoff
         let dropoff: Structure | null = null;
         if (colony.colonyInfo.containerId) {
-             const container = Game.getObjectById<StructureContainer>(colony.colonyInfo.containerId);
-             if (container) dropoff = container;
+            const container = Game.getObjectById<StructureContainer>(colony.colonyInfo.containerId);
+            if (container) dropoff = container;
         }
         // Fallback to spawn if no container/storage
         if (!dropoff && colony.getMainRoom().storage) dropoff = colony.getMainRoom().storage || null;
@@ -125,7 +125,11 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
 
         // Optimize Body
         const bestBody = this.findBestHarvesterBody(energyCap, distToSource, distToDropoff);
-        const productionPerTick = EnergyCalculator.calculateHarvesterProductionPerTick(bestBody, distToSource, distToDropoff);
+        const productionPerTick = EnergyCalculator.calculateHarvesterProductionPerTick(
+            bestBody,
+            distToSource,
+            distToDropoff,
+        );
 
         // Calculate Desired Amount
         // Limit 1: Source Regeneration (3000 energy / 300 ticks = 10 energy/tick, or 4000/300 if center room)
@@ -150,7 +154,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         };
 
         return {
-            desiredAmount: desiredAmount,
+            desiredAmount,
             bodyBlueprint: bestBody,
             memoryBlueprint: memory,
             priority: 9,
@@ -183,30 +187,35 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         // Brute force "reasonable" combinations?
         // Let's stick to the previous iterative logic but properly evaluating with EnergyCalculator
 
-        let work = 1;
-        let carry = 1;
-        let move = 1;
+        const work = 1;
+        const carry = 1;
+        const move = 1;
 
         // Max parts 50
-        for (let w = 1; w <= 5; w++) { // Don't need too many work parts if traveling far, mostly need carry
-             for (let c = 1; c <= 20; c++) {
-                 for (let m = 1; m <= 20; m++) {
-                     const cost = w * 100 + c * 50 + m * 50;
-                     if (cost > energyCap) break;
-                     if (w + c + m > 50) break;
+        for (let w = 1; w <= 5; w++) {
+            // Don't need too many work parts if traveling far, mostly need carry
+            for (let c = 1; c <= 20; c++) {
+                for (let m = 1; m <= 20; m++) {
+                    const cost = w * 100 + c * 50 + m * 50;
+                    if (cost > energyCap) break;
+                    if (w + c + m > 50) break;
 
-                     const body: BodyPartConstant[] = [];
-                     for(let i=0; i<w; i++) body.push(WORK);
-                     for(let i=0; i<c; i++) body.push(CARRY);
-                     for(let i=0; i<m; i++) body.push(MOVE);
+                    const body: BodyPartConstant[] = [];
+                    for (let i = 0; i < w; i++) body.push(WORK);
+                    for (let i = 0; i < c; i++) body.push(CARRY);
+                    for (let i = 0; i < m; i++) body.push(MOVE);
 
-                     const rate = EnergyCalculator.calculateHarvesterProductionPerTick(body, distToSource, distToDropoff);
-                     if (rate > bestRate) {
-                         bestRate = rate;
-                         bestBody = body;
-                     }
-                 }
-             }
+                    const rate = EnergyCalculator.calculateHarvesterProductionPerTick(
+                        body,
+                        distToSource,
+                        distToDropoff,
+                    );
+                    if (rate > bestRate) {
+                        bestRate = rate;
+                        bestBody = body;
+                    }
+                }
+            }
         }
         return bestBody;
     }

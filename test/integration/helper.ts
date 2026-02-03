@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import { readFileSync } from "fs";
 import _ from "lodash";
 const { ScreepsServer, stdHooks } = require("screeps-server-mockup");

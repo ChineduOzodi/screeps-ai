@@ -137,7 +137,8 @@ export class PathfindingUtils {
         this.checkRoomReservationSetup(room, pos);
         for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
             const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];
-            if (reservation.endTime < Game.time) {
+            const creepExists = Game.getObjectById(reservation.creepId);
+            if (reservation.endTime < Game.time || !creepExists) {
                 room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.splice(i, 1);
             }
         }
@@ -150,7 +151,8 @@ export class PathfindingUtils {
         this.checkRoomReservationSetup(room, pos);
         for (let i = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.length - 1; i >= 0; i--) {
             const reservation = room.memory.positionReservations[`${pos.x},${pos.y}`].reservations[i];
-            if (reservation.endTime < Game.time) {
+            const creepExists = Game.getObjectById(reservation.creepId);
+            if (reservation.endTime < Game.time || !creepExists) {
                 room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.splice(i, 1);
             }
         }

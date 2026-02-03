@@ -143,7 +143,10 @@ export class ColonyManagerImpl implements ColonyManager {
 
         for (const key in s) {
             const system = s[key];
-            if (!system.energyUsageTracking.requestedEnergyUsageWeight && system.energyUsageTracking.estimatedEnergyWorkRate === 0) {
+            if (
+                !system.energyUsageTracking.requestedEnergyUsageWeight &&
+                system.energyUsageTracking.estimatedEnergyWorkRate === 0
+            ) {
                 continue;
             }
 
@@ -161,9 +164,13 @@ export class ColonyManagerImpl implements ColonyManager {
         let offset = 8; // Adjusted offset since we added a line
 
         let totalRequestedWeight = 0;
-        options.forEach(o => totalRequestedWeight += o.energyTracking.requestedEnergyUsageWeight);
+        options.forEach(o => (totalRequestedWeight += o.energyTracking.requestedEnergyUsageWeight));
 
-        room.visual.text(`Total Requested Weight: ${totalRequestedWeight.toFixed(2)}`, 3, offset++, { color: "#cccccc", font: 0.5, align: "left" });
+        room.visual.text(`Total Requested Weight: ${totalRequestedWeight.toFixed(2)}`, 3, offset++, {
+            color: "#cccccc",
+            font: 0.5,
+            align: "left",
+        });
 
         for (const option of options) {
             const {
@@ -180,21 +187,22 @@ export class ColonyManagerImpl implements ColonyManager {
 
                 // Draw bar for usage/allowed
                 const barWidth = 10;
-                const usagePercent = allowedEnergyWorkRate > 0 ? Math.min(estimatedEnergyWorkRate / allowedEnergyWorkRate, 1) : 0;
-                const barColor = estimatedEnergyWorkRate > allowedEnergyWorkRate ? '#ff0000' : '#00ff00';
+                const usagePercent =
+                    allowedEnergyWorkRate > 0 ? Math.min(estimatedEnergyWorkRate / allowedEnergyWorkRate, 1) : 0;
+                const barColor = estimatedEnergyWorkRate > allowedEnergyWorkRate ? "#ff0000" : "#00ff00";
 
-                room.visual.rect(10, y - 0.6, barWidth, 0.6, { fill: '#333333', opacity: 0.5 });
+                room.visual.rect(10, y - 0.6, barWidth, 0.6, { fill: "#333333", opacity: 0.5 });
                 if (usagePercent > 0) {
-                     room.visual.rect(10, y - 0.6, barWidth * usagePercent, 0.6, { fill: barColor, opacity: 0.8 });
+                    room.visual.rect(10, y - 0.6, barWidth * usagePercent, 0.6, { fill: barColor, opacity: 0.8 });
                 }
 
                 // Stats text
                 room.visual.text(
                     `Use/Allow: ${estimatedEnergyWorkRate.toFixed(1)}/${allowedEnergyWorkRate.toFixed(1)}  ` +
-                    `Req/Act %: ${(requestedEnergyUsagePercentage * 100).toFixed(0)}%/${(actualEnergyUsagePercentage * 100).toFixed(0)}%`,
+                        `Req/Act %: ${(requestedEnergyUsagePercentage * 100).toFixed(0)}%/${(actualEnergyUsagePercentage * 100).toFixed(0)}%`,
                     10 + barWidth + 1,
                     y,
-                    { ...textStyle, color: "#aaaaaa" }
+                    { ...textStyle, color: "#aaaaaa" },
                 );
 
                 offset++;
@@ -208,15 +216,19 @@ export class ColonyManagerImpl implements ColonyManager {
         const x = 35;
         let y = 3;
 
-        room.visual.text("Spawn Queue:", x, y++, { align: 'left', color: '#aaaaaa', opacity: 0.8 });
+        room.visual.text("Spawn Queue:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
 
         if (queue.length === 0) {
-            room.visual.text("- Empty -", x, y++, { align: 'left', font: 0.5, color: '#666666' });
+            room.visual.text("- Empty -", x, y++, { align: "left", font: 0.5, color: "#666666" });
         }
 
         for (let i = 0; i < Math.min(queue.length, 10); i++) {
             const item = queue[i];
-            room.visual.text(`[${item.priority}] ${item.memory.role}`, x, y++, { align: 'left', font: 0.5, opacity: 0.8 });
+            room.visual.text(`[${item.priority}] ${item.memory.role}`, x, y++, {
+                align: "left",
+                font: 0.5,
+                opacity: 0.8,
+            });
         }
     }
 
@@ -226,23 +238,27 @@ export class ColonyManagerImpl implements ColonyManager {
         const x = 3;
         let y = 15;
 
-        room.visual.text("GOAP State:", x, y++, { align: 'left', color: '#aaaaaa', opacity: 0.8 });
+        room.visual.text("GOAP State:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
         const goal = goap.activeGoal;
         if (goal) {
-             room.visual.text(`Goal: ${goal.name}`, x, y++, { align: 'left', font: 0.7, color: '#00ff00' });
-             room.visual.text(`Priority: ${goal.priority}`, x, y++, { align: 'left', font: 0.5, color: '#cccccc' });
+            room.visual.text(`Goal: ${goal.name}`, x, y++, { align: "left", font: 0.7, color: "#00ff00" });
+            room.visual.text(`Priority: ${goal.priority}`, x, y++, { align: "left", font: 0.5, color: "#cccccc" });
         } else {
-             room.visual.text(`Goal: None`, x, y++, { align: 'left', font: 0.7, color: '#ff6666' });
+            room.visual.text(`Goal: None`, x, y++, { align: "left", font: 0.7, color: "#ff6666" });
         }
 
         const plan = goap.activePlan;
         if (plan && plan.length > 0) {
             y += 0.5;
-            room.visual.text(`Current Plan:`, x, y++, { align: 'left', font: 0.6, color: '#aaaaaa' });
+            room.visual.text(`Current Plan:`, x, y++, { align: "left", font: 0.6, color: "#aaaaaa" });
             plan.forEach((action, idx) => {
-                 let color = '#ffffff';
-                 if (idx === 0) color = '#ffff00'; // Highlight current action
-                 room.visual.text(`${idx + 1}. ${action.name}`, x + 0.5, y++, { align: 'left', font: 0.5, color: color });
+                let color = "#ffffff";
+                if (idx === 0) color = "#ffff00"; // Highlight current action
+                room.visual.text(`${idx + 1}. ${action.name}`, x + 0.5, y++, {
+                    align: "left",
+                    font: 0.5,
+                    color,
+                });
             });
         }
     }
@@ -253,10 +269,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
         this.systems.energy
             .getSpawnerProfilesList()
-            .forEach(
-                x =>
-                    (upkeep += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
-            );
+            .forEach(x => (upkeep += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)));
 
         this.systems.energy.systemInfo.estimatedEnergyProductionRate = gross - upkeep;
         (this.systems.energy.systemInfo as any).grossProduction = gross;
@@ -471,8 +484,8 @@ export class ColonyManagerImpl implements ColonyManager {
             if (creep.memory.colonyId === this.colonyInfo.id) {
                 if (!colonyCreeps[name]) {
                     console.log(`Adopting orphaned creep: ${name}`);
-                     colonyCreeps[name] = {
-                        name: name,
+                    colonyCreeps[name] = {
+                        name,
                         id: creep.id,
                         status: CreepStatus.WORKING, // Assume working, systems will sort it out
                     };

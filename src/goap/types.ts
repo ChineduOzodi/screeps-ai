@@ -1,4 +1,3 @@
-
 export interface WorldState {
     [key: string]: boolean | number;
 }

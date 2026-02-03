@@ -11,7 +11,6 @@ export class DefenseSystem extends BaseSystemImpl {
         if (!this.colony.colonyInfo.defenseManagement) {
             this.colony.colonyInfo.defenseManagement = {
                 nextUpdate: Game.time,
-
             };
         }
         return this.colony.colonyInfo.defenseManagement;
@@ -29,8 +28,7 @@ export class DefenseSystem extends BaseSystemImpl {
         return this.systemInfo.energyUsageTracking;
     }
 
-    public override onStart(): void {
-    }
+    public override onStart(): void {}
 
     public constructor(colony: any) {
         super(colony);
@@ -57,11 +55,13 @@ export class DefenseSystem extends BaseSystemImpl {
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {
-        const goals: Goal[] = [{
-            name: "Defend Room",
-            priority: !state['isSafe'] ? 1000 : 0,
-            desiredState: { isSafe: true }
-        }];
+        const goals: Goal[] = [
+            {
+                name: "Defend Room",
+                priority: !state.isSafe ? 1000 : 0,
+                desiredState: { isSafe: true },
+            },
+        ];
         return goals;
     }
 

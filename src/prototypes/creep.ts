@@ -72,7 +72,6 @@ export abstract class CreepRunner {
             return;
         }
 
-
         this.onRun();
     }
 
@@ -101,7 +100,6 @@ export abstract class CreepRunner {
         }
         return false;
     }
-
 
     public getMovementSystem(): CreepMovementSystem {
         if (!this.creep.memory.movementSystem) {

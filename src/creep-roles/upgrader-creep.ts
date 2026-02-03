@@ -49,22 +49,23 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
         // If storage exists, use that. Else find closest source.
         let sourcePos = room.storage?.pos;
         if (!sourcePos) {
-             const sources = colony.systems.energy.systemInfo.sources;
-             if (sources && sources.length > 0) {
-                 // Simple closest source logic
-                 let bestSource = sources[0];
-                 let bestDist = Infinity;
-                 for (const s of sources) {
-                     const sPos = new RoomPosition(s.position.x, s.position.y, s.position.roomName);
-                     const dist = EnergyCalculator.calculateTravelTime(controller.pos, sPos);
-                     if (dist < bestDist) {
-                         bestDist = dist;
-                         bestSource = s;
-                     }
-                 }
-                 const p = bestSource.position;
-                 sourcePos = new RoomPosition(p.x, p.y, p.roomName);
-             }        }
+            const sources = colony.systems.energy.systemInfo.sources;
+            if (sources && sources.length > 0) {
+                // Simple closest source logic
+                let bestSource = sources[0];
+                let bestDist = Infinity;
+                for (const s of sources) {
+                    const sPos = new RoomPosition(s.position.x, s.position.y, s.position.roomName);
+                    const dist = EnergyCalculator.calculateTravelTime(controller.pos, sPos);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestSource = s;
+                    }
+                }
+                const p = bestSource.position;
+                sourcePos = new RoomPosition(p.x, p.y, p.roomName);
+            }
+        }
 
         if (!sourcePos) throw new Error(`No source found for ${controller.id}`); // Should not happen if room works
 
@@ -84,7 +85,7 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
 
         let desiredAmount = 0;
         if (consumptionPerTick > 0 && energyBudgetRate > 0) {
-             desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
+            desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
         }
 
         // Hard cap for controller slots? Usually 1-2 heavy upgraders is enough, or swarm for early RCL.
@@ -101,7 +102,7 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
         };
 
         const creepSpawnManagement: CreepSpawnerProfileInfo = {
-            desiredAmount: desiredAmount,
+            desiredAmount,
             bodyBlueprint: body,
             memoryBlueprint: memory,
             priority: 5, // Lower than harvester
@@ -113,20 +114,20 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
     }
 
     private createUpgraderBody(energyCap: number, distance: number): BodyPartConstant[] {
-         // Simple builder: 1 WORK, 1 CARRY, 1 MOVE = 200
-         // Optimization: If close, more WORK. If far, more CARRY?
-         // For now, linear scaling [WORK, CARRY, MOVE]
+        // Simple builder: 1 WORK, 1 CARRY, 1 MOVE = 200
+        // Optimization: If close, more WORK. If far, more CARRY?
+        // For now, linear scaling [WORK, CARRY, MOVE]
 
-         const unitCost = 200;
-         const maxUnits = Math.floor(energyCap / unitCost);
-         const units = Math.min(maxUnits, 16); // Cap size at something reasonable (16*3 = 48 parts)
+        const unitCost = 200;
+        const maxUnits = Math.floor(energyCap / unitCost);
+        const units = Math.min(maxUnits, 16); // Cap size at something reasonable (16*3 = 48 parts)
 
-         const body: BodyPartConstant[] = [];
-         for(let i=0; i<units; i++) {
-             body.push(WORK);
-             body.push(CARRY);
-             body.push(MOVE);
-         }
-         return body;
+        const body: BodyPartConstant[] = [];
+        for (let i = 0; i < units; i++) {
+            body.push(WORK);
+            body.push(CARRY);
+            body.push(MOVE);
+        }
+        return body;
     }
 }
