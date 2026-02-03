@@ -1,6 +1,10 @@
 interface RoomMemory {
     positionReservations: RoomPositionReservations;
     constructionProjects: Record<string, ConstructionProject>;
+    repairStats?: {
+        totalNeeded: number;
+        lastCheck: number;
+    };
 }
 
 interface ConstructionProject {

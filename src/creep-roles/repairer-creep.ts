@@ -105,12 +105,28 @@ export class RepairerCreepSpawner extends CreepSpawnerImpl {
         const consumptionPerTick = EnergyCalculator.calculateWorkerConsumptionPerTick(body, dist, 1);
 
         let desiredAmount = 0;
+        let budgetBasedAmount = 0;
         if (consumptionPerTick > 0 && energyBudgetRate > 0) {
-            desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
+            budgetBasedAmount = Math.floor(energyBudgetRate / consumptionPerTick);
         }
 
-        // Cap repairers to avoid spam since they are highly efficient
-        desiredAmount = Math.min(desiredAmount, 2);
+        const stats = colony.constructionManager.getRepairStats();
+        if (stats.totalNeeded > 0) {
+            const workParts = body.filter(p => p === WORK).length;
+            const repairPower = workParts * REPAIR_POWER;
+            // Half lifetime capacity
+            const lifeTime = CREEP_LIFE_TIME || 1500;
+            const capacity = repairPower * (lifeTime / 2);
+            const idealAmount = Math.ceil(stats.totalNeeded / capacity);
+
+            // "Instead of 2 max, it should be based on energy allocation by the energy system...
+            // however if 1 healer is needed... it should still request one"
+
+            desiredAmount = Math.min(idealAmount, budgetBasedAmount);
+            if (desiredAmount === 0 && idealAmount > 0) {
+                desiredAmount = 1;
+            }
+        }
 
         const memory: AddCreepToQueueOptions = {
             workAmount: body.filter(p => p === WORK).length,

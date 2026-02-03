@@ -39,11 +39,17 @@ export class BuilderSystem extends BaseSystemImpl {
     public override run(): void {
         super.run();
         this.updateBuildQueue();
+
+        const queue = this.colony.colonyInfo.builderManagement?.buildQueue || [];
+        if (queue.length > 0) {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
+        } else {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0;
+        }
     }
 
     public constructor(colony: any) {
         super(colony);
-        this.defaultEnergyWeight = 0.5;
     }
 
     public override getCreepSpawners(): CreepSpawner[] {

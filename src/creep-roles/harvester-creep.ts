@@ -74,8 +74,19 @@ export class HarvesterCreep extends CreepRunner {
             }
             if (target && this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 this.moveToWithReservation(target, 2);
-            } else if (creep.room.controller && this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-                this.moveToWithReservation(creep.room.controller, creep.memory.workDuration, 3);
+            } else {
+                // If no storage target, try to build first
+                const constructionSite = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
+                if (constructionSite) {
+                    if (this.build(constructionSite) === ERR_NOT_IN_RANGE) {
+                        this.moveToWithReservation(constructionSite, creep.memory.workDuration, 3);
+                    }
+                } else if (
+                    creep.room.controller &&
+                    this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE
+                ) {
+                    this.moveToWithReservation(creep.room.controller, creep.memory.workDuration, 3);
+                }
             }
         }
     }

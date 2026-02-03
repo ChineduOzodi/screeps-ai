@@ -32,11 +32,11 @@ export class UpgradeSystem extends BaseSystemImpl {
 
     public constructor(colony: any) {
         super(colony);
-        this.defaultEnergyWeight = 0.5;
     }
 
     public override run(): void {
         super.run();
+        this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
     }
 
     public override getCreepSpawners(): CreepSpawner[] {

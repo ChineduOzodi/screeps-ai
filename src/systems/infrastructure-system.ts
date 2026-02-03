@@ -33,7 +33,6 @@ export class InfrastructureSystem extends BaseSystemImpl {
 
     public constructor(colony: any) {
         super(colony);
-        this.defaultEnergyWeight = 0.5;
     }
 
     public override run(): void {
@@ -46,16 +45,8 @@ export class InfrastructureSystem extends BaseSystemImpl {
             return;
         }
 
-        const room = this.colony.getMainRoom();
-        if (!room) {
-            return;
-        }
-
-        const targets = room.find(FIND_STRUCTURES, {
-            filter: object => object.hits < object.hitsMax,
-        });
-
-        if (targets.length > 0) {
+        const stats = this.colony.constructionManager.getRepairStats();
+        if (stats.totalNeeded > 0) {
             this.energyUsageTracking.requestedEnergyUsageWeight = 0.25;
         } else {
             this.energyUsageTracking.requestedEnergyUsageWeight = 0;

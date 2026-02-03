@@ -46,7 +46,6 @@ export class EnergySystem extends BaseSystemImpl {
 
     public constructor(colony: any) {
         super(colony);
-        this.defaultEnergyWeight = 0.0;
     }
 
     private setSources() {

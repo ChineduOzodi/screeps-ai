@@ -13,6 +13,11 @@ export interface ConstructionProject {
     status: "planning" | "building" | "complete";
 }
 
+export interface RepairStats {
+    totalNeeded: number;
+    lastCheck: number;
+}
+
 export class ConstructionManager {
     private colony: ColonyManager;
 
@@ -189,5 +194,35 @@ export class ConstructionManager {
 
         const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(st => st.structureType === s.type);
         return !!site;
+    }
+    public getRepairStats(): RepairStats {
+        const room = this.colony.getMainRoom();
+        if (!room) {
+            return { totalNeeded: 0, lastCheck: Game.time };
+        }
+
+        if (!room.memory.repairStats) {
+            room.memory.repairStats = {
+                totalNeeded: 0,
+                lastCheck: 0,
+            };
+        }
+
+        const stats = room.memory.repairStats;
+        if (Game.time - stats.lastCheck > 50) {
+            const targets = room.find(FIND_STRUCTURES, {
+                filter: object => object.hits < object.hitsMax,
+            });
+
+            let totalNeeded = 0;
+            for (const target of targets) {
+                totalNeeded += target.hitsMax - target.hits;
+            }
+
+            stats.totalNeeded = totalNeeded;
+            stats.lastCheck = Game.time;
+        }
+
+        return stats;
     }
 }

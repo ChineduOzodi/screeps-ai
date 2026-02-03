@@ -38,7 +38,6 @@ export abstract class BaseSystemImpl implements BaseSystem {
     public abstract get energyUsageTracking(): EnergyUsageTracking;
 
     protected colony: ColonyManager;
-    protected defaultEnergyWeight: number = 0;
 
     public constructor(colony: ColonyManager) {
         this.colony = colony;
@@ -141,9 +140,7 @@ export abstract class BaseSystemImpl implements BaseSystem {
      * Main run loop for the system.
      * Derived classes should call super.run() to ensure energy weights are reset for the next tick.
      */
-    public run(): void {
-        this.energyUsageTracking.requestedEnergyUsageWeight = this.defaultEnergyWeight;
-    }
+    public run(): void {}
     public abstract getRolesToTrackEnergy(): CreepRole[];
     public abstract getCreepSpawners(): CreepSpawner[];
 }
