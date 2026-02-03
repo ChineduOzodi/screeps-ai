@@ -176,7 +176,7 @@ export class ConstructionUtils {
             ignoreCreeps: true,
             ignoreDestructibleStructures: true,
             range,
-            swampCost: 1, // Ignore swamp cost for planning optimal roads
+            swampCost: 1.2,
         });
 
         return path.map(step => ({

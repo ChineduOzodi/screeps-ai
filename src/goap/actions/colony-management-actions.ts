@@ -30,28 +30,6 @@ export class DefendRoomAction implements Action {
     }
 }
 
-export class MaintainStructuresAction implements Action {
-    public cost = 20;
-    public preconditions: WorldState = { structuresRepaired: false };
-    public effects: WorldState = { structuresRepaired: true };
-    public name = "MaintainStructuresAction";
-
-    constructor(private colony: ColonyManager) {}
-
-    public getCost(): number {
-        return this.cost;
-    }
-
-    public isValid(): boolean {
-        return true;
-    }
-
-    public execute(): boolean {
-        this.colony.systems.infrastructure.setEnergyBudgetWeight(0.5);
-        return true;
-    }
-}
-
 export class UpgradeControllerAction implements Action {
     public cost = 30; // Higher cost means we prefer other critical tasks if possible?
     public preconditions: WorldState = {}; // Preconditions depend on specific RCL goals
@@ -91,28 +69,6 @@ export class UpgradeControllerAction implements Action {
 
     public execute(): boolean {
         this.colony.systems.upgrade.setEnergyBudgetWeight(1.0);
-        return true;
-    }
-}
-
-export class HarvestEnergyAction implements Action {
-    public cost = 5; // Low cost, fundamental
-    public preconditions: WorldState = { hasEnergy: false };
-    public effects: WorldState = { hasEnergy: true };
-    public name = "HarvestEnergyAction";
-
-    constructor(private colony: ColonyManager) {}
-
-    public getCost(): number {
-        return this.cost;
-    }
-
-    public isValid(): boolean {
-        return true;
-    }
-
-    public execute(): boolean {
-        this.colony.systems.energy.setEnergyBudgetWeight(2.0);
         return true;
     }
 }

@@ -1,10 +1,9 @@
 import { BaseSystemImpl } from "./base-system";
 import { CreepRole } from "prototypes/creep";
 import { CreepSpawner } from "prototypes/CreepSpawner";
-import { HarvesterCreep, HarvesterCreepSpawner } from "creep-roles/harvester-creep";
+import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
-import { HarvestEnergyAction } from "goap/actions/colony-management-actions";
 import { EnergyCalculator } from "utils/energy-calculator";
 
 /**
@@ -180,18 +179,10 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {
-        const priority = !state.hasEnergy ? 100 : 20;
-        const goals: Goal[] = [
-            {
-                name: "Harvest Energy",
-                priority,
-                desiredState: { hasEnergy: true },
-            },
-        ];
-        return goals;
+        return [];
     }
 
     public override getGoapActions(): Action[] {
-        return [new HarvestEnergyAction(this.colony)];
+        return [];
     }
 }

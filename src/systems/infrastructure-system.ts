@@ -5,7 +5,6 @@ import { BaseSystemImpl } from "./base-system";
 import { RepairerCreepSpawner } from "creep-roles/repairer-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
-import { MaintainStructuresAction } from "goap/actions/colony-management-actions";
 
 export class InfrastructureSystem extends BaseSystemImpl {
     public override get systemInfo(): ColonyInfrastructureManagement {
@@ -62,17 +61,10 @@ export class InfrastructureSystem extends BaseSystemImpl {
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {
-        const goals: Goal[] = [
-            {
-                name: "Maintain Structures",
-                priority: state.structuresRepaired === false ? 50 : 0,
-                desiredState: { structuresRepaired: true },
-            },
-        ];
-        return goals;
+        return [];
     }
 
     public override getGoapActions(): Action[] {
-        return [new MaintainStructuresAction(this.colony)];
+        return [];
     }
 }

@@ -39,4 +39,8 @@ export class RoadManager {
         // Submit Project
         this.colony.constructionManager.buildProject("ColonyRoads", roadStructures);
     }
+
+    public areColonyRoadsBuilt(): boolean {
+        return this.colony.constructionManager.isProjectComplete("ColonyRoads");
+    }
 }

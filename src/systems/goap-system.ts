@@ -1,6 +1,5 @@
 import { BaseSystemImpl } from "./base-system";
 import { ColonyManager } from "../prototypes/colony";
-import { CreepRole } from "../prototypes/creep";
 import { Action, Goal, WorldState } from "../goap/types";
 import { Planner } from "../goap/planner";
 import { CreepSpawner } from "../prototypes/CreepSpawner";
@@ -158,10 +157,6 @@ export class GoapSystem extends BaseSystemImpl {
         delete this.systemInfo.planActionNames;
     }
 
-    private updateBuildQueue(): void {
-        // Disabled: Managed by BuilderSystem
-    }
-
     private getWorldState(): WorldState {
         const room = this.colony.getMainRoom();
         const controller = room.controller;
@@ -184,20 +179,12 @@ export class GoapSystem extends BaseSystemImpl {
         const extensions = countStructures(STRUCTURE_EXTENSION);
         const constructionSites = room.find(FIND_CONSTRUCTION_SITES).length;
         const enemies = room.find(FIND_HOSTILE_CREEPS).length;
-        const damage = room.find(FIND_STRUCTURES, { filter: s => s.hits < s.hitsMax }).length;
 
         // Check for specific infrastructure
         const containers = countInfrastructure(STRUCTURE_CONTAINER);
         const towers = countStructures(STRUCTURE_TOWER);
         // Approximation for roads: do we have *some* roads?
         const roads = countInfrastructure(STRUCTURE_ROAD);
-
-        // Energy check: Do we have enough energy to operate?
-        // Use colony.systems.energy.noEnergyCollectors() for a more robust check?
-        // Or simple available energy in room?
-        const energyAvailable = room.energyAvailable;
-        const energyCapacity = room.energyCapacityAvailable;
-        const hasEnergy = energyAvailable > 100 || (energyCapacity > 0 && energyAvailable / energyCapacity > 0.1);
 
         return {
             hasSpawn: spawns > 0,
@@ -207,9 +194,7 @@ export class GoapSystem extends BaseSystemImpl {
             isSafe: enemies === 0,
             hasContainer: containers > 0,
             hasTower: towers > 0,
-            hasRoads: roads > 5, // Arbitrary threshold to say "we have roads"
-            structuresRepaired: damage === 0,
-            hasEnergy,
+            hasRoads: this.colony.roadManager.areColonyRoadsBuilt(),
         };
     }
 
