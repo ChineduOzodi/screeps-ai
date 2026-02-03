@@ -39,7 +39,6 @@ export class BuildExtensionsAction implements Action {
     }
 
     isValid() {
-        // Can only build if we are at required RCL
         return (this.colony.getMainRoom().controller?.level || 0) >= this.getRequiredRCL();
     }
 
@@ -53,26 +52,25 @@ export class BuildExtensionsAction implements Action {
             filter: { structureType: STRUCTURE_EXTENSION },
         }).length;
 
+        // If we have enough actual structures, we are definitely done.
         if (currentExtensions >= this.targetCount) {
             return true;
         }
 
-        // Check for construction sites
-        const currentSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: s => s.structureType === STRUCTURE_EXTENSION && s.my,
-        }).length;
+        const projectName = `Extensions_Target_${this.targetCount}`;
 
-        if (currentExtensions + currentSites < this.targetCount) {
-            // Place more sites
-            console.log(`GOAP: Placing extension sites to reach ${this.targetCount}`);
-            const center = ConstructionUtils.findSuitableExtensionClusterPosition(spawn, room);
-            if (center) {
-                ConstructionUtils.buildExtensionCluster(center, room);
-            }
+        // If project is complete (sites exist or structures exist), we consider this action "done" regarding planning.
+        if (this.colony.constructionManager.isProjectComplete(projectName)) {
+            return true;
         }
 
-        // If sites exist, we wait for builders (managed by GoapSystem spawning builders)
-        return false;
+        const center = ConstructionUtils.findSuitableExtensionClusterPosition(spawn, room);
+        if (center) {
+            const structures = ConstructionUtils.getExtensionClusterStructures(center, room);
+            this.colony.constructionManager.buildProject(projectName, structures);
+        }
+
+        return true;
     }
 }
 
@@ -107,34 +105,10 @@ export class BuildRoadsAction implements Action {
 
     execute(): boolean {
         this.colony.systems.builder.setEnergyBudgetWeight(1.0);
-        const room = this.colony.getMainRoom();
-        const spawn = this.colony.getMainSpawn();
-        if (!room || !spawn) return true;
 
-        // We assume if we run this, we place roads.
-        // To avoid spamming, we could check if roads exist, but ConstructionUtils.buildRoads checks for existing roads.
-        // However, checks are cheap enough for occasional run.
+        this.colony.roadManager.planColonyRoads();
 
-        // This effectively runs "ensure roads exist".
-        // Returns true only when roads are built? Or just placed?
-        // If we want "hasRoads" to mean "Roads are built", we must return false until built.
-
-        // Let's implement placement first.
-        ConstructionUtils.buildRoadsAroundPosition(spawn.pos);
-        ConstructionUtils.buildRoadsToEnergySources(room, spawn.pos);
-        ConstructionUtils.buildRoadsToController(room, spawn.pos);
-
-        // Check if all roads are built (no construction sites for roads)
-        const roadSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: { structureType: STRUCTURE_ROAD },
-        });
-
-        if (roadSites.length === 0) {
-            // Also ideally check if roads actually exist, but for now assuming placement -> build -> done.
-            return true;
-        }
-
-        return false;
+        return true;
     }
 }
 
@@ -169,15 +143,15 @@ export class BuildContainerAction implements Action {
         const spawn = this.colony.getMainSpawn();
         if (!room || !spawn) return true;
 
-        const containers = room.find(FIND_STRUCTURES, { filter: { structureType: STRUCTURE_CONTAINER } });
-        if (containers.length > 0) return true;
-
-        const sites = room.find(FIND_CONSTRUCTION_SITES, { filter: { structureType: STRUCTURE_CONTAINER } });
-        if (sites.length === 0) {
-            ConstructionUtils.constructFirstContainer(spawn);
+        const projectName = "First_Container";
+        if (this.colony.constructionManager.isProjectComplete(projectName)) {
+            return true;
         }
 
-        return false;
+        const structures = ConstructionUtils.getFirstContainerStructures(spawn);
+        this.colony.constructionManager.buildProject(projectName, structures);
+
+        return true;
     }
 }
 
@@ -208,18 +182,16 @@ export class BuildTowerAction implements Action {
 
     execute(): boolean {
         this.colony.systems.builder.setEnergyBudgetWeight(1.0);
-        const room = this.colony.getMainRoom();
         const spawn = this.colony.getMainSpawn();
-        if (!room || !spawn) return true;
+        if (!spawn) return true;
 
-        const towers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
-        if (towers.length > 0) return true;
+        const projectName = "First_Tower";
 
-        const sites = room.find(FIND_CONSTRUCTION_SITES, { filter: { structureType: STRUCTURE_TOWER } });
-        if (sites.length === 0) {
-            ConstructionUtils.buildFirstTower(spawn);
+        const structures = ConstructionUtils.getFirstTowerStructures(spawn);
+        if (structures.length > 0) {
+            this.colony.constructionManager.buildProject(projectName, structures);
         }
 
-        return false; // Wait for build
+        return true;
     }
 }

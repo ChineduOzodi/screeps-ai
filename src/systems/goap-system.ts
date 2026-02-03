@@ -166,16 +166,31 @@ export class GoapSystem extends BaseSystemImpl {
         const room = this.colony.getMainRoom();
         const controller = room.controller;
         const spawns = this.colony.getMainSpawn() ? 1 : 0;
-        const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
+
+        const countStructures = (type: StructureConstant) => {
+            return (
+                room.find(FIND_MY_STRUCTURES, { filter: { structureType: type } }).length +
+                room.find(FIND_CONSTRUCTION_SITES, { filter: { structureType: type } }).length
+            );
+        };
+
+        const countInfrastructure = (type: StructureConstant) => {
+            return (
+                room.find(FIND_STRUCTURES, { filter: { structureType: type } }).length +
+                room.find(FIND_CONSTRUCTION_SITES, { filter: { structureType: type } }).length
+            );
+        };
+
+        const extensions = countStructures(STRUCTURE_EXTENSION);
         const constructionSites = room.find(FIND_CONSTRUCTION_SITES).length;
         const enemies = room.find(FIND_HOSTILE_CREEPS).length;
         const damage = room.find(FIND_STRUCTURES, { filter: s => s.hits < s.hitsMax }).length;
 
         // Check for specific infrastructure
-        const containers = room.find(FIND_STRUCTURES, { filter: { structureType: STRUCTURE_CONTAINER } }).length;
-        const towers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }).length;
+        const containers = countInfrastructure(STRUCTURE_CONTAINER);
+        const towers = countStructures(STRUCTURE_TOWER);
         // Approximation for roads: do we have *some* roads?
-        const roads = room.find(FIND_STRUCTURES, { filter: { structureType: STRUCTURE_ROAD } }).length;
+        const roads = countInfrastructure(STRUCTURE_ROAD);
 
         // Energy check: Do we have enough energy to operate?
         // Use colony.systems.energy.noEnergyCollectors() for a more robust check?

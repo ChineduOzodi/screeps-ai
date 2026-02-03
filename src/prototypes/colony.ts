@@ -1,4 +1,6 @@
 import { CreepRole, CreepStatus } from "./creep";
+import { ConstructionManager } from "../managers/construction-manager";
+import { RoadManager } from "../managers/road-manager";
 
 import { BaseSystem } from "systems/base-system";
 import { BuilderSystem } from "./../systems/builder-system";
@@ -46,14 +48,20 @@ export interface ColonyManager {
     getSystemsList(): BaseSystem[];
     getCreeps(): Creep[];
     removeSpawnRequest(name: string): void;
+    constructionManager: ConstructionManager;
+    roadManager: RoadManager;
 }
 
 export class ColonyManagerImpl implements ColonyManager {
     public colonyInfo: Colony;
     public systems = getSystems(this);
+    public constructionManager: ConstructionManager;
+    public roadManager: RoadManager;
 
     public constructor(colony: Colony) {
         this.colonyInfo = colony;
+        this.constructionManager = new ConstructionManager(this);
+        this.roadManager = new RoadManager(this);
     }
 
     public run(): void {
@@ -82,6 +90,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
         spawnManager.run();
         systems.forEach(x => x.run());
+        this.constructionManager.run();
 
         this.creepManager();
         this.visualizeStats();

@@ -93,7 +93,7 @@ export class BuilderSystem extends BaseSystemImpl {
             },
             {
                 name: "Build Roads",
-                priority: this.getNumber(state, "rcl") >= 2 && !state.hasRoads ? 40 : 0,
+                priority: this.getNumber(state, "rcl") >= 1 && !state.hasRoads ? 40 : 0,
                 desiredState: { hasRoads: true },
             },
             {

@@ -85,8 +85,9 @@ export class ConstructionUtils {
         return null; // No suitable position found
     }
 
-    public static buildExtensionCluster(centerPos: RoomPosition, room: Room): void {
+    public static getExtensionClusterStructures(centerPos: RoomPosition, room: Room): ProjectStructure[] {
         const roomName = room.name;
+        const structures: ProjectStructure[] = [];
         const extensionOffsets = [
             { x: 0, y: 0 },
             { x: 0, y: -1 },
@@ -106,70 +107,83 @@ export class ConstructionUtils {
         ];
 
         for (const offset of extensionOffsets) {
-            const pos = new RoomPosition(centerPos.x + offset.x, centerPos.y + offset.y, roomName);
-            pos.createConstructionSite(STRUCTURE_EXTENSION);
+            structures.push({
+                x: centerPos.x + offset.x,
+                y: centerPos.y + offset.y,
+                roomName,
+                type: STRUCTURE_EXTENSION,
+            });
         }
 
         for (const offset of roadOffsets) {
-            const pos = new RoomPosition(centerPos.x + offset.x, centerPos.y + offset.y, roomName);
-            pos.createConstructionSite(STRUCTURE_ROAD);
+            structures.push({
+                x: centerPos.x + offset.x,
+                y: centerPos.y + offset.y,
+                roomName,
+                type: STRUCTURE_ROAD,
+            });
         }
+        return structures;
     }
 
-    public static buildRoadsAroundPosition(pos: RoomPosition): void {
+    public static getRoadsAroundPosition(pos: RoomPosition): ProjectStructure[] {
         const roadPositions = [
-            new RoomPosition(pos.x + 1, pos.y, pos.roomName),
-            new RoomPosition(pos.x - 1, pos.y, pos.roomName),
-            new RoomPosition(pos.x, pos.y + 1, pos.roomName),
-            new RoomPosition(pos.x, pos.y - 1, pos.roomName),
-            new RoomPosition(pos.x + 1, pos.y + 1, pos.roomName),
-            new RoomPosition(pos.x - 1, pos.y - 1, pos.roomName),
-            new RoomPosition(pos.x + 1, pos.y - 1, pos.roomName),
-            new RoomPosition(pos.x - 1, pos.y + 1, pos.roomName),
+            { x: pos.x + 1, y: pos.y },
+            { x: pos.x - 1, y: pos.y },
+            { x: pos.x, y: pos.y + 1 },
+            { x: pos.x, y: pos.y - 1 },
+            { x: pos.x + 1, y: pos.y + 1 },
+            { x: pos.x - 1, y: pos.y - 1 },
+            { x: pos.x + 1, y: pos.y - 1 },
+            { x: pos.x - 1, y: pos.y + 1 },
         ];
-        for (const roadPos of roadPositions) {
-            roadPos.createConstructionSite(STRUCTURE_ROAD);
-        }
+        return roadPositions.map(p => ({
+            x: p.x,
+            y: p.y,
+            roomName: pos.roomName,
+            type: STRUCTURE_ROAD,
+        }));
     }
 
-    public static buildRoadsToEnergySources(room: Room, spawnPos: RoomPosition): void {
-        const sources = room.find(FIND_SOURCES);
-        for (const source of sources) {
-            ConstructionUtils.buildRoads(spawnPos, source.pos, 1);
-        }
+    public static getFirstContainerStructures(spawn: StructureSpawn): ProjectStructure[] {
+        return [
+            {
+                x: spawn.pos.x + 2,
+                y: spawn.pos.y,
+                roomName: spawn.pos.roomName,
+                type: STRUCTURE_CONTAINER,
+            },
+        ];
     }
 
-    public static buildRoadsToController(room: Room, spawnPos: RoomPosition): void {
-        const controller = room.controller;
-        if (controller) {
-            ConstructionUtils.buildRoads(spawnPos, controller.pos, 3);
+    public static getFirstTowerStructures(spawn: StructureSpawn): ProjectStructure[] {
+        const towerPosition = new RoomPosition(spawn.pos.x + 2, spawn.pos.y + 2, spawn.pos.roomName);
+        if (ConstructionUtils.isTileClearForStructure(towerPosition, spawn.room, true)) {
+            const structures: ProjectStructure[] = [];
+            structures.push({
+                x: towerPosition.x,
+                y: towerPosition.y,
+                roomName: spawn.pos.roomName,
+                type: STRUCTURE_TOWER,
+            });
+            return structures.concat(ConstructionUtils.getRoadsAroundPosition(towerPosition));
         }
+        return [];
     }
 
-    public static buildRoads(startPos: RoomPosition, endPos: RoomPosition, range: number): void {
+    public static calculateRoads(startPos: RoomPosition, endPos: RoomPosition, range: number): ProjectStructure[] {
         const path = startPos.findPathTo(endPos, {
             ignoreCreeps: true,
             ignoreDestructibleStructures: true,
             range,
-            swampCost: 2,
+            swampCost: 1, // Ignore swamp cost for planning optimal roads
         });
 
-        for (const step of path) {
-            const pos = new RoomPosition(step.x, step.y, startPos.roomName);
-            pos.createConstructionSite(STRUCTURE_ROAD);
-        }
-    }
-
-    public static constructFirstContainer(spawn: StructureSpawn): void {
-        const containerPos = new RoomPosition(spawn.pos.x + 2, spawn.pos.y, spawn.pos.roomName);
-        spawn.room.createConstructionSite(containerPos, STRUCTURE_CONTAINER);
-    }
-
-    public static buildFirstTower(spawn: StructureSpawn): void {
-        const towerPosition = new RoomPosition(spawn.pos.x + 2, spawn.pos.y + 2, spawn.pos.roomName);
-        if (ConstructionUtils.isTileClearForStructure(towerPosition, spawn.room, true)) {
-            towerPosition.createConstructionSite(STRUCTURE_TOWER);
-            ConstructionUtils.buildRoadsAroundPosition(towerPosition);
-        }
+        return path.map(step => ({
+            x: step.x,
+            y: step.y,
+            roomName: startPos.roomName,
+            type: STRUCTURE_ROAD,
+        }));
     }
 }
