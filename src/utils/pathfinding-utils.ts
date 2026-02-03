@@ -88,6 +88,7 @@ export class PathfindingUtils {
         startTime: number,
         endTime: number,
     ): void {
+        this.unreserveAll(creep);
         const { room } = creep;
         this.checkRoomReservationSetup(room, pos);
         this.deletePastReservations(room, pos);
@@ -156,5 +157,30 @@ export class PathfindingUtils {
                 room.memory.positionReservations[`${pos.x},${pos.y}`].reservations.splice(i, 1);
             }
         }
+    }
+
+    public static unreserveAll(creep: Creep): void {
+        const room = creep.room;
+        if (!room.memory.positionReservations) {
+            return;
+        }
+
+        const keys = Object.keys(room.memory.positionReservations);
+        for (const key of keys) {
+            const entry = room.memory.positionReservations[key];
+            if (!entry || !entry.reservations) continue;
+
+            for (let i = entry.reservations.length - 1; i >= 0; i--) {
+                if (entry.reservations[i].creepId === creep.id) {
+                    entry.reservations.splice(i, 1);
+                }
+            }
+
+            if (entry.reservations.length === 0) {
+                delete room.memory.positionReservations[key];
+            }
+        }
+        delete creep.memory.movementSystem?.reservationStartTime;
+        delete creep.memory.movementSystem?.reservationEndTime;
     }
 }
