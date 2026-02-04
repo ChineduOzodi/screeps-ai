@@ -23,7 +23,20 @@ export class Spawning {
         }
 
         const role = profile.memoryBlueprint.role;
-        const currentCount = this.colony.getCreepCount(role);
+        let currentCount = 0;
+
+        if (profile.memoryBlueprint.workTargetId) {
+            const targetId = profile.memoryBlueprint.workTargetId;
+            const creeps = this.colony
+                .getCreeps()
+                .filter(c => c.memory.role === role && c.memory.workTargetId === targetId);
+            const queued = this.colony
+                .getSpawnQueue()
+                .filter(r => r.memory.role === role && r.memory.workTargetId === targetId);
+            currentCount = creeps.length + queued.length;
+        } else {
+            currentCount = this.colony.getCreepCount(role);
+        }
 
         if (currentCount < profile.desiredAmount) {
             const options = { ...profile.memoryBlueprint };

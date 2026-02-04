@@ -95,16 +95,26 @@ export class HarvesterCreep extends CreepRunner {
 export class HarvesterCreepSpawner extends CreepSpawnerImpl {
     public onCreateProfiles(_energyRateCap: number, colony: ColonyManager): CreepProfiles {
         const profiles: CreepProfiles = {};
-        for (const colonySource of colony.systems.energy.systemInfo.sources) {
-            const spawn = colony.getMainSpawn();
+        const spawn = colony.getMainSpawn();
+
+        // Sort sources by distance to spawn
+        const sortedSources = [...colony.systems.energy.systemInfo.sources].sort((a, b) => {
+            const distA = EnergyCalculator.calculateTravelTime(spawn.pos, a.position);
+            const distB = EnergyCalculator.calculateTravelTime(spawn.pos, b.position);
+            return distA - distB;
+        });
+
+        sortedSources.forEach((colonySource, index) => {
             const profileName = `${CreepRole.HARVESTER}-${colonySource.sourceId}`;
             // Use current energy for spawning if no harvesters exist to jumpstart
             let energy = spawn.room.energyCapacityAvailable;
             if (colony.systems.energy.noEnergyCollectors()) {
                 energy = spawn.room.energyAvailable;
             }
-            profiles[profileName] = this.createHarvesterProfile(spawn, colonySource, energy, colony);
-        }
+            // Higher priority for closer sources (starts at 10 and goes down)
+            const priority = 10 - index;
+            profiles[profileName] = this.createHarvesterProfile(spawn, colonySource, energy, colony, priority);
+        });
         return profiles;
     }
 
@@ -113,6 +123,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         colonySource: ColonySource,
         energyCap: number,
         colony: ColonyManager,
+        priority: number,
     ): CreepSpawnerProfileInfo {
         const { sourceId, accessCount } = colonySource;
         const source = Game.getObjectById<Source>(sourceId);
@@ -168,7 +179,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
             desiredAmount,
             bodyBlueprint: bestBody,
             memoryBlueprint: memory,
-            priority: 9,
+            priority,
         };
     }
 
@@ -203,12 +214,11 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         const move = 1;
 
         // Max parts 50
-        for (let w = 1; w <= 5; w++) {
-            // Don't need too many work parts if traveling far, mostly need carry
-            for (let c = 1; c <= 20; c++) {
-                for (let m = 1; m <= 20; m++) {
+        for (let w = 1; w <= 15; w++) {
+            for (let c = 1; c <= 25; c++) {
+                for (let m = 1; m <= 25; m++) {
                     const cost = w * 100 + c * 50 + m * 50;
-                    if (cost > energyCap) break;
+                    if (cost > energyCap) break; // Optimization: inner loop (move) increases cost, so break
                     if (w + c + m > 50) break;
 
                     const body: BodyPartConstant[] = [];

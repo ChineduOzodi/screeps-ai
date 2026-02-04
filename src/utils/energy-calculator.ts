@@ -28,6 +28,41 @@ export class EnergyCalculator {
     }
 
     /**
+     * Calculates the movement delay (ticks per tile) based on body weight and fatigue.
+     * @param body The creep's body parts
+     * @param loaded Whether the creep is carrying resources (affects CARRY weight)
+     * @param onRoad Whether the creep is moving on a road (default true for harvesters)
+     */
+    public static calculateMoveSpeed(body: BodyPartConstant[], loaded: boolean, onRoad: boolean = true): number {
+        const moveParts = body.filter(p => p === MOVE).length;
+        const carryParts = body.filter(p => p === CARRY).length;
+        const otherParts = body.length - moveParts - carryParts;
+
+        // "It's worth noting that empty CARRY parts don't generate fatigue."
+        // If loaded, CARRY parts count. If not, they don't.
+        const effectiveCarryParts = loaded ? carryParts : 0;
+
+        const weight = otherParts + effectiveCarryParts;
+
+        // "1 point per body part on roads, 2 on plain land"
+        const fatiguePerPart = onRoad ? 1 : 2;
+        const totalFatigue = weight * fatiguePerPart;
+
+        // "Each MOVE body part decreases fatigue points by 2 per tick"
+        const fatigueReduction = moveParts * 2;
+
+        if (totalFatigue === 0) return 1; // No weight (only MOVE parts), max speed
+        if (fatigueReduction === 0) return Infinity; // Cannot move
+
+        // "The creep cannot move when its fatigue is greater than zero."
+        // Movement happens once fatigue enters negative or zero?
+        // Logic: You generate X fatigue. You reduce Y per tick.
+        // Ticks needed = Ceil(X / Y).
+        // If X <= Y, you move immediately (1 tick).
+        return Math.max(1, Math.ceil(totalFatigue / fatigueReduction));
+    }
+
+    /**
      * Calculates the theoretical energy production per tick for a harvester cycle.
      * Cycle: Travel to Source -> Harvest until full -> Travel to Dropoff -> Dropoff
      */
@@ -46,7 +81,13 @@ export class EnergyCalculator {
         const harvestRate = workParts * 2; // 2 energy per tick per WORK part
 
         const timeToHarvest = Math.ceil(carryCapacity / harvestRate);
-        const travelTime = distanceToSource + distanceToDropoff;
+
+        // Calculate speeds
+        const speedAndEmpty = this.calculateMoveSpeed(body, false, true); // To Source (Empty)
+        const speedLoaded = this.calculateMoveSpeed(body, true, true); // To Dropoff (Full)
+
+        const travelTime = distanceToSource * speedAndEmpty + distanceToDropoff * speedLoaded;
+
         // 1 tick to transfer/withdraw usually, but let's assume 1 for transfer
         const transferTime = 1;
 
