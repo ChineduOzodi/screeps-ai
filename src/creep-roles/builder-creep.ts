@@ -120,6 +120,17 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
             desiredAmount = Math.floor(energyBudgetRate / consumptionPerTick);
         }
 
+        const queue = colony.colonyInfo.builderManagement?.buildQueue || [];
+        const minAmount = queue.length > 0 ? 1 : 0;
+
+        if (room.storage) {
+            // Min 1, Max energy budget
+            desiredAmount = Math.max(minAmount, desiredAmount);
+        } else {
+            // Exactly 1 if no storage
+            desiredAmount = minAmount;
+        }
+
         // Cap reasonable builders
         desiredAmount = Math.min(desiredAmount, 3);
 

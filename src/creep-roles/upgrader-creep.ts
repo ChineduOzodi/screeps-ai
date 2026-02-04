@@ -90,6 +90,16 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
 
         // Hard cap for controller slots? Usually 1-2 heavy upgraders is enough, or swarm for early RCL.
         // Limit to reasonable number to avoid CPU spam
+        if (room.storage) {
+            // Min 1, Max energy budget
+            desiredAmount = Math.max(1, desiredAmount);
+        } else {
+            // Exactly 1 if no storage
+            desiredAmount = 1;
+        }
+
+        // Hard cap for controller slots? Usually 1-2 heavy upgraders is enough, or swarm for early RCL.
+        // Limit to reasonable number to avoid CPU spam
         desiredAmount = Math.min(desiredAmount, 3); // Cap at 3 for now
 
         const memory: AddCreepToQueueOptions = {
