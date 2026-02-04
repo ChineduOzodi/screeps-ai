@@ -2,6 +2,8 @@ import { BaseSystemImpl } from "./base-system";
 import { CreepRole } from "prototypes/creep";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
+import { MinerCreepSpawner } from "creep-roles/miner-creep";
+import { CarrierCreepSpawner } from "creep-roles/carrier-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
 import { EnergyCalculator } from "utils/energy-calculator";
@@ -164,18 +166,53 @@ export class EnergySystem extends BaseSystemImpl {
 
     public override run(): void {
         super.run();
+
+        // Cleanup spawn queue if we switch away from Miners
+        if (!this.shouldUseMiners()) {
+            const spawnQueue = this.colony.getSpawnQueue();
+            // Iterate backwards to safely splice
+            for (let i = spawnQueue.length - 1; i >= 0; i--) {
+                const role = spawnQueue[i].memory.role;
+                if (role === CreepRole.MINER || role === CreepRole.CARRIER) {
+                    // console.log(`Removing ${role} from queue as we are not using miners.`);
+                    spawnQueue.splice(i, 1);
+                }
+            }
+        }
     }
 
     public override getCreepSpawners(): CreepSpawner[] {
+        if (this.shouldUseMiners()) {
+            return [new MinerCreepSpawner(), new CarrierCreepSpawner(), new HarvesterCreepSpawner()];
+        }
         return [new HarvesterCreepSpawner()];
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
-        return [CreepRole.HARVESTER];
+        return [CreepRole.HARVESTER, CreepRole.MINER, CreepRole.CARRIER];
     }
 
     public noEnergyCollectors(): boolean {
-        return this.getRoleCount(CreepRole.HARVESTER) === 0 && this.getRoleCount(CreepRole.MINER) === 0;
+        return (
+            this.getRoleCount(CreepRole.HARVESTER) === 0 &&
+            this.getRoleCount(CreepRole.MINER) === 0 &&
+            this.getRoleCount(CreepRole.CARRIER) === 0
+        );
+    }
+
+    public shouldUseMiners(): boolean {
+        /*
+            When to transition?
+            1. Storage is built
+            2. Energy Capacity is high enough to support a Miner (5 WORK = 500) + Carrier (Min 100-200)?
+               - Miner: 500 (5 WORK)
+               - Carrier: 200 (2 CARRY, 2 MOVE)
+        */
+        const room = this.colony.getMainRoom();
+        const storage = room.storage;
+        const capacity = room.energyCapacityAvailable;
+        // Miner (5 WORK) = 500. Carrier (2 CARRY 2 MOVE) = 200. 500 because they are not spawned at the same time.
+        return storage !== undefined && storage.isActive() && capacity >= 500;
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {
