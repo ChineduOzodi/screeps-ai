@@ -13,7 +13,7 @@
     "push-localhost": "rollup -c && node tools/deploy.js localhost",
     "push-sim": "rollup -c && node tools/deploy.js sim",
     "test": "npm run test-unit",
-    "test-unit": "env TS_NODE_PROJECT=\"tsconfig.test.json\" mocha --require ts-node/register test/unit/**/*.ts",
+    "test-unit": "set TS_NODE_PROJECT=tsconfig.test.json&& mocha --require ts-node/register \"src/**/*.test.ts\"",
     "test-integration": "echo 'See docs/in-depth/testing.md for instructions on enabling integration tests'",
     "watch-main": "rollup -cw",
     "watch-pserver": "rollup -cw",

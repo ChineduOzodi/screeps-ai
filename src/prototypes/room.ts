@@ -48,11 +48,6 @@ export class RoomExtras {
         }
     }
 
-    // public getTotalPotentialEnergy(): void {
-    //     const totalPotentialEnergy = 0;
-    //     Game.creeps;
-    // }
-
     public visualizeReservations(): void {
         if (!this.room.memory.positionReservations) {
             return;

@@ -1,6 +1,6 @@
 import { assert } from "chai";
-import { loop } from "../../src/main";
-import { Game, Memory } from "./mock";
+import { loop } from "./main";
+import { Game, Memory } from "../test/utils/mock";
 
 describe("main", () => {
     before(() => {

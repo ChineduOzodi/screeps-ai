@@ -1,9 +1,9 @@
 import { assert } from "chai";
-import { Game, Memory } from "./mock";
+import { Game, Memory } from "../../test/utils/mock";
 import { SpawnExtras } from "prototypes/spawn";
 
-import { loop } from "../../src/main";
-import { createFakeRoom, createFakeStructureSpawn } from "./fakes";
+import { loop } from "../main";
+import { createFakeRoom, createFakeStructureSpawn } from "../../test/utils/fakes";
 
 describe("spawn", () => {
     let spawn: SpawnExtras;
