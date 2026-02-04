@@ -59,6 +59,7 @@ interface ColonySource {
     sourceId: Id<Source>;
     position: RoomPosition;
     accessCount: number;
+    miningPosition?: RoomPosition;
 }
 
 interface CreepSpawnerProfileInfo {

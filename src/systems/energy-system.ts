@@ -7,6 +7,7 @@ import { CarrierCreepSpawner } from "creep-roles/carrier-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
 import { EnergyCalculator } from "utils/energy-calculator";
+import { ProjectStructure } from "managers/construction-manager";
 
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
@@ -57,14 +58,27 @@ export class EnergySystem extends BaseSystemImpl {
             // Calculate available slots (walkable tiles)
             let slots = 0;
             const terrain = source.room.getTerrain();
+            let miningPosition: RoomPosition | undefined;
+            let bestDist = Infinity;
+            const spawn = this.colony.getMainSpawn();
+
             for (let x = -1; x <= 1; x++) {
                 for (let y = -1; y <= 1; y++) {
                     if (x === 0 && y === 0) continue;
                     const pos = new RoomPosition(source.pos.x + x, source.pos.y + y, source.pos.roomName);
                     if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
-                        // Check strictly for walls. Swamps and plains are walkable.
-                        // TODO: Check for existing structures that block movement?
                         slots++;
+
+                        // We strictly want the mining position to be range 1 from source.
+                        // And preferably closer to spawn?
+                        // Actually, if we use container, we want it to be valid build position.
+                        // We can use ConstructionUtils to check if it's buildable (no walls, no other structures except road/container)
+                        // For now, let's just pick the first valid one or closest to spawn.
+                        const dist = spawn ? EnergyCalculator.calculateTravelTime(spawn.pos, pos) : 0;
+                        if (!miningPosition || dist < bestDist) {
+                            miningPosition = pos;
+                            bestDist = dist;
+                        }
                     }
                 }
             }
@@ -73,6 +87,7 @@ export class EnergySystem extends BaseSystemImpl {
                 accessCount: slots,
                 sourceId: source.id,
                 position: source.pos,
+                miningPosition,
             });
         });
     }
@@ -167,6 +182,8 @@ export class EnergySystem extends BaseSystemImpl {
     public override run(): void {
         super.run();
 
+        this.manageMiningInfrastructure();
+
         // Cleanup spawn queue if we switch away from Miners
         if (!this.shouldUseMiners()) {
             const spawnQueue = this.colony.getSpawnQueue();
@@ -183,7 +200,7 @@ export class EnergySystem extends BaseSystemImpl {
 
     public override getCreepSpawners(): CreepSpawner[] {
         if (this.shouldUseMiners()) {
-            return [new MinerCreepSpawner(), new CarrierCreepSpawner(), new HarvesterCreepSpawner()];
+            return [new MinerCreepSpawner(), new CarrierCreepSpawner()];
         }
         return [new HarvesterCreepSpawner()];
     }
@@ -221,5 +238,31 @@ export class EnergySystem extends BaseSystemImpl {
 
     public override getGoapActions(): Action[] {
         return [];
+    }
+
+    private manageMiningInfrastructure(): void {
+        if (!this.shouldUseMiners()) {
+            return;
+        }
+
+        // We only build 1 container per source for now?
+        // Prioritize building after storage is done (checked by shouldUseMiners)
+        // Checks construction every 10 ticks?
+        if (Game.time % 20 !== 0) return;
+
+        this.systemInfo.sources.forEach(sourceData => {
+            if (!sourceData.miningPosition) this.setSources();
+            if (!sourceData.miningPosition) return;
+
+            const projectName = `MiningContainer_${sourceData.sourceId}`;
+            const structure: ProjectStructure = {
+                x: sourceData.miningPosition.x,
+                y: sourceData.miningPosition.y,
+                roomName: sourceData.miningPosition.roomName,
+                type: STRUCTURE_CONTAINER,
+            };
+
+            this.colony.constructionManager.buildProject(projectName, [structure]);
+        });
     }
 }

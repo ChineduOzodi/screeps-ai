@@ -22,6 +22,9 @@ export class MinerCreep extends CreepRunner {
 
         if (source) {
             if (creep.pos.getRangeTo(source) <= 1) {
+                // We are in position (mostly).
+                // Ensure we are ON the container if it exists?
+
                 // Harvest
                 this.harvest(source);
                 // Miner with no CARRY parts will drop energy on the ground or into a container automatically.
@@ -40,7 +43,7 @@ export class MinerCreep extends CreepRunner {
                             // Log or handle error
                         }
                     } else {
-                        creep.say("Help!");
+                        creep.say("No Carrier!");
                     }
                 } else {
                     // Fallback if we accidentally have move parts

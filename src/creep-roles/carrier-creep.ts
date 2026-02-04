@@ -77,7 +77,8 @@ export class CarrierCreep extends CreepRunner {
         const { creep } = this;
 
         // Priority 1: Pick up from Container if exists
-        // (We can check 'workTargetId' associated container in memory if we stored it, or search)
+        // Use findClosestByRange or check explicitly for miner's container
+        // We can check if there's a container near the source.
         const container = source.pos.findInRange(FIND_STRUCTURES, 1, {
             filter: s => s.structureType === STRUCTURE_CONTAINER,
         })[0] as StructureContainer;
@@ -90,19 +91,29 @@ export class CarrierCreep extends CreepRunner {
         }
 
         // Priority 2: Pick up Dropped Energy
-        const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1, {
+        const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
             filter: r => r.resourceType === RESOURCE_ENERGY,
-        })[0];
+        });
+        const highestDropped = dropped.sort((a, b) => b.amount - a.amount)[0];
 
-        if (dropped) {
-            if (this.pickup(dropped) === ERR_NOT_IN_RANGE) {
-                this.moveToWithReservation(dropped, 5);
+        if (highestDropped) {
+            if (this.pickup(highestDropped) === ERR_NOT_IN_RANGE) {
+                this.moveToWithReservation(highestDropped, 5);
             }
             return;
         }
 
-        // Priority 3: Withdraw from Miner (Dead code: Miner has no CARRY parts)
-        // Kept empty or removed.
+        // Priority 3: Wait near source/container
+        // If container exists but empty, wait near it?
+        if (container) {
+            if (!creep.pos.inRangeTo(container, 2)) {
+                this.moveToWithReservation(container, 5);
+            }
+        } else {
+            if (!creep.pos.inRangeTo(source, 2)) {
+                this.moveToWithReservation(source, 5);
+            }
+        }
 
         // Idle near source if nothing to do?
         if (!creep.pos.inRangeTo(source, 2)) {
