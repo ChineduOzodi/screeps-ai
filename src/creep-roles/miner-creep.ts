@@ -19,35 +19,61 @@ export class MinerCreep extends CreepRunner {
         }
 
         const source = Game.getObjectById<Source>(memory.workTargetId);
+        const colony = this.getColony();
+
+        const sourceInfo = colony?.energyManagement?.sources.find((s: any) => s.sourceId === memory.workTargetId);
+
+        // Reconstruct RoomPosition from memory object if necessary
+        const miningPosObj = sourceInfo?.miningPosition;
+        const miningPos = miningPosObj
+            ? new RoomPosition(miningPosObj.x, miningPosObj.y, miningPosObj.roomName)
+            : source?.pos;
 
         if (source) {
-            if (creep.pos.getRangeTo(source) <= 1) {
-                // We are in position (mostly).
-                // Ensure we are ON the container if it exists?
+            // Logic:
+            // 1. If we are NOT at miningPos (or source pos if undefined), try to get there.
+            //    - If 0 MOVE parts, look for Carrier to pull us.
+            //    - If we have MOVE parts, move there.
+            // 2. Harvest.
 
-                // Harvest
+            const targetPos = miningPos || source.pos;
+            const atPosition = creep.pos.isEqualTo(targetPos);
+
+            // If we are at the target position (or close enough if it's just source), we are good.
+            // If miningPos is defined, we want exact match. If not, range 1 is ok.
+            const inPosition = miningPos ? atPosition : creep.pos.inRangeTo(source, 1);
+
+            if (inPosition) {
                 this.harvest(source);
-                // Miner with no CARRY parts will drop energy on the ground or into a container automatically.
+                // Ensure we don't accidentally move if we are working
             } else {
-                // If not in range and has no move parts, we need to be pulled
+                // Not in position.
+                // Harvest if possible while waiting (if in range of source but not on container)
+                if (creep.pos.inRangeTo(source, 1)) {
+                    this.harvest(source);
+                }
+
+                // Movement Logic
                 if (creep.getActiveBodyparts(MOVE) === 0) {
+                    // Turn towards carrier to accept pull
                     const carrier = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
                         filter: c =>
                             c.memory.role === CreepRole.CARRIER && c.memory.workTargetId === memory.workTargetId,
                     });
                     if (carrier) {
-                        // Carrier will handle the pull logic, we just need to be compliant?
-                        // Actually, if carrier pulls, we need to move?
-                        // "The target creep must yield to the puller by also calling move method in the direction of the puller."
-                        if (creep.move(carrier) !== OK) {
-                            // Log or handle error
-                        }
+                        // We must call move(direction) to accept a pull.
+                        // Even if we don't move, calling this with 0 fatigue is harmless (returns ERR_NO_BODYPART or OK if pulled)
+                        creep.move(creep.pos.getDirectionTo(carrier));
                     } else {
                         creep.say("No Carrier!");
                     }
                 } else {
-                    // Fallback if we accidentally have move parts
-                    this.moveToWithReservation(source, memory.workDuration, undefined, ["builder", "upgrader"]);
+                    // Use standard movement
+                    if (targetPos) {
+                        this.moveToWithReservation({ pos: targetPos }, memory.workDuration, 0, ["builder", "upgrader"]);
+                    } else {
+                        this.moveToWithReservation(source, memory.workDuration, 1, ["builder", "upgrader"]);
+                    }
                 }
             }
         } else {
@@ -57,7 +83,7 @@ export class MinerCreep extends CreepRunner {
 }
 
 export class MinerCreepSpawner extends CreepSpawnerImpl {
-    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+    public onCreateProfiles(energyBudgetRate: number, colony: ColonyManager): CreepProfiles {
         const colonySpawns: CreepProfiles = {};
         const spawn = colony.getMainSpawn();
 
@@ -67,6 +93,12 @@ export class MinerCreepSpawner extends CreepSpawnerImpl {
             const distB = EnergyCalculator.calculateTravelTime(spawn.pos, b.position);
             return distA - distB;
         });
+
+        // Use current energy for spawning if no harvesters exist to jumpstart
+        let energyCap = spawn.room.energyCapacityAvailable;
+        if (colony.systems.energy.noEnergyCollectors()) {
+            energyCap = spawn.room.energyAvailable;
+        }
 
         sortedSources.forEach((colonySource, index) => {
             if (!colonySource.accessCount) {

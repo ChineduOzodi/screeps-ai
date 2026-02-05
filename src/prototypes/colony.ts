@@ -50,6 +50,7 @@ export interface ColonyManager {
     removeSpawnRequest(name: string): void;
     constructionManager: ConstructionManager;
     roadManager: RoadManager;
+    getPrimaryStorage(): StructureStorage | StructureContainer | undefined;
 }
 
 export class ColonyManagerImpl implements ColonyManager {
@@ -528,6 +529,21 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public getId(): string {
         return this.colonyInfo.id;
+    }
+
+    public getPrimaryStorage(): StructureStorage | StructureContainer | undefined {
+        const room = this.getMainRoom();
+        if (room.storage && room.storage.isActive()) {
+            return room.storage;
+        }
+
+        if (this.colonyInfo.containerId) {
+            const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
+            if (container) {
+                return container;
+            }
+        }
+        return undefined;
     }
 }
 

@@ -6,6 +6,7 @@ declare global {
         colonyId: string;
         movementSystem?: CreepMovementSystem;
         targetId?: string; // TODO: convert to Id<Tombstone | StructureExtension | AnyStructure | Resource<ResourceConstant> | Source | ConstructionSite<BuildableStructureConstant> or _HasId
+        targetPos?: RoomPosition;
         working: boolean;
         workDuration: number;
     }

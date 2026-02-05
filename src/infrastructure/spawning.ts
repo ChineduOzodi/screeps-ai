@@ -1,4 +1,5 @@
 import { ColonyManager } from "prototypes/colony";
+import { CreepRole } from "prototypes/creep";
 
 export class Spawning {
     private colony: ColonyManager;
@@ -8,13 +9,43 @@ export class Spawning {
     }
 
     public run(): void {
+        const allProfiles: CreepSpawnerProfileInfo[] = [];
         for (const system of this.colony.getSystemsList()) {
             const profiles = system.getSpawnerProfilesList();
+            allProfiles.push(...profiles);
             for (const profile of profiles) {
                 this.manageSpawnProfile(profile);
             }
         }
+
+        this.pruneSpawnQueue(allProfiles);
         this.processSpawnQueue();
+    }
+
+    private pruneSpawnQueue(allProfiles: CreepSpawnerProfileInfo[]) {
+        const validSignatures = new Set<string>();
+        for (const profile of allProfiles) {
+            if (!profile.memoryBlueprint) continue;
+            const sig = this.getProfileSignature(profile.memoryBlueprint);
+            validSignatures.add(sig);
+        }
+
+        const queue = this.colony.getSpawnQueue();
+        // Iterate backwards to safe delete, but we use removeSpawnRequest which searches by name
+        // so we should just collect names to remove first or iterate backwards and use index if we manually splice.
+        // using removeSpawnRequest is safer as it cleans up creep memory map too.
+        for (let i = queue.length - 1; i >= 0; i--) {
+            const request = queue[i];
+            const sig = this.getProfileSignature(request.memory);
+            if (!validSignatures.has(sig)) {
+                console.log(`Pruning orphaned spawn request: ${request.memory.role} (name: ${request.memory.name})`);
+                this.colony.removeSpawnRequest(request.memory.name);
+            }
+        }
+    }
+
+    private getProfileSignature(memory: { role: CreepRole; workTargetId?: string }): string {
+        return `${memory.role}:${memory.workTargetId || ""}`;
     }
 
     private manageSpawnProfile(profile: CreepSpawnerProfileInfo) {

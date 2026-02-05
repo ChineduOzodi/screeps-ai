@@ -1,5 +1,9 @@
 import { assert } from "chai";
 import sinon from "sinon";
+import "../prototypes/colony.extensions";
+import "../prototypes/creep.extensions";
+import "../prototypes/room.extensions";
+import "../prototypes/spawn.extensions";
 import { CreepRole } from "../prototypes/creep";
 import { Spawning } from "./spawning";
 import { ColonyManager } from "../prototypes/colony";
@@ -121,5 +125,40 @@ describe("Spawning", () => {
         (spawning as any).manageSpawnProfile(profile);
 
         assert.isFalse(colony.addToSpawnCreepQueue.called, "Should count spawn queue");
+    });
+    it("should prune orphaned spawn requests that match no active profile", () => {
+        // Setup: One active profile for Harvester
+        const profile = {
+            desiredAmount: 1,
+            bodyBlueprint: [WORK, CARRY, MOVE],
+            memoryBlueprint: {
+                role: CreepRole.HARVESTER,
+                workTargetId: "source1",
+                averageEnergyConsumptionProductionPerTick: 10,
+            },
+        };
+        colony.getSystemsList.returns([{ getSpawnerProfilesList: () => [profile] }]);
+
+        // Setup: Queue contains a valid request (Harvester) and an orphaned one (Miner)
+        const validRequest = {
+            memory: { role: CreepRole.HARVESTER, workTargetId: "source1", name: "harvester1" },
+            body: [],
+        };
+        const orphanedRequest = {
+            memory: { role: CreepRole.MINER, name: "miner1" },
+            body: [],
+        };
+
+        const queue = [validRequest, orphanedRequest];
+        colony.getSpawnQueue.returns(queue);
+        colony.removeSpawnRequest = sinon.spy();
+
+        spawning.run();
+
+        assert.isTrue(colony.removeSpawnRequest.calledWith("miner1"), "Should have removed orphaned miner request");
+        assert.isFalse(
+            colony.removeSpawnRequest.calledWith("harvester1"),
+            "Should NOT have removed valid harvester request",
+        );
     });
 });

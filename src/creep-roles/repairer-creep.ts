@@ -82,7 +82,7 @@ export class RepairerCreepSpawner extends CreepSpawnerImpl {
         // Find most damaged structure, or assume average
         const room = colony.getMainRoom();
 
-        let targetPos = room.storage?.pos;
+        let targetPos = colony.getPrimaryStorage()?.pos;
         if (!targetPos) {
             const sources = colony.systems.energy.systemInfo.sources;
             if (sources && sources.length > 0) {
@@ -93,7 +93,7 @@ export class RepairerCreepSpawner extends CreepSpawnerImpl {
         if (!targetPos) return {};
 
         // Find dist from spawn/storage
-        const sourcePos = room.storage?.pos || room.find(FIND_SOURCES)[0]?.pos;
+        const sourcePos = colony.getPrimaryStorage()?.pos || room.find(FIND_SOURCES)[0]?.pos;
         let dist = 20; // fallback
         if (targetPos && sourcePos) {
             dist = EnergyCalculator.calculateTravelTime(sourcePos, targetPos);

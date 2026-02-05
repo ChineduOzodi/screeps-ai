@@ -3,6 +3,7 @@ export interface FakeGame {
     rooms: { [roomName: string]: Room };
     spawns: { [spawnName: string]: StructureSpawn };
     time: number;
+    getObjectById?: (id: string) => any;
 }
 
 export const Game: FakeGame = {
@@ -10,6 +11,7 @@ export const Game: FakeGame = {
     rooms: {},
     spawns: {},
     time: 12345,
+    getObjectById: () => null,
 };
 
 export const Memory: Memory = {
@@ -19,4 +21,4 @@ export const Memory: Memory = {
     flags: {},
     rooms: {},
     spawns: {},
-};
+} as any;

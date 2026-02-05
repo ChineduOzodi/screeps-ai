@@ -89,7 +89,7 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
         const room = colony.getMainRoom();
 
         // If storage exists, use that. Else find closest source.
-        let sourcePos = room.storage?.pos;
+        let sourcePos = colony.getPrimaryStorage()?.pos;
         if (!sourcePos) {
             const sources = colony.systems.energy.systemInfo.sources;
             if (sources && sources.length > 0) {
@@ -123,7 +123,7 @@ export class BuilderCreepSpawner extends CreepSpawnerImpl {
         const queue = colony.colonyInfo.builderManagement?.buildQueue || [];
         const minAmount = queue.length > 0 ? 1 : 0;
 
-        if (room.storage) {
+        if (colony.getPrimaryStorage()) {
             // Min 1, Max energy budget
             desiredAmount = Math.max(minAmount, desiredAmount);
         } else {

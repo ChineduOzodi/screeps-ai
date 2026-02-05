@@ -47,7 +47,7 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
 
         // Find dropoff/pickup
         // If storage exists, use that. Else find closest source.
-        let sourcePos = room.storage?.pos;
+        let sourcePos = colony.getPrimaryStorage()?.pos;
         if (!sourcePos) {
             const sources = colony.systems.energy.systemInfo.sources;
             if (sources && sources.length > 0) {
@@ -90,7 +90,7 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
 
         // Hard cap for controller slots? Usually 1-2 heavy upgraders is enough, or swarm for early RCL.
         // Limit to reasonable number to avoid CPU spam
-        if (room.storage) {
+        if (colony.getPrimaryStorage()) {
             // Min 1, Max energy budget
             desiredAmount = Math.max(1, desiredAmount);
         } else {

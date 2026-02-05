@@ -40,6 +40,7 @@ describe("builder-creep", () => {
                 energyCapacityAvailable: SPAWN_ENERGY_CAPACITY,
                 storage: {
                     pos: new RoomPosition(25, 25, "E1S1"),
+                    isActive: () => true,
                 },
             } as any;
 

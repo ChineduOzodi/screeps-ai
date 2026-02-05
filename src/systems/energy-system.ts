@@ -210,14 +210,23 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     public noEnergyCollectors(): boolean {
-        return (
-            this.getRoleCount(CreepRole.HARVESTER) === 0 &&
-            this.getRoleCount(CreepRole.MINER) === 0 &&
-            this.getRoleCount(CreepRole.CARRIER) === 0
+        // Count ALIVE creeps only. If all we have are queued creeps, we still need to fall back
+        // to emergency harvester mode if there are no active collectors.
+        const creeps = this.colony.getCreeps();
+        const collectors = creeps.filter(
+            c =>
+                c.memory.role === CreepRole.HARVESTER ||
+                c.memory.role === CreepRole.MINER ||
+                c.memory.role === CreepRole.CARRIER,
         );
+        return collectors.length === 0;
     }
 
     public shouldUseMiners(): boolean {
+        if (this.noEnergyCollectors()) {
+            return false;
+        }
+
         /*
             When to transition?
             1. Storage is built
@@ -226,10 +235,10 @@ export class EnergySystem extends BaseSystemImpl {
                - Carrier: 200 (2 CARRY, 2 MOVE)
         */
         const room = this.colony.getMainRoom();
-        const storage = room.storage;
+        const storage = this.colony.getPrimaryStorage();
         const capacity = room.energyCapacityAvailable;
         // Miner (5 WORK) = 500. Carrier (2 CARRY 2 MOVE) = 200. 500 because they are not spawned at the same time.
-        return storage !== undefined && storage.isActive() && capacity >= 500;
+        return storage !== undefined && capacity >= 500;
     }
 
     public override getGoapGoals(state: WorldState): Goal[] {

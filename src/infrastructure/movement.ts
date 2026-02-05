@@ -34,20 +34,36 @@ export class Movement {
         // requirements
         if (
             creep.memory.movementSystem.path &&
-            creep.memory.targetId &&
+            (creep.memory.targetId || creep.memory.targetPos) &&
             (creep.memory.targetRange != null || creep.memory.targetRange !== undefined)
         ) {
-            const target = Game.getObjectById<Structure>(creep.memory.targetId);
-            if (!target) {
-                console.log(`${creep.name}: target no longer exists`);
-                delete creep.memory.movementSystem.path;
-                delete creep.memory.targetId;
-            } else {
-                if (target && creep.pos.getRangeTo(target.pos) <= creep.memory.targetRange) {
+            let targetPos: RoomPosition | undefined;
+            if (creep.memory.targetId) {
+                const target = Game.getObjectById<Structure>(creep.memory.targetId);
+                if (!target) {
+                    console.log(`${creep.name}: target no longer exists (ID: ${creep.memory.targetId})`);
+                    // If we have a fallback targetPos, un-comment below?
+                    // For now, if ID is gone, we abort, unless logic specifically creates targetPos.
+                    // Actually, let's strictly fail if targetId was expected but gone.
+                    delete creep.memory.movementSystem.path;
+                    delete creep.memory.targetId;
+                    delete creep.memory.targetPos;
+                    return;
+                }
+                targetPos = target.pos;
+            } else if (creep.memory.targetPos) {
+                // Reconstruct RoomPosition from memory
+                const memPos = creep.memory.targetPos as any; // Handle serialized object
+                targetPos = new RoomPosition(memPos.x, memPos.y, memPos.roomName);
+            }
+
+            if (targetPos) {
+                if (creep.pos.getRangeTo(targetPos) <= creep.memory.targetRange) {
                     // console.log('reached target: ' + creep.memory.spawnId);
                     // sMovementPathfinding.unreservePosition(creep,creep.room,creep.memory.path[creep.memory.path.length - 1]);
                     delete creep.memory.movementSystem.path;
                     delete creep.memory.targetId;
+                    delete creep.memory.targetPos;
                     creep.memory.movementSystem.idleReserved = true;
                     creep.memory.movementSystem.previousPos = creep.pos;
                 } else {
@@ -61,6 +77,7 @@ export class Movement {
                         PathfindingUtils.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
+                        delete creep.memory.targetPos;
                         creep.memory.movementSystem.pathStuck = 0;
                         // reserve current location
                         PathfindingUtils.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
@@ -75,6 +92,7 @@ export class Movement {
                         PathfindingUtils.unreservePosition(creep, creep.room, lastPathStep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
+                        delete creep.memory.targetPos;
                         creep.memory.movementSystem.pathStuck = Math.random() * 3;
                         // reserve current location
                         PathfindingUtils.reserveLocation(creep, creep.pos, Game.time, Game.time + ticksToLive);
@@ -94,10 +112,17 @@ export class Movement {
         };
     }
 
-    public static moveToTargetByPath(creep: Creep, targetId: string, targetRange: number, path: PathStep[]): void {
+    public static moveToTargetByPath(
+        creep: Creep,
+        targetId: string | undefined,
+        targetPos: RoomPosition | undefined,
+        targetRange: number,
+        path: PathStep[],
+    ): void {
         if (creep.memory.movementSystem) {
             creep.memory.movementSystem.path = path;
             creep.memory.targetId = targetId;
+            creep.memory.targetPos = targetPos;
             creep.memory.targetRange = targetRange;
             creep.memory.movementSystem.pathStuck = 0;
         } else {
@@ -107,7 +132,8 @@ export class Movement {
 
     public static moveToTargetByPathWithReservation(
         creep: Creep,
-        targetId: string,
+        targetId: string | undefined,
+        targetPos: RoomPosition | undefined,
         targetRange: number,
         path: PathStep[],
         startTime: number,
@@ -116,6 +142,7 @@ export class Movement {
         if (creep.memory.movementSystem) {
             creep.memory.movementSystem.path = path;
             creep.memory.targetId = targetId;
+            creep.memory.targetPos = targetPos;
             creep.memory.targetRange = targetRange;
             creep.memory.movementSystem.pathStuck = 0;
             creep.memory.movementSystem.reservationStartTime = startTime;
@@ -165,14 +192,14 @@ export class Movement {
         });
 
         if (path && path.length > 0) {
-            this.moveToTargetByPath(creep, target.id, range, path);
+            this.moveToTargetByPath(creep, target.id, undefined, range, path);
         }
         // console.log(path);
     }
 
     public static moveToWithReservation(
         creep: Creep,
-        target: _HasRoomPosition & _HasId,
+        target: _HasRoomPosition & Partial<_HasId>,
         workDuration: number,
         range = 1,
         ignoreRoles?: string[],
@@ -193,6 +220,7 @@ export class Movement {
             this.moveToTargetByPathWithReservation(
                 creep,
                 target.id,
+                target.id ? undefined : target.pos, // If no ID, use pos
                 range,
                 pathInfo.path,
                 pathInfo.startTime,

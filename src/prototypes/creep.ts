@@ -110,7 +110,7 @@ export abstract class CreepRunner {
     }
 
     protected moveToWithReservation(
-        target: _HasRoomPosition & _HasId,
+        target: _HasRoomPosition & Partial<_HasId>,
         workDuration: number,
         range = 1,
         ignoreRoles?: string[],

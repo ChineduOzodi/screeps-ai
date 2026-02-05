@@ -12,12 +12,8 @@ export class CarrierCreep extends CreepRunner {
 
     public override onRun(): void {
         const { creep, memory } = this;
-        // Logic:
-        // 1. Check if we need to pull our Miner to the source.
-        // 2. If Miner is OK, do Transport Cycle.
 
         if (!memory.workTargetId) {
-            // Fallback or error
             creep.say("No target");
             return;
         }
@@ -28,48 +24,79 @@ export class CarrierCreep extends CreepRunner {
             return;
         }
 
-        // 1. Check Miner Position
-        // Find Miner assigned to this source
+        // Identify Mining Position
+        const colony = this.getColony();
+
+        const sourceInfo = colony?.energyManagement?.sources.find((s: any) => s.sourceId === memory.workTargetId);
+        const miningPosObj = sourceInfo?.miningPosition;
+        const miningPos = miningPosObj
+            ? new RoomPosition(miningPosObj.x, miningPosObj.y, miningPosObj.roomName)
+            : undefined;
+
+        // Check Miner
         const miner = creep.room
             .find(FIND_MY_CREEPS)
             .find(c => c.memory.role === CreepRole.MINER && c.memory.workTargetId === memory.workTargetId);
 
+        // Tow Miner if needed
         if (miner) {
-            // Is miner at source?
-            if (!miner.pos.isNearTo(source)) {
-                // Miner needs pulling
-                // State: "Pulling"
-                if (creep.pull(miner) === ERR_NOT_IN_RANGE) {
-                    this.moveToWithReservation(miner, 5); // Go to miner to pull
-                } else {
-                    // Pulled successfully, now move towards source
-                    const moveRes = miner.move(creep);
-                    const myMove = this.moveToWithReservation(source, 5);
-                    // Note: 'pull' returns OK, we also need to move.
-                    // moveToWithReservation might handle the move.
-
-                    if (moveRes !== OK) {
-                        // Miner couldn't move?
-                    }
+            let minerCorrectlyPlaced = false;
+            // Precise check if miningPos known
+            if (miningPos) {
+                if (miner.pos.isEqualTo(miningPos)) {
+                    minerCorrectlyPlaced = true;
                 }
-                return; // Priority is positioning the miner
+            } else {
+                // Fallback check
+                if (miner.pos.isNearTo(source)) {
+                    minerCorrectlyPlaced = true;
+                }
+            }
+
+            if (!minerCorrectlyPlaced) {
+                if (miningPos) {
+                    this.performTow(miner, miningPos);
+                    return;
+                } else {
+                    creep.say("No MinePos");
+                }
             }
         }
 
-        // 2. Transport Cycle
+        // Standard Cycle
         if (memory.working && creep.store[RESOURCE_ENERGY] === 0) {
-            memory.working = false; // Need to gather
+            memory.working = false;
         }
         if (!memory.working && creep.store.getFreeCapacity() === 0) {
-            memory.working = true; // Need to deliver
+            memory.working = true;
         }
 
         if (memory.working) {
-            // DELIVER
             this.deliverEnergy();
         } else {
-            // GATHER
             this.gatherEnergy(source, miner);
+        }
+    }
+
+    private performTow(miner: Creep, targetPos: RoomPosition) {
+        if (!this.creep.pos.isNearTo(miner)) {
+            // Go to miner
+            this.moveToWithReservation(miner, 0);
+            return;
+        }
+
+        if (this.creep.pull(miner) === OK) {
+            // Swap Logic
+            if (this.creep.pos.isEqualTo(targetPos)) {
+                this.creep.move(this.creep.pos.getDirectionTo(miner));
+            } else {
+                // Move carrier to target (pulling miner behind)
+                if (this.creep.pos.isNearTo(targetPos)) {
+                    this.creep.move(this.creep.pos.getDirectionTo(targetPos));
+                } else {
+                    this.moveToWithReservation({ pos: targetPos }, 0, 0);
+                }
+            }
         }
     }
 
@@ -77,8 +104,6 @@ export class CarrierCreep extends CreepRunner {
         const { creep } = this;
 
         // Priority 1: Pick up from Container if exists
-        // Use findClosestByRange or check explicitly for miner's container
-        // We can check if there's a container near the source.
         const container = source.pos.findInRange(FIND_STRUCTURES, 1, {
             filter: s => s.structureType === STRUCTURE_CONTAINER,
         })[0] as StructureContainer;
@@ -132,8 +157,13 @@ export class CarrierCreep extends CreepRunner {
 
         if (!target) {
             // Storage
-            if (creep.room.storage && creep.room.storage.store.getFreeCapacity() > 0) {
+            if (creep.room.storage && creep.room.storage.isActive()) {
                 target = creep.room.storage;
+            } else {
+                const colony = this.getColony();
+                if (colony && colony.containerId) {
+                    target = Game.getObjectById(colony.containerId);
+                }
             }
         }
 
@@ -168,7 +198,7 @@ export class CarrierCreep extends CreepRunner {
 }
 
 export class CarrierCreepSpawner extends CreepSpawnerImpl {
-    public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
+    public onCreateProfiles(energyBudgetRate: number, colony: ColonyManager): CreepProfiles {
         const colonySpawns: CreepProfiles = {};
         const spawn = colony.getMainSpawn();
 
@@ -178,6 +208,12 @@ export class CarrierCreepSpawner extends CreepSpawnerImpl {
             const distB = EnergyCalculator.calculateTravelTime(spawn.pos, b.position);
             return distA - distB;
         });
+
+        // Use current energy for spawning if no harvesters exist to jumpstart
+        let energyCap = spawn.room.energyCapacityAvailable;
+        if (colony.systems.energy.noEnergyCollectors()) {
+            energyCap = spawn.room.energyAvailable;
+        }
 
         sortedSources.forEach((colonySource, index) => {
             const priority = 10 - index;
