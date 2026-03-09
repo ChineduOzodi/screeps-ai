@@ -14,7 +14,7 @@
     "push-sim": "rollup -c && node tools/deploy.js sim",
     "test": "npm run test-unit",
     "test-unit": "set TS_NODE_PROJECT=tsconfig.test.json&& mocha --require ts-node/register \"src/**/*.test.ts\"",
-    "test-integration": "echo 'See docs/in-depth/testing.md for instructions on enabling integration tests'",
+    "test-integration": "npm run build && set TS_NODE_PROJECT=tsconfig.test.json&& mocha --require ts-node/register \"test/integration/**/*.test.ts\"",
     "watch-main": "rollup -cw",
     "watch-pserver": "rollup -cw",
     "watch-sim": "rollup -cw"
@@ -36,6 +36,7 @@
     "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/chai": "^4.3.16",
+    "@types/fs-extra-promise": "^1.0.8",
     "@types/lodash": "^4.17.6",
     "@types/mocha": "^10.0.7",
     "@types/node": "^20.14.9",
@@ -51,12 +52,14 @@
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-prettier": "^5.1.3",
+    "fs-extra-promise": "^1.0.1",
     "lodash": "^4.17.21",
     "mocha": "^10.6.0",
     "prettier": "^3.3.2",
     "rollup": "^4.18.0",
     "rollup-plugin-clear": "^2.0.7",
     "rollup-plugin-typescript2": "^0.36.0",
+    "screeps": "^4.2.21",
     "sinon": "^18.0.0",
     "sinon-chai": "^3.7.0",
     "ts-node": "^10.9.2",
@@ -67,5 +70,9 @@
   "dependencies": {
     "screeps-profiler": "^2.0.1",
     "source-map": "~0.6.1"
+  },
+  "overrides": {
+    "isolated-vm": "^4.6.0",
+    "node-gyp": "^12.0.0"
   }
 }

@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 import { readFileSync } from "fs";
 import _ from "lodash";
-const { ScreepsServer, stdHooks } = require("screeps-server-mockup");
+const { ScreepsServer, stdHooks } = require("../mockup/src/main");
 const DIST_MAIN_JS = "dist/main.js";
 
 /*
