@@ -17,6 +17,7 @@ describe("Energy System", () => {
         const mockRoom = {
             energyCapacityAvailable: 300,
             energyAvailable: 300,
+            find: () => [],
         } as any;
 
         mockColony = {

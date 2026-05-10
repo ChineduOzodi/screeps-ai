@@ -41,6 +41,7 @@ export class CarrierCreep extends CreepRunner {
         // Tow Miner if needed
         if (miner) {
             let minerCorrectlyPlaced = false;
+
             // Precise check if miningPos known
             if (miningPos) {
                 if (miner.pos.isEqualTo(miningPos)) {
@@ -56,10 +57,21 @@ export class CarrierCreep extends CreepRunner {
             if (!minerCorrectlyPlaced) {
                 if (miningPos) {
                     this.performTow(miner, miningPos);
-                    return;
                 } else {
-                    creep.say("No MinePos");
+                    // Fallback tow: pull miner until carrier is near source, then swap.
+                    if (!this.creep.pos.isNearTo(miner)) {
+                        this.moveToWithReservation(miner, 0);
+                        return;
+                    }
+                    if (this.creep.pull(miner) === OK) {
+                        if (this.creep.pos.isNearTo(source)) {
+                            this.creep.move(this.creep.pos.getDirectionTo(miner));
+                        } else {
+                            this.moveToWithReservation(source, 0, 1);
+                        }
+                    }
                 }
+                return;
             }
         }
 
@@ -85,7 +97,8 @@ export class CarrierCreep extends CreepRunner {
             return;
         }
 
-        if (this.creep.pull(miner) === OK) {
+        const pullResult = this.creep.pull(miner);
+        if (pullResult === OK) {
             // Swap Logic
             if (this.creep.pos.isEqualTo(targetPos)) {
                 this.creep.move(this.creep.pos.getDirectionTo(miner));
@@ -94,7 +107,7 @@ export class CarrierCreep extends CreepRunner {
                 if (this.creep.pos.isNearTo(targetPos)) {
                     this.creep.move(this.creep.pos.getDirectionTo(targetPos));
                 } else {
-                    this.moveToWithReservation({ pos: targetPos }, 0, 0);
+                    this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
                 }
             }
         }
@@ -104,8 +117,8 @@ export class CarrierCreep extends CreepRunner {
         const { creep } = this;
 
         // Priority 1: Pick up from Container if exists
-        const container = source.pos.findInRange(FIND_STRUCTURES, 1, {
-            filter: s => s.structureType === STRUCTURE_CONTAINER,
+        const container = creep.room.find(FIND_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(source.pos, 1),
         })[0] as StructureContainer;
 
         if (container && container.store[RESOURCE_ENERGY] > 0) {
@@ -116,8 +129,8 @@ export class CarrierCreep extends CreepRunner {
         }
 
         // Priority 2: Pick up Dropped Energy
-        const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-            filter: r => r.resourceType === RESOURCE_ENERGY,
+        const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+            filter: r => r.resourceType === RESOURCE_ENERGY && r.pos.inRangeTo(source.pos, 3),
         });
         const highestDropped = dropped.sort((a, b) => b.amount - a.amount)[0];
 

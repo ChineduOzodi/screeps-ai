@@ -162,7 +162,11 @@ export default class ScreepsServer extends EventEmitter {
     */
     async startProcess(name: string, execPath: string, env: NodeJS.ProcessEnv) {
         const fd = await fs.openAsync(path.resolve(this.opts.logdir, `${name}.log`), "a");
-        this.processes[name] = cp.fork(path.resolve(execPath), [], { stdio: [0, fd, fd, "ipc"], env });
+        this.processes[name] = cp.fork(path.resolve(execPath), [], {
+            stdio: [0, fd, fd, "ipc"],
+            env,
+            execArgv: ["--no-node-snapshot"],
+        });
         this.emit("info", `[${name}] process ${this.processes[name].pid} started`);
         this.processes[name].on("exit", async (code, signal) => {
             await fs.closeAsync(fd);

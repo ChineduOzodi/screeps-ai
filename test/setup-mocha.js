@@ -82,7 +82,30 @@ global.ATTACK_POWER = 30;
 global.UPGRADE_CONTROLLER_POWER = 1;
 global.RANGED_ATTACK_POWER = 10;
 global.HEAL_POWER = 12;
-global.RANGED_HEAL_POWER = 4;global.RoomPosition = class {
+global.RANGED_HEAL_POWER = 4;
+
+global.STRUCTURE_EXTENSION = "extension";
+global.STRUCTURE_RAMPART = "rampart";
+global.STRUCTURE_ROAD = "road";
+global.STRUCTURE_SPAWN = "spawn";
+global.STRUCTURE_LINK = "link";
+global.STRUCTURE_WALL = "constructedWall";
+global.STRUCTURE_STORAGE = "storage";
+global.STRUCTURE_TOWER = "tower";
+global.STRUCTURE_OBSERVER = "observer";
+global.STRUCTURE_POWER_SPAWN = "powerSpawn";
+global.STRUCTURE_EXTRACTOR = "extractor";
+global.STRUCTURE_LAB = "lab";
+global.STRUCTURE_TERMINAL = "terminal";
+global.STRUCTURE_CONTAINER = "container";
+global.STRUCTURE_NUKER = "nuker";
+global.STRUCTURE_FACTORY = "factory";
+global.STRUCTURE_INVADER_CORE = "invaderCore";
+global.STRUCTURE_PORTAL = "portal";
+global.STRUCTURE_CONTROLLER = "controller";
+global.STRUCTURE_KEEPER_LAIR = "keeperLair";
+
+global.RoomPosition = class {
     constructor(x, y, roomName) {
         this.x = x;
         this.y = y;

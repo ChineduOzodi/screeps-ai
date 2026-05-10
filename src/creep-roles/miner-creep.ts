@@ -13,6 +13,7 @@ export class MinerCreep extends CreepRunner {
 
     public override onRun(): void {
         const { creep, memory } = this;
+        console.log(`[MinerCreep] onRun: ${creep.name} working: ${memory.working}`);
 
         if (!memory.workTargetId) {
             throw new Error(`creep does not have sourceId in memory: ${creep.id}`);
@@ -61,9 +62,8 @@ export class MinerCreep extends CreepRunner {
                             c.memory.role === CreepRole.CARRIER && c.memory.workTargetId === memory.workTargetId,
                     });
                     if (carrier) {
-                        // We must call move(direction) to accept a pull.
-                        // Even if we don't move, calling this with 0 fatigue is harmless (returns ERR_NO_BODYPART or OK if pulled)
-                        creep.move(creep.pos.getDirectionTo(carrier));
+                        // We must call move(pullingCreep) to accept a pull.
+                        creep.move(carrier);
                     } else {
                         creep.say("No Carrier!");
                     }

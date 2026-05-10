@@ -66,6 +66,7 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public run(): void {
+        console.log(`[Colony] starting run for ${this.colonyInfo.id}`);
         if (!this.getMainRoom()) {
             console.log(`No vision of colony room ${this.colonyInfo.id}, removing from memory...`);
             delete Memory.colonies[this.colonyInfo.id];
@@ -75,6 +76,7 @@ export class ColonyManagerImpl implements ColonyManager {
         const spawnManager = new Spawning(this);
 
         if (!this.colonyInfo.setupComplete) {
+            console.log(`[Colony] initialSetup`);
             this.colonyInfo.setupComplete = this.initialSetup();
             systems.forEach(x => x.onStart());
         }
@@ -309,20 +311,29 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public getStoredEnergyPercent(): number {
         if (!this.colonyInfo.containerId) {
-            this.colonyInfo.containerId =
-                this.getMainSpawn().pos.findClosestByRange<StructureContainer>(FIND_MY_STRUCTURES)?.id;
+            try {
+                this.colonyInfo.containerId = this.getMainSpawn().pos.findClosestByRange<StructureContainer>(
+                    FIND_STRUCTURES,
+                    { filter: s => s.structureType === STRUCTURE_CONTAINER },
+                )?.id;
+            } catch (e) {
+                const containers = this.getMainRoom().find(FIND_STRUCTURES, {
+                    filter: s => s.structureType === STRUCTURE_CONTAINER,
+                });
+                this.colonyInfo.containerId = containers[0]?.id;
+            }
         }
         if (!this.colonyInfo.containerId) {
             return 0;
         }
 
         const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
-        if (!container) {
+        if (!container || !container.store) {
             return 0;
         }
 
-        let energy = container.store[RESOURCE_ENERGY];
-        let capacity = container.store.getCapacity(RESOURCE_ENERGY);
+        let energy = container.store[RESOURCE_ENERGY] || 0;
+        let capacity = container.store.getCapacity(RESOURCE_ENERGY) || 1;
 
         if (this.getMainRoom().storage) {
             energy += this.getMainRoom().storage?.store[RESOURCE_ENERGY] || 0;
@@ -515,7 +526,7 @@ export class ColonyManagerImpl implements ColonyManager {
     public getMainSpawn(): StructureSpawn {
         let spawn = Game.getObjectById(this.colonyInfo.mainSpawnId);
         if (!spawn) {
-            console.warn(`Colony ${this.colonyInfo.id} does not have a main spawn set, resetting spawn.`);
+            console.log(`Colony ${this.colonyInfo.id} does not have a main spawn set, resetting spawn.`);
             const mainRoom = this.getMainRoom();
             spawn = mainRoom.find(FIND_MY_SPAWNS)[0];
             this.colonyInfo.mainSpawnId = spawn.id;

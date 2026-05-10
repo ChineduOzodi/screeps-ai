@@ -10,6 +10,7 @@ export class PathfindingUtils {
         startTime: number;
         endTime: number;
     } {
+        console.log(`[PathfindingUtils] findPathWithReservation: creep ${creep.name} to target`);
         const moveTime = creep.pos.findPathTo(target, {
             range,
             ignoreCreeps: true,
@@ -23,6 +24,7 @@ export class PathfindingUtils {
         const startTime = Game.time + moveTime;
         const endTime = Game.time + moveTime + workDuration;
 
+        console.log(`[PathfindingUtils] findPathWithReservation: creep ${creep.name} - phase 2: custom costMatrix`);
         const path = creep.pos.findPathTo(target, {
             range,
             ignoreCreeps: true,
@@ -57,6 +59,7 @@ export class PathfindingUtils {
             },
         });
 
+        console.log(`[PathfindingUtils] findPathWithReservation: DONE creep ${creep.name}`);
         // console.log(`${creep.name}, target pos: ${(target as _HasRoomPosition).pos.x},${(target as _HasRoomPosition).pos.y}, creep pos: ${creep.pos.x}, ${creep.pos.y}, path length: ${path.length}, range: ${range}`);
         return { path, startTime, endTime };
     }

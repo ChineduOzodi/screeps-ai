@@ -77,7 +77,9 @@ export class ErrorMapper {
             try {
                 loop();
             } catch (e) {
+                const globalMem = Memory as any;
                 if (e instanceof Error) {
+                    globalMem._lastError = e.stack;
                     if ("sim" in Game.rooms || !enableSourceMaps) {
                         // running in simulator or source maps are disabled
                         const message = `Source maps don't work in the simulator - displaying original error`;

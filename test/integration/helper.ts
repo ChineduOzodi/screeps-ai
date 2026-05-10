@@ -36,6 +36,10 @@ class IntegrationTestHelper {
         };
         this._player = await this._server.world.addBot({ username: "player", room: "W0N1", x: 15, y: 15, modules });
 
+        this._player.on("console", (logs: any) => {
+            logs.forEach((log: any) => console.log("[Bot] " + log));
+        });
+
         // Start server
         await this._server.start();
     }
@@ -45,11 +49,13 @@ class IntegrationTestHelper {
     }
 }
 
-beforeEach(async () => {
+beforeEach(async function () {
+    this.timeout(20000);
     await helper.beforeEach();
 });
 
-afterEach(async () => {
+afterEach(async function () {
+    this.timeout(20000);
     await helper.afterEach();
 });
 

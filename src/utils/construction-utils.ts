@@ -76,9 +76,16 @@ export class ConstructionUtils {
 
         // Check primary spots
         for (const pDelta of spotCandidates) {
-            const candidateCenter = new RoomPosition(spawnPos.x + pDelta.dx, spawnPos.y + pDelta.dy, roomName);
-            if (isClusterValidAtCenter(candidateCenter)) {
-                return candidateCenter;
+            const x = spawnPos.x + pDelta.dx;
+            const y = spawnPos.y + pDelta.dy;
+            if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+            try {
+                const candidateCenter = new RoomPosition(x, y, roomName);
+                if (isClusterValidAtCenter(candidateCenter)) {
+                    return candidateCenter;
+                }
+            } catch (e) {
+                console.log(`Failed to create candidate for extension: ${x},${y} in ${roomName}`);
             }
         }
 

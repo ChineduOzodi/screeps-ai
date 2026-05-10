@@ -24,6 +24,9 @@ export class EnergySystem extends BaseSystemImpl {
                 storedEnergyPercent: 0,
             };
             this.setSources();
+        } else if (this.colony.colonyInfo.energyManagement.sources.length === 0) {
+            // Retry finding sources if the room had no vision initially
+            this.setSources();
         }
         return this.colony.colonyInfo.energyManagement;
     }
@@ -51,8 +54,11 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     private setSources() {
-        const sources = this.colony.getMainRoom().find(FIND_SOURCES);
-        this.systemInfo.sources = [];
+        const energyManagement = this.colony.colonyInfo.energyManagement;
+        if (!energyManagement) return;
+
+        const sources = this.colony.getMainRoom()?.find(FIND_SOURCES) || [];
+        energyManagement.sources = [];
 
         sources.forEach(source => {
             // Calculate available slots (walkable tiles)
@@ -65,8 +71,19 @@ export class EnergySystem extends BaseSystemImpl {
             for (let x = -1; x <= 1; x++) {
                 for (let y = -1; y <= 1; y++) {
                     if (x === 0 && y === 0) continue;
-                    const pos = new RoomPosition(source.pos.x + x, source.pos.y + y, source.pos.roomName);
-                    if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
+                    if (!source || !source.pos) continue;
+                    const px = source.pos.x + x;
+                    const py = source.pos.y + y;
+                    if (px < 0 || px > 49 || py < 0 || py > 49) continue;
+
+                    let pos: RoomPosition | undefined;
+                    try {
+                        pos = new RoomPosition(px, py, source.pos.roomName);
+                    } catch (e) {
+                        continue;
+                    }
+
+                    if (pos && terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
                         slots++;
 
                         // We strictly want the mining position to be range 1 from source.
@@ -83,7 +100,7 @@ export class EnergySystem extends BaseSystemImpl {
                 }
             }
 
-            this.systemInfo.sources.push({
+            energyManagement.sources.push({
                 accessCount: slots,
                 sourceId: source.id,
                 position: source.pos,
