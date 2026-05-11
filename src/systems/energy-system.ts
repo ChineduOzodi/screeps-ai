@@ -57,7 +57,8 @@ export class EnergySystem extends BaseSystemImpl {
         const energyManagement = this.colony.colonyInfo.energyManagement;
         if (!energyManagement) return;
 
-        const sources = this.colony.getMainRoom()?.find(FIND_SOURCES) || [];
+        const room = this.colony.getMainRoom();
+        const sources = room && typeof room.find === "function" ? room.find(FIND_SOURCES) : [];
         energyManagement.sources = [];
 
         sources.forEach(source => {

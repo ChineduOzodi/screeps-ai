@@ -1,4 +1,5 @@
 import { Movement } from "infrastructure/movement";
+import { ColonyManager, ColonyManagerImpl } from "./colony";
 
 // Is mirrored to work in screeps.com, so should update the counterpart when updating this
 export enum CreepStatus {
@@ -55,17 +56,19 @@ export abstract class CreepRunner {
         this.memory = creep.memory;
     }
 
-    public getColony(): Colony | undefined {
-        let colony = Memory.colonies[this.creep.memory.colonyId];
-        if (colony) {
-            return colony;
+    public getColony(): ColonyManager | undefined {
+        let colonyData = Memory.colonies[this.creep.memory.colonyId];
+        if (!colonyData) {
+            this.creep.memory.colonyId = this.creep.room.name;
+            colonyData = Memory.colonies[this.creep.memory.colonyId];
         }
-        this.creep.memory.colonyId = this.creep.room.name;
-        colony = Memory.colonies[this.creep.memory.colonyId];
-        if (!colony) {
+
+        if (!colonyData) {
             console.log(`ERROR: creep (${this.creep.name}) does not have colony at ${this.creep.memory.colonyId}`);
+            return undefined;
         }
-        return colony;
+
+        return new ColonyManagerImpl(colonyData);
     }
 
     public run(): void {

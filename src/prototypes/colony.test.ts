@@ -95,6 +95,7 @@ describe("ColonyManager", () => {
 
             const mockContainer = {
                 id: "container1",
+                structureType: "container",
             };
             colonyData.containerId = "container1" as any;
 
@@ -112,6 +113,7 @@ describe("ColonyManager", () => {
 
             const mockContainer = {
                 id: "container1",
+                structureType: "container",
             };
             colonyData.containerId = "container1" as any;
             // @ts-ignore

@@ -35,6 +35,9 @@ function getSystems(colony: ColonyManager): Systems {
 export interface ColonyManager {
     get colonyInfo(): Colony;
     get systems(): Systems;
+    get builderManagement(): ColonyBuilderManagement | undefined;
+    get energyManagement(): ColonyEnergyManagement | undefined;
+    get creeps(): ColonyCreeps;
 
     getMainRoom(): Room;
     getMainSpawn(): StructureSpawn;
@@ -63,6 +66,10 @@ export class ColonyManagerImpl implements ColonyManager {
         this.colonyInfo = colony;
         this.constructionManager = new ConstructionManager(this);
         this.roadManager = new RoadManager(this);
+    }
+
+    public get energyManagement(): ColonyEnergyManagement | undefined {
+        return this.colonyInfo.energyManagement;
     }
 
     public run(): void {
@@ -310,25 +317,29 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public getStoredEnergyPercent(): number {
+        const room = this.getMainRoom();
+        if (!room || typeof room.find !== "function") {
+            return 0;
+        }
+
         if (!this.colonyInfo.containerId) {
-            try {
-                this.colonyInfo.containerId = this.getMainSpawn().pos.findClosestByRange<StructureContainer>(
-                    FIND_STRUCTURES,
-                    { filter: s => s.structureType === STRUCTURE_CONTAINER },
-                )?.id;
-            } catch (e) {
-                const containers = this.getMainRoom().find(FIND_STRUCTURES, {
-                    filter: s => s.structureType === STRUCTURE_CONTAINER,
-                });
-                this.colonyInfo.containerId = containers[0]?.id;
+            const containers = room.find(FIND_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_CONTAINER,
+            }) as StructureContainer[];
+
+            const mainSpawn = this.getMainSpawn();
+            if (mainSpawn) {
+                this.colonyInfo.containerId = mainSpawn.pos.findClosestByRange(containers)?.id;
             }
         }
+
         if (!this.colonyInfo.containerId) {
             return 0;
         }
 
         const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
-        if (!container || !container.store) {
+        if (!container || container.structureType !== STRUCTURE_CONTAINER || !container.store) {
+            this.colonyInfo.containerId = undefined;
             return 0;
         }
 
@@ -528,10 +539,14 @@ export class ColonyManagerImpl implements ColonyManager {
         if (!spawn) {
             console.log(`Colony ${this.colonyInfo.id} does not have a main spawn set, resetting spawn.`);
             const mainRoom = this.getMainRoom();
-            spawn = mainRoom.find(FIND_MY_SPAWNS)[0];
-            this.colonyInfo.mainSpawnId = spawn.id;
+            if (mainRoom && typeof mainRoom.find === "function") {
+                spawn = mainRoom.find(FIND_MY_SPAWNS)[0];
+                if (spawn) {
+                    this.colonyInfo.mainSpawnId = spawn.id;
+                }
+            }
         }
-        return spawn;
+        return spawn as StructureSpawn;
     }
 
     public getCreepData(name: string): CreepData | undefined {
@@ -550,11 +565,21 @@ export class ColonyManagerImpl implements ColonyManager {
 
         if (this.colonyInfo.containerId) {
             const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
-            if (container) {
+            if (container && container.structureType === STRUCTURE_CONTAINER) {
                 return container;
+            } else {
+                this.colonyInfo.containerId = undefined;
             }
         }
         return undefined;
+    }
+
+    public get builderManagement(): ColonyBuilderManagement | undefined {
+        return this.colonyInfo.builderManagement;
+    }
+
+    public get creeps(): ColonyCreeps {
+        return this.getColonyCreeps();
     }
 }
 

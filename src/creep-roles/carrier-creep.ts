@@ -161,27 +161,25 @@ export class CarrierCreep extends CreepRunner {
 
     private deliverEnergy() {
         const { creep } = this;
-        // Priority: Spawns/Extensions -> Storage -> Other
+        const colony = this.getColony();
+
+        // Priority 1: Spawns/Extensions (Local Room)
         let target: Structure | null = creep.pos.findClosestByPath(FIND_STRUCTURES, {
             filter: s =>
                 (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
         });
 
-        if (!target) {
-            // Storage
-            if (creep.room.storage && creep.room.storage.isActive()) {
-                target = creep.room.storage;
-            } else {
-                const colony = this.getColony();
-                if (colony && colony.containerId) {
-                    target = Game.getObjectById(colony.containerId);
-                }
+        // Priority 2: Primary Storage (Colony Wide)
+        if (!target && colony) {
+            const primaryStorage = colony.getPrimaryStorage();
+            if (primaryStorage && primaryStorage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                target = primaryStorage;
             }
         }
 
+        // Priority 3: Towers (Local Room)
         if (!target) {
-            // Towers?
             target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
             });
@@ -192,18 +190,10 @@ export class CarrierCreep extends CreepRunner {
                 this.moveToWithReservation(target, 5);
             }
         } else {
-            // No dropoff? Upgrade controller? Or build?
             // Fallback: Upgrade controller if full and no where to go
-            if (creep.room.controller) {
-                if (this.transfer(creep.room.controller, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    this.moveToWithReservation(creep.room.controller, 5);
-                } else {
-                    // We can't transfer to controller, we must upgrade.
-                    // But we are a carrier. We likely don't have WORK parts?
-                    // Carrier body is CARRY/MOVE.
-                    // So we can't upgrade.
-                    // Just drop it? Or wait.
-                    // creep.say("Full!");
+            if (creep.room.controller && creep.room.controller.my) {
+                if (this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+                    this.moveToWithReservation(creep.room.controller, 5, 3);
                 }
             }
         }

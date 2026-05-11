@@ -9,5 +9,6 @@ export function createFakeStructureSpawn(id: string, roomName: string): Structur
 export function createFakeRoom(roomName: string): Room {
     return {
         name: roomName,
+        find: () => [],
     } as any as Room;
 }
