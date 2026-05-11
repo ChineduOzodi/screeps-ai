@@ -24,7 +24,10 @@ export class EnergySystem extends BaseSystemImpl {
                 storedEnergyPercent: 0,
             };
             this.setSources();
-        } else if (this.colony.colonyInfo.energyManagement.sources.length === 0) {
+        } else if (
+            !this.colony.colonyInfo.energyManagement.sources ||
+            this.colony.colonyInfo.energyManagement.sources.length === 0
+        ) {
             // Retry finding sources if the room had no vision initially
             this.setSources();
         }
@@ -110,25 +113,30 @@ export class EnergySystem extends BaseSystemImpl {
         });
     }
 
+    private getRawBody(creepData: any): BodyPartConstant[] {
+        const rawBody = creepData.body;
+        return rawBody && rawBody[0] && typeof rawBody[0] === "object" ? rawBody.map((p: any) => p.type) : rawBody;
+    }
+
     public getTheoreticalGrossProduction(): number {
         let totalProduction = 1; // The spawner provides 1 energy per tick until full.
-        const harvesters = this.colony.getCreeps().filter(c => c.memory.role === CreepRole.HARVESTER);
 
-        // Include spawning creeps
-        const spawnQueue = this.colony.getSpawnQueue().filter(r => r.memory.role === CreepRole.HARVESTER);
+        // --- Harvester Production ---
+        const harvesters = this.colony.getCreeps().filter((c: any) => c.memory.role === CreepRole.HARVESTER);
+        const harvesterSpawnQueue = this.colony
+            .getSpawnQueue()
+            .filter((r: any) => r.memory.role === CreepRole.HARVESTER);
 
-        const allCreeps = [
+        const allHarvesters = [
             ...harvesters,
-            ...spawnQueue.map(sq => ({
+            ...harvesterSpawnQueue.map((sq: any) => ({
                 body: sq.body,
                 memory: sq.memory,
             })),
         ];
 
-        for (const creepData of allCreeps) {
-            const rawBody = (creepData as any).body;
-            const body: BodyPartConstant[] =
-                rawBody && rawBody[0] && typeof rawBody[0] === "object" ? rawBody.map((p: any) => p.type) : rawBody;
+        for (const creepData of allHarvesters) {
+            const body = this.getRawBody(creepData);
             const memory = creepData.memory;
 
             if (!memory.workTargetId) continue;
@@ -138,7 +146,6 @@ export class EnergySystem extends BaseSystemImpl {
 
             // logic to find dropoff
             let target: Structure | null = null;
-            // TODO: This logic duplicates Harvester behavior, maybe centralize?
             const pos = source.pos;
             target = pos.findClosestByPath<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
                 filter: (structure: Structure) => {
@@ -147,50 +154,63 @@ export class EnergySystem extends BaseSystemImpl {
                     );
                 },
             });
-            // If no immediate dropoff, maybe container? or just spawn as fallback
             if (!target) target = this.colony.getMainSpawn();
 
             const distSource = EnergyCalculator.calculateTravelTime(target.pos, source.pos);
             const distDropoff = distSource; // Assume round trip for now
 
-            const production = EnergyCalculator.calculateHarvesterProductionPerTick(
-                body as BodyPartConstant[],
-                distSource,
-                distDropoff,
-            );
+            const production = EnergyCalculator.calculateHarvesterProductionPerTick(body, distSource, distDropoff);
             totalProduction += production;
         }
 
-        if (totalProduction === 0 && allCreeps.length > 0) {
-            console.log(`[EnergySystem] Production is 0 despite ${allCreeps.length} harvesters.`);
-            for (const creepData of allCreeps) {
-                const memory = creepData.memory;
-                const sourceId = memory.workTargetId;
-                const source = sourceId ? Game.getObjectById<Source>(sourceId) : null;
-                console.log(`- Creep: ${memory.name}, Target: ${sourceId}, Found: ${!!source}`);
-                if (source) {
-                    // Check dist calculation
-                    const pos = source.pos;
-                    let target = pos.findClosestByPath<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
-                        filter: (structure: Structure) => {
-                            return (
-                                structure.structureType === STRUCTURE_EXTENSION ||
-                                structure.structureType === STRUCTURE_SPAWN
-                            );
-                        },
-                    });
-                    if (!target) target = this.colony.getMainSpawn();
-                    const distSource = EnergyCalculator.calculateTravelTime(target.pos, source.pos);
+        // --- Miner/Carrier Production ---
+        const miners = this.colony.getCreeps().filter((c: any) => c.memory.role === CreepRole.MINER);
+        const carriers = this.colony.getCreeps().filter((c: any) => c.memory.role === CreepRole.CARRIER);
 
-                    const rawBody = (creepData as any).body;
-                    const body: BodyPartConstant[] =
-                        rawBody && rawBody[0] && typeof rawBody[0] === "object"
-                            ? rawBody.map((p: any) => p.type)
-                            : rawBody;
+        const minerSpawnQueue = this.colony.getSpawnQueue().filter((r: any) => r.memory.role === CreepRole.MINER);
+        const carrierSpawnQueue = this.colony.getSpawnQueue().filter((r: any) => r.memory.role === CreepRole.CARRIER);
 
-                    const prod = EnergyCalculator.calculateHarvesterProductionPerTick(body, distSource, distSource);
-                    console.log(`  - Dist: ${distSource}, Prod: ${prod}, Body: ${JSON.stringify(body)}`);
+        const allMiners = [...miners, ...minerSpawnQueue.map((sq: any) => ({ body: sq.body, memory: sq.memory }))];
+        const allCarriers = [
+            ...carriers,
+            ...carrierSpawnQueue.map((sq: any) => ({ body: sq.body, memory: sq.memory })),
+        ];
+
+        if (allMiners.length > 0 && allCarriers.length > 0) {
+            const sources = this.systemInfo.sources;
+            const storage = this.colony.getPrimaryStorage() || this.colony.getMainSpawn();
+
+            for (const sourceInfo of sources) {
+                const sourceId = sourceInfo.sourceId;
+                const minersForSource = allMiners.filter((m: any) => m.memory.workTargetId === sourceId);
+                const carriersForSource = allCarriers.filter((c: any) => c.memory.workTargetId === sourceId);
+
+                if (minersForSource.length === 0 || carriersForSource.length === 0) continue;
+
+                let minerMiningRate = 0;
+                for (const miner of minersForSource) {
+                    const body = this.getRawBody(miner);
+                    const workParts = body.filter((p: any) => p === WORK).length;
+                    minerMiningRate += workParts * 2;
                 }
+
+                let carrierTransportRate = 0;
+                // If we don't have storage yet, they go to spawn or extensions.
+                // For simplicity, use the dist to storage/spawn.
+                const dist = storage ? EnergyCalculator.calculateTravelTime(storage.pos, sourceInfo.position) : 25;
+                const cycleTime = dist * 2 + 2; // +2 for pick/drop
+
+                for (const carrier of carriersForSource) {
+                    const body = this.getRawBody(carrier);
+                    const carryParts = body.filter((p: any) => p === CARRY).length;
+                    carrierTransportRate += (carryParts * 50) / cycleTime;
+                }
+
+                // A source has 3000 energy every 300 ticks = 10 energy/tick.
+                // TODO: Check if it's a center room or neutral room for different rates.
+                const sourceRate = 10;
+
+                totalProduction += Math.min(minerMiningRate, carrierTransportRate, sourceRate);
             }
         }
 
