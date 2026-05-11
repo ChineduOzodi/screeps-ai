@@ -1,7 +1,7 @@
-import { ColonyManager, ColonyManagerImpl } from "prototypes/colony";
+import { ColonyManagerImpl } from "prototypes/colony";
+import { ColonyManager, CreepRole } from "prototypes/types";
 import { Game, Memory } from "../../test/utils/mock";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";
-import { CreepRole } from "prototypes/creep";
 import { assert } from "chai";
 import { loop } from "../main";
 import { stub } from "sinon";

@@ -1,5 +1,4 @@
-import { ColonyManager } from "prototypes/colony";
-import { CreepRole } from "prototypes/creep";
+import { ColonyManager, CreepRole } from "prototypes/types";
 
 export class Spawning {
     private colony: ColonyManager;

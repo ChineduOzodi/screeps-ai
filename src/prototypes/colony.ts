@@ -1,8 +1,7 @@
-import { CreepRole, CreepStatus } from "./creep";
 import { ConstructionManager } from "../managers/construction-manager";
 import { RoadManager } from "../managers/road-manager";
 
-import { BaseSystem } from "systems/base-system";
+import { BaseSystem } from "./types";
 import { BuilderSystem } from "./../systems/builder-system";
 import { DefenseSystem } from "./../systems/defense-system";
 import { EnergySystem } from "./../systems/energy-system";
@@ -11,15 +10,8 @@ import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
 import { GoapSystem } from "../systems/goap-system";
-
-export interface Systems {
-    energy: EnergySystem;
-    defense: DefenseSystem;
-    infrastructure: InfrastructureSystem;
-    upgrade: UpgradeSystem;
-    builder: BuilderSystem;
-    goap: GoapSystem;
-}
+import { Action } from "../goap/types";
+import { ColonyCreeps, ColonyManager, CreepRole, CreepStatus, Systems } from "./types";
 
 function getSystems(colony: ColonyManager): Systems {
     return {
@@ -30,30 +22,6 @@ function getSystems(colony: ColonyManager): Systems {
         builder: new BuilderSystem(colony),
         goap: new GoapSystem(colony),
     };
-}
-
-export interface ColonyManager {
-    get colonyInfo(): Colony;
-    get systems(): Systems;
-    get builderManagement(): ColonyBuilderManagement | undefined;
-    get energyManagement(): ColonyEnergyManagement | undefined;
-    get creeps(): ColonyCreeps;
-
-    getMainRoom(): Room;
-    getMainSpawn(): StructureSpawn;
-    getColonyCreeps(): ColonyCreeps;
-    getCreepData(name: string): CreepData | undefined;
-    getSpawnQueue(): SpawnRequest[];
-    addToSpawnCreepQueue(bodyBlueprint: BodyPartConstant[], memoryBlueprint: AddCreepToQueueOptions): string;
-    getTotalEstimatedEnergyFlowRate(role: CreepRole): number;
-    getCreepCount(role: CreepRole): number;
-    /** List version of systems used in colony. */
-    getSystemsList(): BaseSystem[];
-    getCreeps(): Creep[];
-    removeSpawnRequest(name: string): void;
-    constructionManager: ConstructionManager;
-    roadManager: RoadManager;
-    getPrimaryStorage(): StructureStorage | StructureContainer | undefined;
 }
 
 export class ColonyManagerImpl implements ColonyManager {
@@ -270,7 +238,7 @@ export class ColonyManagerImpl implements ColonyManager {
         if (plan && plan.length > 0) {
             y += 0.5;
             room.visual.text(`Current Plan:`, x, y++, { align: "left", font: 0.6, color: "#aaaaaa" });
-            plan.forEach((action, idx) => {
+            plan.forEach((action: Action, idx: number) => {
                 let color = "#ffffff";
                 if (idx === 0) color = "#ffff00"; // Highlight current action
                 room.visual.text(`${idx + 1}. ${action.name}`, x + 0.5, y++, {
@@ -288,7 +256,7 @@ export class ColonyManagerImpl implements ColonyManager {
 
         this.systems.energy
             .getSpawnerProfilesList()
-            .forEach(x => (upkeep += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)));
+            .forEach((x: CreepSpawnerProfileInfo) => (upkeep += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)));
 
         this.systems.energy.systemInfo.estimatedEnergyProductionRate = gross - upkeep;
         (this.systems.energy.systemInfo as any).grossProduction = gross;
@@ -581,10 +549,6 @@ export class ColonyManagerImpl implements ColonyManager {
     public get creeps(): ColonyCreeps {
         return this.getColonyCreeps();
     }
-}
-
-export interface ColonyCreeps {
-    [name: string]: CreepData;
 }
 
 interface EnergyTrackingSystem {

@@ -1,4 +1,4 @@
-import { ColonyManager } from "../prototypes/colony";
+import { ColonyManager } from "../prototypes/types";
 
 export interface ProjectStructure {
     x: number;

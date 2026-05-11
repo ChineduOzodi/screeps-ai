@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import { Action, WorldState } from "../types";
-import { ColonyManager } from "../../prototypes/colony";
+import { ColonyManager } from "../../prototypes/types";
 import { ConstructionUtils } from "../../utils/construction-utils";
 
 export class BuildExtensionsAction implements Action {

@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { Game, Memory } from "../../test/utils/mock";
 import { loop } from "../main";
 import { EnergySystem } from "./energy-system";
-import { ColonyManager } from "../prototypes/colony";
+import { ColonyManager } from "../prototypes/types";
 
 describe("Energy System", () => {
     let mockColony: ColonyManager;

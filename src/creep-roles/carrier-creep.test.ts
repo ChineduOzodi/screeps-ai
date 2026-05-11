@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { stub } from "sinon";
 import { CarrierCreep } from "./carrier-creep";
-import { CreepRole } from "prototypes/creep";
+import { CreepRole } from "prototypes/types";
 import { Game, Memory } from "../../test/utils/mock";
 
 // Ensure RoomPosition is available for tests

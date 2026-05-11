@@ -1,4 +1,4 @@
-import { ColonyManager } from "../prototypes/colony";
+import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
 import { ProjectStructure } from "./construction-manager";
 

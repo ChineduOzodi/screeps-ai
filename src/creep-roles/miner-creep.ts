@@ -1,7 +1,7 @@
 /* eslint-disable max-classes-per-file */
-import { CreepProfiles, CreepRole, CreepRunner } from "prototypes/creep";
+import { CreepRunner } from "prototypes/creep";
+import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 
-import { ColonyManager } from "prototypes/colony";
 import { CreepConstants } from "constants/creep-constants";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";

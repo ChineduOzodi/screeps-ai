@@ -1,37 +1,5 @@
-import { ColonyManager } from "prototypes/colony";
-import { CreepRole } from "prototypes/creep";
+import { BaseSystem, ColonyManager, CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
-
-export interface BaseSystem {
-    /** Reference to the system data that lives in screeps. */
-    get systemInfo(): BaseSystemInfo;
-
-    /** Reference to the energy usage tracking data that lives in screeps. */
-    get energyUsageTracking(): EnergyUsageTracking;
-
-    /** What happens when an new colony is started. */
-    onStart(): void;
-
-    run(): void;
-
-    /** Functionality to update profiles of creeps to be spawned by the spawning system. Primarily invoked by colony manager. */
-    updateProfiles(): void;
-
-    /** Get Roles to track energy */
-    getRolesToTrackEnergy(): CreepRole[];
-
-    getSpawnerProfilesList(): CreepSpawnerProfileInfo[];
-
-    /**
-     * Returns the number of creeps that are alive with chosen role for this system.
-     * @param role role to count.
-     */
-    getRoleCount(role: CreepRole): number;
-
-    getGoapGoals(state: any): any[];
-
-    getGoapActions(): any[];
-}
 
 export abstract class BaseSystemImpl implements BaseSystem {
     public abstract get systemInfo(): BaseSystemInfo;

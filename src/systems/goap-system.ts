@@ -1,5 +1,5 @@
 import { BaseSystemImpl } from "./base-system";
-import { ColonyManager } from "../prototypes/colony";
+import { ColonyManager } from "prototypes/types";
 import { Action, Goal, WorldState } from "../goap/types";
 import { Planner } from "../goap/planner";
 import { CreepSpawner } from "../prototypes/CreepSpawner";

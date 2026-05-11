@@ -1,4 +1,6 @@
-import { CreepRole, CreepRunner } from "prototypes/creep";
+import { CreepRole } from "prototypes/types";
+import { CreepRunner } from "prototypes/creep";
+import { ColonyManagerImpl } from "prototypes/colony";
 import { BuilderCreep } from "creep-roles/builder-creep";
 import { DefenderCreep } from "creep-roles/defender-creep";
 import { HarvesterCreep } from "creep-roles/harvester-creep";
@@ -19,9 +21,20 @@ export class CreepManagement {
             return;
         }
 
-        const colony = creepRunner.getColony();
-        if (colony && colony.creeps && creep.name in colony.creeps) {
-            colony.creeps[creep.name].id = creep.id;
+        let colonyId = creep.memory.colonyId;
+        if (!Memory.colonies[colonyId]) {
+            creep.memory.colonyId = creep.room.name;
+            colonyId = creep.room.name;
+        }
+
+        const colonyData = Memory.colonies[colonyId];
+        if (colonyData) {
+            const colony = new ColonyManagerImpl(colonyData);
+            creepRunner.setColony(colony);
+
+            if (colony.creeps && creep.name in colony.creeps) {
+                colony.creeps[creep.name].id = creep.id;
+            }
         }
 
         creepRunner.run();

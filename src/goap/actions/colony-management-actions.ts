@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import { Action, WorldState } from "../types";
-import { ColonyManager } from "../../prototypes/colony";
+import { ColonyManager } from "../../prototypes/types";
 
 export class DefendRoomAction implements Action {
     public cost = 10;

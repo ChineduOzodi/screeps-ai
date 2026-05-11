@@ -1,6 +1,5 @@
 import { BODYPART_COST_MAP } from "constants/creep-constants";
-import { ColonyManager } from "./colony";
-import { CreepProfiles } from "./creep";
+import { ColonyManager, CreepProfiles } from "./types";
 
 export interface CreepSpawner {
     createProfiles(energyCap: number, colony: ColonyManager): CreepProfiles;

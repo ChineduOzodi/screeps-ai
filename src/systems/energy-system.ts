@@ -1,5 +1,5 @@
 import { BaseSystemImpl } from "./base-system";
-import { CreepRole } from "prototypes/creep";
+import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
 import { MinerCreepSpawner } from "creep-roles/miner-creep";

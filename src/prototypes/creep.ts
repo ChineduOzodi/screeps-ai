@@ -1,74 +1,22 @@
 import { Movement } from "infrastructure/movement";
-import { ColonyManager, ColonyManagerImpl } from "./colony";
-
-// Is mirrored to work in screeps.com, so should update the counterpart when updating this
-export enum CreepStatus {
-    WORKING = "working",
-    IDLE = "idle",
-    SPAWN_QUEUE = "spawn queue",
-    SPAWNING = "spawning",
-}
-
-// Is mirrored to work in screeps.com, so should update the counterpart when updating this
-export enum CreepWorkPastAction {
-    NONE = "none",
-    MOVE = "move",
-
-    /** Transfer resource from the creep to another object. */
-    TRANSFER = "transfer",
-    HARVEST = "harvest",
-
-    /** Withdraw resources from a structure, a tombstone or a ruin. */
-    WITHDRAW = "withdraw",
-
-    /** Pick up an item (a dropped piece of energy). */
-    PICKUP = "pickup",
-
-    /** Repair a damaged structure using carried energy. */
-    REPAIR = "repair",
-
-    /** Build a structure at the target construction site using carried energy. */
-    BUILD = "build",
-    ATTACK = "attack",
-    UPGRADE_CONTROLLER = "upgrade",
-}
-
-export enum CreepRole {
-    REPAIRER = "repairer",
-    BUILDER = "builder",
-    HARVESTER = "harvester",
-    DEFENDER = "defender",
-    UPGRADER = "upgrader",
-    MINER = "miner",
-    CARRIER = "carrier",
-}
-
-export interface CreepProfiles {
-    [k: string]: CreepSpawnerProfileInfo;
-}
+import { ColonyManager, CreepProfiles, CreepRole, CreepStatus } from "./types";
 
 export abstract class CreepRunner {
     public creep: Creep;
     protected memory: CreepMemory;
+    protected colony: ColonyManager | undefined;
 
     public constructor(creep: Creep) {
         this.creep = creep;
         this.memory = creep.memory;
     }
 
+    public setColony(colony: ColonyManager): void {
+        this.colony = colony;
+    }
+
     public getColony(): ColonyManager | undefined {
-        let colonyData = Memory.colonies[this.creep.memory.colonyId];
-        if (!colonyData) {
-            this.creep.memory.colonyId = this.creep.room.name;
-            colonyData = Memory.colonies[this.creep.memory.colonyId];
-        }
-
-        if (!colonyData) {
-            console.log(`ERROR: creep (${this.creep.name}) does not have colony at ${this.creep.memory.colonyId}`);
-            return undefined;
-        }
-
-        return new ColonyManagerImpl(colonyData);
+        return this.colony;
     }
 
     public run(): void {

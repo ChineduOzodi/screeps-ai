@@ -1,6 +1,6 @@
 import { BaseSystemImpl } from "./base-system";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";
-import { CreepRole } from "prototypes/creep";
+import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import {
     BuildContainerAction,

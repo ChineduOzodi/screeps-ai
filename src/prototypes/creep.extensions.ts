@@ -1,4 +1,4 @@
-import { CreepRole, CreepStatus } from "./creep";
+import { CreepRole, CreepStatus } from "./types";
 
 declare global {
     interface CreepMemory extends AddCreepToQueueOptions {

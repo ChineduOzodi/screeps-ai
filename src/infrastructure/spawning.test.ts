@@ -4,9 +4,8 @@ import "../prototypes/colony.extensions";
 import "../prototypes/creep.extensions";
 import "../prototypes/room.extensions";
 import "../prototypes/spawn.extensions";
-import { CreepRole } from "../prototypes/creep";
+import { ColonyManager, CreepRole } from "../prototypes/types";
 import { Spawning } from "./spawning";
-import { ColonyManager } from "../prototypes/colony";
 
 // define types locally if needed or use 'any' for mocks to avoid deep type issues
 // We just need to ensure the structure matches what Spawning expects
