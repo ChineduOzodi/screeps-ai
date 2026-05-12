@@ -1,3 +1,5 @@
+import { PathfindingCache } from "./pathfinding-cache";
+
 export class ConstructionUtils {
     public static isTileClearForStructure(pos: RoomPosition, room: Room, ignoreRoads: boolean = false): boolean {
         if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) {
@@ -179,7 +181,7 @@ export class ConstructionUtils {
     }
 
     public static calculateRoads(startPos: RoomPosition, endPos: RoomPosition, range: number): ProjectStructure[] {
-        const path = startPos.findPathTo(endPos, {
+        const path = PathfindingCache.findPath(startPos, endPos, {
             ignoreCreeps: true,
             ignoreDestructibleStructures: true,
             range,

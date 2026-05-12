@@ -26,6 +26,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
         Memory.colonies = {};
     }
 
+    if (!Memory.pathfindingCache) {
+        Memory.pathfindingCache = {};
+    }
+
     for (const name in Memory.colonies) {
         const colonyData = Memory.colonies[name];
         if (!colonyData) {

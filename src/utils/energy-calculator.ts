@@ -1,3 +1,4 @@
+import { PathfindingCache } from "./pathfinding-cache";
 import { BODYPART_COST_MAP } from "constants/creep-constants";
 
 export class EnergyCalculator {
@@ -20,7 +21,7 @@ export class EnergyCalculator {
      * @param loaded Whether the creep is loaded (for fatigue calculations - simplified here to assume full speed on roads/plains for now)
      */
     public static calculateTravelTime(origin: RoomPosition, destination: RoomPosition): number {
-        const path = origin.findPathTo(destination, {
+        const path = PathfindingCache.findPath(origin, destination, {
             ignoreCreeps: true,
             range: 1,
         });
