@@ -59,12 +59,4 @@ export class InfrastructureSystem extends BaseSystemImpl {
     public override getCreepSpawners(): CreepSpawner[] {
         return [new RepairerCreepSpawner()];
     }
-
-    public override getGoapGoals(state: WorldState): Goal[] {
-        return [];
-    }
-
-    public override getGoapActions(): Action[] {
-        return [];
-    }
 }

@@ -1,5 +1,6 @@
 import { BaseSystem, ColonyManager, CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
+import { Objective } from "../objectives/types";
 
 export abstract class BaseSystemImpl implements BaseSystem {
     public abstract get systemInfo(): BaseSystemInfo;
@@ -15,11 +16,7 @@ export abstract class BaseSystemImpl implements BaseSystem {
         this.energyUsageTracking.requestedEnergyUsageWeight = weight;
     }
 
-    public getGoapGoals(state: any): any[] {
-        return [];
-    }
-
-    public getGoapActions(): any[] {
+    public getObjectives(): Objective[] {
         return [];
     }
 

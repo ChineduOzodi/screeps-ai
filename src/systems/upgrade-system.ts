@@ -2,9 +2,7 @@ import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { BaseSystemImpl } from "./base-system";
 import { UpgraderCreepSpawner } from "creep-roles/upgrader-creep";
-
-import { Action, Goal, WorldState } from "goap/types";
-import { UpgradeControllerAction } from "goap/actions/colony-management-actions";
+import { Objective } from "objectives/types";
 
 export class UpgradeSystem extends BaseSystemImpl {
     public override get systemInfo(): ColonyUpgradeManagement {
@@ -47,28 +45,22 @@ export class UpgradeSystem extends BaseSystemImpl {
         return [CreepRole.UPGRADER];
     }
 
-    public override getGoapGoals(state: WorldState): Goal[] {
-        const rcl = state.rcl as number;
-        if (rcl >= 8) return [];
-
-        // Always aim for next level.
-        const goals: Goal[] = [
-            {
-                name: `Upgrade Controller to ${rcl + 1}`,
-                priority: 20, // Lower than defense/harvest/maintenance usually
-                desiredState: { rcl: rcl + 1 },
-            },
-        ];
-        return goals;
-    }
-
-    public override getGoapActions(): Action[] {
-        // We supply upgrading actions for current level + 1
+    public override getObjectives(): Objective[] {
         const room = this.room;
         if (!room || !room.controller) return [];
         const level = room.controller.level;
         if (level >= 8) return [];
 
-        return [new UpgradeControllerAction(this.colony, level + 1)];
+        return [
+            {
+                name: `Upgrade Controller to ${level + 1}`,
+                priority: 20,
+                isReady: () => true,
+                isComplete: () => (this.room.controller?.level || 0) > level,
+                execute: () => {
+                    this.energyUsageTracking.requestedEnergyUsageWeight = 1.0;
+                },
+            },
+        ];
     }
 }

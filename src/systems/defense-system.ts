@@ -2,9 +2,7 @@ import { BaseSystemImpl } from "./base-system";
 import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { DefenderCreepSpawner } from "creep-roles/defender-creep";
-
-import { Action, Goal, WorldState } from "goap/types";
-import { DefendRoomAction } from "goap/actions/colony-management-actions";
+import { Objective } from "objectives/types";
 
 export class DefenseSystem extends BaseSystemImpl {
     public override get systemInfo(): BaseSystemInfo {
@@ -53,18 +51,20 @@ export class DefenseSystem extends BaseSystemImpl {
         return [CreepRole.DEFENDER];
     }
 
-    public override getGoapGoals(state: WorldState): Goal[] {
-        const goals: Goal[] = [
+    public override getObjectives(): Objective[] {
+        const room = this.colony.getMainRoom();
+        const hostiles = room.find(FIND_HOSTILE_CREEPS);
+
+        return [
             {
                 name: "Defend Room",
-                priority: !state.isSafe ? 1000 : 0,
-                desiredState: { isSafe: true },
+                priority: 1000,
+                isReady: () => hostiles.length > 0,
+                isComplete: () => hostiles.length === 0,
+                execute: () => {
+                    this.energyUsageTracking.requestedEnergyUsageWeight = 10;
+                },
             },
         ];
-        return goals;
-    }
-
-    public override getGoapActions(): Action[] {
-        return [new DefendRoomAction(this.colony)];
     }
 }

@@ -8,7 +8,7 @@ import {
     BuildRoadsAction,
     BuildTowerAction,
 } from "goap/actions/infrastructure-actions";
-import { Action, Goal, WorldState } from "goap/types";
+import { Objective } from "objectives/types";
 
 export class BuilderSystem extends BaseSystemImpl {
     public override get systemInfo(): ColonyBuilderManagement {
@@ -60,6 +60,71 @@ export class BuilderSystem extends BaseSystemImpl {
         return [CreepRole.BUILDER];
     }
 
+    public override getObjectives(): Objective[] {
+        const room = this.colony.getMainRoom();
+        if (!room) return [];
+        const rcl = room.controller?.level || 0;
+
+        const objectives: Objective[] = [];
+
+        // Build Extensions 5
+        objectives.push({
+            name: "Build Extensions to 5",
+            priority: 100,
+            isReady: () => rcl >= 2,
+            isComplete: () => this.colony.constructionManager.isProjectComplete("Extensions_Target_5"),
+            execute: () => {
+                new BuildExtensionsAction(this.colony, 5).execute();
+            },
+        });
+
+        // Build Extensions 10
+        objectives.push({
+            name: "Build Extensions to 10",
+            priority: 100,
+            isReady: () => rcl >= 3,
+            isComplete: () => this.colony.constructionManager.isProjectComplete("Extensions_Target_10"),
+            execute: () => {
+                new BuildExtensionsAction(this.colony, 10).execute();
+            },
+        });
+
+        // First Container
+        objectives.push({
+            name: "Build First Container",
+            priority: 50,
+            isReady: () => rcl >= 1,
+            isComplete: () => this.colony.constructionManager.isProjectComplete("First_Container"),
+            execute: () => {
+                new BuildContainerAction(this.colony).execute();
+            },
+        });
+
+        // Roads
+        objectives.push({
+            name: "Build Roads",
+            priority: 40,
+            isReady: () => rcl >= 1,
+            isComplete: () => this.colony.roadManager.areColonyRoadsBuilt(),
+            execute: () => {
+                new BuildRoadsAction(this.colony).execute();
+            },
+        });
+
+        // Tower
+        objectives.push({
+            name: "Build Tower",
+            priority: 80,
+            isReady: () => rcl >= 3,
+            isComplete: () => this.colony.constructionManager.isProjectComplete("First_Tower"),
+            execute: () => {
+                new BuildTowerAction(this.colony).execute();
+            },
+        });
+
+        return objectives;
+    }
+
     private updateBuildQueue(): void {
         if (!this.colony.colonyInfo.builderManagement) {
             this.colony.colonyInfo.builderManagement = {
@@ -76,53 +141,5 @@ export class BuilderSystem extends BaseSystemImpl {
             }
         }
         this.colony.colonyInfo.builderManagement.buildQueue = sites.map(s => s.id);
-    }
-
-    // --- GOAP Integration ---
-
-    public override getGoapGoals(state: WorldState): Goal[] {
-        const goals: Goal[] = [
-            {
-                name: "Build Extensions to 5",
-                priority: this.getNumber(state, "rcl") >= 2 && this.getNumber(state, "extensions") < 5 ? 100 : 0,
-                desiredState: { extensions: 5 },
-            },
-            {
-                name: "Build Extensions to 10",
-                priority: this.getNumber(state, "rcl") >= 3 && this.getNumber(state, "extensions") < 10 ? 100 : 0,
-                desiredState: { extensions: 10 },
-            },
-            {
-                name: "Build First Container",
-                priority: this.getNumber(state, "rcl") >= 1 && !state.hasContainer ? 50 : 0,
-                desiredState: { hasContainer: true },
-            },
-            {
-                name: "Build Roads",
-                priority: this.getNumber(state, "rcl") >= 1 && !state.hasRoads ? 40 : 0,
-                desiredState: { hasRoads: true },
-            },
-            {
-                name: "Build Tower",
-                priority: this.getNumber(state, "rcl") >= 3 && !state.hasTower ? 80 : 0,
-                desiredState: { hasTower: true },
-            },
-        ];
-        return goals;
-    }
-
-    public override getGoapActions(): Action[] {
-        return [
-            new BuildExtensionsAction(this.colony, 5),
-            new BuildExtensionsAction(this.colony, 10),
-            new BuildRoadsAction(this.colony),
-            new BuildContainerAction(this.colony),
-            new BuildTowerAction(this.colony),
-        ];
-    }
-
-    private getNumber(state: WorldState, key: string): number {
-        const val = state[key];
-        return typeof val === "number" ? val : 0;
     }
 }

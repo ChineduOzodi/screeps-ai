@@ -279,14 +279,6 @@ export class EnergySystem extends BaseSystemImpl {
         return storage !== undefined && capacity >= 500;
     }
 
-    public override getGoapGoals(state: WorldState): Goal[] {
-        return [];
-    }
-
-    public override getGoapActions(): Action[] {
-        return [];
-    }
-
     private manageMiningInfrastructure(): void {
         if (!this.shouldUseMiners()) {
             return;

@@ -1,3 +1,4 @@
+import { Objective } from "../objectives/types";
 
 export enum CreepStatus {
     WORKING = "working",
@@ -73,9 +74,7 @@ export interface BaseSystem {
      */
     getRoleCount(role: CreepRole): number;
 
-    getGoapGoals(state: any): any[];
-
-    getGoapActions(): any[];
+    getObjectives(): Objective[];
 }
 
 export interface Systems {
@@ -84,7 +83,7 @@ export interface Systems {
     infrastructure: any;
     upgrade: any;
     builder: any;
-    goap: any;
+    objective: any;
 }
 
 export interface ColonyManager {
@@ -107,7 +106,7 @@ export interface ColonyManager {
     getCreeps(): Creep[];
     removeSpawnRequest(name: string): void;
     getPrimaryStorage(): StructureStorage | StructureContainer | undefined;
-    
+
     constructionManager: any;
     roadManager: any;
 }

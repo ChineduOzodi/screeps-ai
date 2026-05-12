@@ -1,7 +1,7 @@
 import { ConstructionManager } from "../managers/construction-manager";
 import { RoadManager } from "../managers/road-manager";
 
-import { BaseSystem } from "./types";
+import { BaseSystem, ColonyCreeps, ColonyManager, CreepRole, CreepStatus, Systems } from "./types";
 import { BuilderSystem } from "./../systems/builder-system";
 import { DefenseSystem } from "./../systems/defense-system";
 import { EnergySystem } from "./../systems/energy-system";
@@ -9,9 +9,8 @@ import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
-import { GoapSystem } from "../systems/goap-system";
-import { Action } from "../goap/types";
-import { ColonyCreeps, ColonyManager, CreepRole, CreepStatus, Systems } from "./types";
+import { ObjectiveSystem } from "../systems/objective-system";
+import { Objective } from "../objectives/types";
 
 function getSystems(colony: ColonyManager): Systems {
     return {
@@ -20,7 +19,7 @@ function getSystems(colony: ColonyManager): Systems {
         infrastructure: new InfrastructureSystem(colony),
         upgrade: new UpgradeSystem(colony),
         builder: new BuilderSystem(colony),
-        goap: new GoapSystem(colony),
+        objective: new ObjectiveSystem(colony),
     };
 }
 
@@ -121,7 +120,7 @@ export class ColonyManagerImpl implements ColonyManager {
         const visualizeSystems = this.getEnergyTrackingSystems();
         this.visualizeSystems(visualizeSystems);
         this.visualizeSpawnQueue();
-        this.visualizeGoapStats();
+        this.visualizeObjectiveStats();
     }
 
     private getEnergyTrackingSystems(): EnergyTrackingSystem[] {
@@ -219,34 +218,19 @@ export class ColonyManagerImpl implements ColonyManager {
         }
     }
 
-    private visualizeGoapStats(): void {
+    private visualizeObjectiveStats(): void {
         const room = this.getMainRoom();
-        const goap = this.systems.goap;
+        const objectiveSystem = this.systems.objective;
         const x = 3;
         let y = 15;
 
-        room.visual.text("GOAP State:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
-        const goal = goap.activeGoal;
-        if (goal) {
-            room.visual.text(`Goal: ${goal.name}`, x, y++, { align: "left", font: 0.7, color: "#00ff00" });
-            room.visual.text(`Priority: ${goal.priority}`, x, y++, { align: "left", font: 0.5, color: "#cccccc" });
+        room.visual.text("Objective State:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
+        const objective = objectiveSystem.activeObjective;
+        if (objective) {
+            room.visual.text(`Active: ${objective.name}`, x, y++, { align: "left", font: 0.7, color: "#00ff00" });
+            room.visual.text(`Priority: ${objective.priority}`, x, y++, { align: "left", font: 0.5, color: "#cccccc" });
         } else {
-            room.visual.text(`Goal: None`, x, y++, { align: "left", font: 0.7, color: "#ff6666" });
-        }
-
-        const plan = goap.activePlan;
-        if (plan && plan.length > 0) {
-            y += 0.5;
-            room.visual.text(`Current Plan:`, x, y++, { align: "left", font: 0.6, color: "#aaaaaa" });
-            plan.forEach((action: Action, idx: number) => {
-                let color = "#ffffff";
-                if (idx === 0) color = "#ffff00"; // Highlight current action
-                room.visual.text(`${idx + 1}. ${action.name}`, x + 0.5, y++, {
-                    align: "left",
-                    font: 0.5,
-                    color,
-                });
-            });
+            room.visual.text(`Active: None`, x, y++, { align: "left", font: 0.7, color: "#ff6666" });
         }
     }
 
