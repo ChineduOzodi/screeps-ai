@@ -32,7 +32,7 @@ export class ConstructionManager {
      */
     public buildProject(projectName: string, structures: ProjectStructure[]): void {
         const room = this.colony.getMainRoom();
-        if (!room) return;
+        if (!room || !room.memory) return;
 
         // Ensure memory exists
         if (!room.memory.constructionProjects) {
@@ -63,7 +63,7 @@ export class ConstructionManager {
      */
     public isProjectComplete(projectName: string): boolean {
         const room = this.colony.getMainRoom();
-        if (!room || !room.memory.constructionProjects) return false;
+        if (!room || !room.memory || !room.memory.constructionProjects) return false;
 
         const project = room.memory.constructionProjects[projectName];
         if (!project) return false;
@@ -81,7 +81,7 @@ export class ConstructionManager {
 
     public run(): void {
         const room = this.colony.getMainRoom();
-        if (!room || !room.memory.constructionProjects) return;
+        if (!room || !room.memory || !room.memory.constructionProjects) return;
 
         // Maintenance: Check 1 random structure from 1 random project
         const projectNames = Object.keys(room.memory.constructionProjects);
@@ -98,7 +98,7 @@ export class ConstructionManager {
 
     private processProject(projectName: string): void {
         const room = this.colony.getMainRoom();
-        if (!room || !room.memory.constructionProjects) return;
+        if (!room || !room.memory || !room.memory.constructionProjects) return;
         const project = room.memory.constructionProjects[projectName];
         if (!project) return;
 
@@ -135,10 +135,10 @@ export class ConstructionManager {
         } else {
             // "Delete that structure from memory"
             // This requires removing it from the project definition.
-            const roomMem = this.colony.getMainRoom().memory;
-            if (roomMem && roomMem.constructionProjects) {
-                for (const pName in roomMem.constructionProjects) {
-                    const p = roomMem.constructionProjects[pName];
+            const mainRoom = this.colony.getMainRoom();
+            if (mainRoom && mainRoom.memory && mainRoom.memory.constructionProjects) {
+                for (const pName in mainRoom.memory.constructionProjects) {
+                    const p = mainRoom.memory.constructionProjects[pName];
                     const index = p.structures.findIndex(st => st.x === s.x && st.y === s.y && st.type === s.type);
                     if (index > -1) {
                         p.structures.splice(index, 1);
@@ -197,7 +197,7 @@ export class ConstructionManager {
     }
     public getRepairStats(): RepairStats {
         const room = this.colony.getMainRoom();
-        if (!room) {
+        if (!room || !room.memory) {
             return { totalNeeded: 0, lastCheck: Game.time };
         }
 

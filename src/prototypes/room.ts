@@ -49,7 +49,7 @@ export class RoomExtras {
     }
 
     public visualizeReservations(): void {
-        if (!this.room.memory.positionReservations) {
+        if (!this.room.memory || !this.room.memory.positionReservations) {
             return;
         }
 

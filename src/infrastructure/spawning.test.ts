@@ -160,4 +160,37 @@ describe("Spawning", () => {
             "Should NOT have removed valid harvester request",
         );
     });
+
+    describe("processSpawnQueue", () => {
+        it("should prune a spawn request if its body cost exceeds spawn.room.energyCapacityAvailable", () => {
+            const body: BodyPartConstant[] = [WORK, WORK, WORK]; // 300 energy
+            const memory = { name: "expensiveCreep", role: CreepRole.HARVESTER } as any;
+            const request = { body, memory, priority: 0 };
+
+            colony.getSpawnQueue.returns([request]);
+            spawn.room.energyCapacityAvailable = 250;
+            colony.removeSpawnRequest = sinon.spy();
+
+            (spawning as any).processSpawnQueue();
+
+            assert.isTrue(
+                colony.removeSpawnRequest.calledWith("expensiveCreep"),
+                "Should have removed expensive request",
+            );
+        });
+
+        it("should NOT prune if body cost <= capacity", () => {
+            const body: BodyPartConstant[] = [WORK, MOVE]; // 100 + 50 = 150 energy
+            const memory = { name: "cheapCreep", role: CreepRole.HARVESTER } as any;
+            const request = { body, memory, priority: 0 };
+
+            colony.getSpawnQueue.returns([request]);
+            spawn.room.energyCapacityAvailable = 300;
+            colony.removeSpawnRequest = sinon.spy();
+
+            (spawning as any).processSpawnQueue();
+
+            assert.isFalse(colony.removeSpawnRequest.called, "Should NOT have removed cheap request");
+        });
+    });
 });

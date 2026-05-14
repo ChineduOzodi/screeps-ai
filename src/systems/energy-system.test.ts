@@ -18,6 +18,12 @@ describe("Energy System", () => {
             energyCapacityAvailable: 300,
             energyAvailable: 300,
             find: () => [],
+            memory: {},
+            visual: {
+                text: () => {},
+                rect: () => {},
+                circle: () => {},
+            },
         } as any;
 
         mockColony = {

@@ -41,11 +41,24 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public run(): void {
         console.log(`[Colony] starting run for ${this.colonyInfo.id}`);
-        if (!this.getMainRoom()) {
+        const mainRoom = this.getMainRoom();
+        if (!mainRoom) {
             console.log(`No vision of colony room ${this.colonyInfo.id}, removing from memory...`);
             delete Memory.colonies[this.colonyInfo.id];
             return;
         }
+
+        // Detect potential colony restart: 
+        // We have setupComplete, but the registered spawn is gone, we have no creeps, 
+        // AND there is a new spawn in the room.
+        if (this.colonyInfo.setupComplete && !Game.getObjectById(this.colonyInfo.mainSpawnId) && this.getCreeps().length === 0) {
+            const spawns = mainRoom.find(FIND_MY_SPAWNS);
+            if (spawns.length > 0) {
+                console.log(`[Colony] ${this.colonyInfo.id} | Detected restart (new spawn found, no creeps). Resetting setupComplete.`);
+                this.colonyInfo.setupComplete = false;
+            }
+        }
+
         const systems = this.getSystemsList();
         const spawnManager = new Spawning(this);
 
@@ -92,6 +105,9 @@ export class ColonyManagerImpl implements ColonyManager {
 
     public visualizeStats(): void {
         const room = this.getMainRoom();
+        if (!room || !room.visual) {
+            return;
+        }
         room.visual.text(`Colony: ${this.colonyInfo.id}`, 3, 5, { color: "white", font: 1, align: "left" });
 
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
@@ -384,16 +400,32 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     private creepManager() {
+        const spawnQueue = this.getSpawnQueue();
         for (const name in this.colonyInfo.creeps) {
             const creepData = this.colonyInfo.creeps[name];
-            if (!creepData.id) {
+
+            // If it's in Game.creeps, it's alive.
+            if (name in Game.creeps) {
                 continue;
             }
-            const creep = Game.getObjectById(creepData.id);
-            if (!creep) {
+
+            // If it has an ID but is not in Game.creeps, it's dead.
+            if (creepData.id) {
                 delete this.colonyInfo.creeps[name];
                 continue;
             }
+
+            // If it's in SPAWN_QUEUE status, check if it's actually in the queue.
+            if (creepData.status === CreepStatus.SPAWN_QUEUE) {
+                const inQueue = spawnQueue.some(req => req.memory.name === name);
+                if (!inQueue) {
+                    delete this.colonyInfo.creeps[name];
+                }
+                continue;
+            }
+
+            // If it's not in Game.creeps and not in queue and has no ID, it's a ghost.
+            delete this.colonyInfo.creeps[name];
         }
     }
 
@@ -430,8 +462,8 @@ export class ColonyManagerImpl implements ColonyManager {
         const index = queue.findIndex(x => x.memory.name === name);
         if (index !== -1) {
             queue.splice(index, 1);
-            delete this.getColonyCreeps()[name];
         }
+        delete this.getColonyCreeps()[name];
     }
 
     private createUniqueCreepName(name: string): string {
@@ -447,13 +479,28 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     private initialSetup() {
+        console.log(`[Colony] Performing initial setup for ${this.colonyInfo.id}`);
         // setup main room
         const room = this.getMainRoom();
-        this.colonyInfo.rooms.push({
-            name: room.name,
-            isMain: true,
-            alertLevel: 0,
-        });
+
+        // Clear stale room memory if it exists
+        if (Memory.rooms && Memory.rooms[room.name]) {
+            console.log(`[Colony] Clearing stale room memory for ${room.name}`);
+            delete Memory.rooms[room.name];
+        }
+
+        this.colonyInfo.rooms = [
+            {
+                name: room.name,
+                isMain: true,
+                alertLevel: 0,
+            },
+        ];
+
+        // Reset management objects
+        this.colonyInfo.spawnQueue = [];
+        this.colonyInfo.creeps = {};
+
         // Check for existing creeps that belong to this colony (recovery from memory wipe)
         this.scanForCreeps();
 

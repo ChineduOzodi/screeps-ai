@@ -30,6 +30,23 @@ export const loop = ErrorMapper.wrapLoop(() => {
         Memory.pathfindingCache = {};
     }
 
+    // Automatically delete memory of rooms that are no longer tracked by any colony and we don't have vision of
+    for (const roomName in Memory.rooms) {
+        if (!(roomName in Game.rooms)) {
+            let isTracked = false;
+            for (const colonyId in Memory.colonies) {
+                const colony = Memory.colonies[colonyId];
+                if (colony && colony.rooms && colony.rooms.some(r => r.name === roomName)) {
+                    isTracked = true;
+                    break;
+                }
+            }
+            if (!isTracked) {
+                delete Memory.rooms[roomName];
+            }
+        }
+    }
+
     for (const name in Memory.colonies) {
         const colonyData = Memory.colonies[name];
         if (!colonyData) {

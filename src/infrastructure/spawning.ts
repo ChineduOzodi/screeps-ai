@@ -88,9 +88,20 @@ export class Spawning {
             return;
         }
 
-        const energy = this.colony.systems.energy;
         const request = spawnQueue[0];
         const { memory, body } = request;
+
+        // Check if it's even possible to spawn this creep with current capacity
+        const bodyCost = this.calculateBodyCost(body);
+        const capacity = spawn.room.energyCapacityAvailable;
+        if (bodyCost > capacity) {
+            console.log(
+                `colony ${this.colony.colonyInfo.id} | Pruning impossible spawn request (cost: ${bodyCost}, capacity: ${capacity}): ${memory.role} (name: ${memory.name})`,
+            );
+            this.colony.removeSpawnRequest(memory.name);
+            return;
+        }
+
         const creepData = this.colony.getCreepData(memory.name);
         if (!creepData) {
             console.log(`colony | could not get creep data for ${memory.name}}`);
@@ -98,6 +109,10 @@ export class Spawning {
         }
 
         this.spawnCreep(spawn, spawnQueue, body, memory);
+    }
+
+    private calculateBodyCost(body: BodyPartConstant[]): number {
+        return body.reduce((cost, part) => cost + BODYPART_COST[part], 0);
     }
 
     private spawnCreep(

@@ -84,6 +84,17 @@ global.RANGED_ATTACK_POWER = 10;
 global.HEAL_POWER = 12;
 global.RANGED_HEAL_POWER = 4;
 
+global.BODYPART_COST = {
+    work: 100,
+    carry: 50,
+    move: 50,
+    attack: 80,
+    ranged_attack: 150,
+    heal: 250,
+    claim: 600,
+    tough: 10,
+};
+
 global.STRUCTURE_EXTENSION = "extension";
 global.STRUCTURE_RAMPART = "rampart";
 global.STRUCTURE_ROAD = "road";
