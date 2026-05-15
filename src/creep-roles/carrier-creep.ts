@@ -82,6 +82,26 @@ export class CarrierCreep extends CreepRunner {
             memory.working = true;
         }
 
+        // Logic check: if we are not working (gathering), but there's nothing left to gather 
+        // AND we have some energy, let's just go deliver it (to prevent idling).
+        if (!memory.working && creep.store[RESOURCE_ENERGY] > 0) {
+            const container = creep.room.find(FIND_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(source.pos, 1),
+            })[0] as StructureContainer;
+            
+            const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+                filter: r => r.resourceType === RESOURCE_ENERGY && r.pos.inRangeTo(source.pos, 3),
+            });
+
+            const hasContainerEnergy = container && container.store[RESOURCE_ENERGY] > 0;
+            const hasDroppedEnergy = dropped.length > 0;
+
+            if (!hasContainerEnergy && !hasDroppedEnergy) {
+                // Nothing left to gather at the source, but we have some energy. Switch to working.
+                memory.working = true;
+            }
+        }
+
         if (memory.working) {
             this.deliverEnergy();
         } else {
@@ -191,8 +211,12 @@ export class CarrierCreep extends CreepRunner {
         } else {
             // Fallback: Upgrade controller if full and no where to go
             if (creep.room.controller && creep.room.controller.my) {
-                if (this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+                const result = this.upgradeController(creep.room.controller);
+                if (result === ERR_NOT_IN_RANGE) {
                     this.moveToWithReservation(creep.room.controller, 5, 3);
+                } else if (result === OK) {
+                    // Say something to show we are falling back
+                    creep.say("⚡ Upgrade");
                 }
             }
         }
