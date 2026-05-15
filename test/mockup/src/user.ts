@@ -1,10 +1,16 @@
 /* eslint lines-between-class-members: "off" */
 
-import { EventEmitter } from 'events';
-import * as _ from 'lodash';
-import ScreepsServer from './screepsServer';
+import { EventEmitter } from "events";
+import * as _ from "lodash";
+import ScreepsServer from "./screepsServer";
 
-type Notification = { message: string; type: string; date: number; count: number; _id: string };
+interface Notification {
+    message: string;
+    type: string;
+    date: number;
+    count: number;
+    _id: string;
+}
 
 export interface UserBadge {
     type: number;
@@ -24,7 +30,7 @@ export default class User extends EventEmitter {
     /**
         Constructor
     */
-    constructor(server: ScreepsServer, data: {_id: string; username: string}) {
+    constructor(server: ScreepsServer, data: { _id: string; username: string }) {
         super();
         this._id = data._id;
         this._username = data.username;
@@ -42,19 +48,19 @@ export default class User extends EventEmitter {
         return this._username;
     }
     get cpu(): Promise<number> {
-        return this.getData('cpu');
+        return this.getData("cpu");
     }
     get cpuAvailable(): Promise<number> {
-        return this.getData('cpuAvailable');
+        return this.getData("cpuAvailable");
     }
     get gcl(): Promise<number> {
-        return this.getData('gcl');
+        return this.getData("gcl");
     }
     get rooms() {
-        return this.getData('rooms');
+        return this.getData("rooms");
     }
     get lastUsedCpu(): Promise<number> {
-        return this.getData('lastUsedCpu');
+        return this.getData("lastUsedCpu");
     }
     get memory(): Promise<string> {
         const { env } = this._server.common.storage;
@@ -62,21 +68,19 @@ export default class User extends EventEmitter {
     }
     get notifications(): Promise<Notification[]> {
         const { db } = this._server.common.storage;
-        return db['users.notifications']
-            .find({ user: this.id })
-            .then((list: any[]) => list.map(({ message, type, date, count, _id }) => {
+        return db["users.notifications"].find({ user: this.id }).then((list: any[]) =>
+            list.map(({ message, type, date, count, _id }) => {
                 this.knownNotifications.push(_id);
                 return { message, type, date, count, _id };
-            }));
+            }),
+        );
     }
     get newNotifications() {
         const known = _.clone(this.knownNotifications);
-        return this.notifications.then(
-            (list) => list.filter((notif) => !known.includes(notif._id))
-        );
+        return this.notifications.then(list => list.filter(notif => !known.includes(notif._id)));
     }
     get activeSegments(): Promise<number[]> {
-        return this.getData('activeSegments');
+        return this.getData("activeSegments");
     }
 
     /**
@@ -92,7 +96,7 @@ export default class User extends EventEmitter {
     */
     async console(cmd: string) {
         const { db } = this._server.common.storage;
-        return db['users.console'].insert({ user: this._id, expression: cmd, hidden: false });
+        return db["users.console"].insert({ user: this._id, expression: cmd, hidden: false });
     }
 
     /**
@@ -112,7 +116,7 @@ export default class User extends EventEmitter {
         await pubsub.subscribe(`user:${this._id}/console`, (event: any) => {
             const { messages } = JSON.parse(event);
             const { log = [], results = [] } = messages || {};
-            this.emit('console', log, results, this._id, this.username);
+            this.emit("console", log, results, this._id, this.username);
         });
         return this;
     }

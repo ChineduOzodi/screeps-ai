@@ -1,23 +1,22 @@
-import * as assert from 'assert';
-import * as fs from 'fs-extra-promise';
-import * as _ from 'lodash';
-import * as path from 'path';
-import ScreepsServer, { ScreepServerOptions } from '../src/screepsServer';
+import * as assert from "assert";
+import * as fs from "fs-extra-promise";
+import * as _ from "lodash";
+import * as path from "path";
+import ScreepsServer, { ScreepServerOptions } from "../src/screepsServer";
 
-// eslint-disable-next-line import/no-unresolved
-const stdHooks = require('../../utils/stdhooks');
+const stdHooks = require("../../utils/stdhooks");
 
 // Dirty hack to prevent driver from flooding error messages
 stdHooks.hookWrite();
 
-suite('Basics tests', function () {
+suite("Basics tests", function () {
     this.timeout(30 * 1000);
     this.slow(5 * 1000);
 
     // Server variable used for the tests
-    let server: ScreepsServer|null = null;
+    let server: ScreepsServer | null = null;
 
-    test('Starting server and running a few ticks without error', async () => {
+    test("Starting server and running a few ticks without error", async () => {
         server = new ScreepsServer();
         await server.start();
         for (let i = 0; i < 5; i += 1) {
@@ -26,12 +25,12 @@ suite('Basics tests', function () {
         server.stop();
     });
 
-    test('Setting options in server constructor', async () => {
+    test("Setting options in server constructor", async () => {
         // Setup options and server
         const opts: ScreepServerOptions = {
-            path:   'another_dir',
-            logdir: 'another_logdir',
-            port:   9999,
+            path: "another_dir",
+            logdir: "another_logdir",
+            port: 9999,
         };
         server = new ScreepsServer(opts);
         // Assert if options are correctly registered
@@ -48,7 +47,7 @@ suite('Basics tests', function () {
         fs.accessSync(path.resolve(opts.logdir));
     });
 
-    test('Running user code', async () => {
+    test("Running user code", async () => {
         // Server initialization
         server = new ScreepsServer();
         await server.world.stubWorld();
@@ -60,8 +59,8 @@ suite('Basics tests', function () {
         };
         // User / bot initialization
         let logs: string[] = [];
-        const user = await server.world.addBot({ username: 'bot', room: 'W0N0', x: 25, y: 25, modules });
-        user.on('console', (log) => {
+        const user = await server.world.addBot({ username: "bot", room: "W0N0", x: 25, y: 25, modules });
+        user.on("console", log => {
             logs = logs.concat(log);
         });
         // Run a few ticks
@@ -71,10 +70,10 @@ suite('Basics tests', function () {
         }
         server.stop();
         // Assert if code was correctly executed
-        assert.deepStrictEqual(logs, ['tick 1', 'tick 2', 'tick 3', 'tick 4', 'tick 5']);
+        assert.deepStrictEqual(logs, ["tick 1", "tick 2", "tick 3", "tick 4", "tick 5"]);
     });
 
-    test('Getting current tick', async () => {
+    test("Getting current tick", async () => {
         // Server initialization
         server = new ScreepsServer();
         await server.world.reset();
@@ -96,8 +95,8 @@ suite('Basics tests', function () {
             server = null;
         }
         // Delete server files
-        await fs.removeAsync(path.resolve('server')).catch(console.error);
-        await fs.removeAsync(path.resolve('another_dir')).catch(console.error);
-        await fs.removeAsync(path.resolve('another_logdir')).catch(console.error);
+        await fs.removeAsync(path.resolve("server")).catch(console.error);
+        await fs.removeAsync(path.resolve("another_dir")).catch(console.error);
+        await fs.removeAsync(path.resolve("another_logdir")).catch(console.error);
     });
 });

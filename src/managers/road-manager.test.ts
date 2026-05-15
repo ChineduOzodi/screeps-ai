@@ -34,14 +34,14 @@ describe("RoadManager", () => {
             name: "W1N1",
             find: (type: number) => [],
             getTerrain: () => ({
-                get: (x: number, y: number) => 0
+                get: (x: number, y: number) => 0,
             }),
-            createConstructionSite: () => 0
+            createConstructionSite: () => 0,
         };
 
         // @ts-ignore
         global.Game.rooms = {
-            "W1N1": mockRoom
+            W1N1: mockRoom,
         };
 
         mockColony = {
@@ -50,12 +50,12 @@ describe("RoadManager", () => {
             colonyInfo: {
                 rooms: [{ name: "W1N1" }],
                 infrastructureManagement: {
-                    nextUpdate: 0
-                }
+                    nextUpdate: 0,
+                },
             },
             constructionManager: {
-                deleteProject: () => {}
-            }
+                deleteProject: () => {},
+            },
         };
 
         roadManager = new RoadManager(mockColony as any);
@@ -66,7 +66,7 @@ describe("RoadManager", () => {
             const roads = [
                 { pos: { x: 10, y: 10 }, structureType: "road" }, // Plain
                 { pos: { x: 11, y: 11 }, structureType: "road" }, // Swamp
-                { pos: { x: 12, y: 12 }, structureType: "road" }  // Wall
+                { pos: { x: 12, y: 12 }, structureType: "road" }, // Wall
             ];
 
             mockRoom.find = (type: number) => {
@@ -80,7 +80,7 @@ describe("RoadManager", () => {
                     if (x === 11 && y === 11) return (global as any).TERRAIN_MASK_SWAMP;
                     if (x === 12 && y === 12) return (global as any).TERRAIN_MASK_WALL;
                     return 0;
-                }
+                },
             });
 
             roadManager.updateRoadStats();
@@ -96,7 +96,7 @@ describe("RoadManager", () => {
             global.Game.time = 550;
 
             roadManager.updateRoadStats();
-            
+
             // Should NOT have updated (null because we didn't mock find yet)
             assert.isUndefined(mockColony.colonyInfo.infrastructureManagement.roadCount);
 

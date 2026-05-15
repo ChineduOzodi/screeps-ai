@@ -1,10 +1,10 @@
-import * as _ from 'lodash';
+import * as _ from "lodash";
 
-type TerrainTypes = 'plain'|'wall'|'swamp';
-const TYPES: TerrainTypes[] = ['plain', 'wall', 'swamp'];
+type TerrainTypes = "plain" | "wall" | "swamp";
+const TYPES: TerrainTypes[] = ["plain", "wall", "swamp"];
 
 export default class Matrix {
-    private data: {[coords: string]: TerrainTypes};
+    private data: { [coords: string]: TerrainTypes };
 
     /**
         Constructor
@@ -17,7 +17,7 @@ export default class Matrix {
         Getters
     */
     get(x: number, y: number): TerrainTypes {
-        return _.get(this.data, `${x}:${y}`, 'plain');
+        return _.get(this.data, `${x}:${y}`, "plain");
     }
 
     /**
@@ -36,7 +36,7 @@ export default class Matrix {
         Serialize the terrain for database storage
     */
     serialize(): string {
-        let str = '';
+        let str = "";
         for (let y = 0; y < 50; y += 1) {
             for (let x = 0; x < 50; x += 1) {
                 const terrain = this.get(x, y);
@@ -56,13 +56,13 @@ export default class Matrix {
     */
     static unserialize(str: string): Matrix {
         const matrix = new Matrix();
-        _.each(str.split(''), (mask, idx) => {
+        _.each(str.split(""), (mask, idx) => {
             const x = idx % 50;
             const y = Math.floor(idx / 50);
             const terrain = _.get(TYPES, mask);
             if (terrain == null) {
                 throw new Error(`invalid terrain mask: ${mask}`);
-            } else if (terrain !== 'plain') {
+            } else if (terrain !== "plain") {
                 matrix.set(x, y, terrain);
             }
         });

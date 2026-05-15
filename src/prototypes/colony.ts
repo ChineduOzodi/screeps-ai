@@ -48,13 +48,19 @@ export class ColonyManagerImpl implements ColonyManager {
             return;
         }
 
-        // Detect potential colony restart: 
-        // We have setupComplete, but the registered spawn is gone, we have no creeps, 
+        // Detect potential colony restart:
+        // We have setupComplete, but the registered spawn is gone, we have no creeps,
         // AND there is a new spawn in the room.
-        if (this.colonyInfo.setupComplete && !Game.getObjectById(this.colonyInfo.mainSpawnId) && this.getCreeps().length === 0) {
+        if (
+            this.colonyInfo.setupComplete &&
+            !Game.getObjectById(this.colonyInfo.mainSpawnId) &&
+            this.getCreeps().length === 0
+        ) {
             const spawns = mainRoom.find(FIND_MY_SPAWNS);
             if (spawns.length > 0) {
-                console.log(`[Colony] ${this.colonyInfo.id} | Detected restart (new spawn found, no creeps). Resetting setupComplete.`);
+                console.log(
+                    `[Colony] ${this.colonyInfo.id} | Detected restart (new spawn found, no creeps). Resetting setupComplete.`,
+                );
                 this.colonyInfo.setupComplete = false;
             }
         }
