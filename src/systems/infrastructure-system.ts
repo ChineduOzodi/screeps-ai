@@ -37,6 +37,7 @@ export class InfrastructureSystem extends BaseSystemImpl {
     public override run(): void {
         super.run();
         this.checkRepairNeeds();
+        this.colony.roadManager.updateRoadStats();
     }
 
     private checkRepairNeeds(): void {

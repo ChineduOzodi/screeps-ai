@@ -18,6 +18,7 @@ describe("Energy System", () => {
             energyCapacityAvailable: 300,
             energyAvailable: 300,
             find: () => [],
+            getTerrain: () => ({ get: () => 0 }),
             memory: {},
             visual: {
                 text: () => {},
@@ -34,8 +35,12 @@ describe("Energy System", () => {
             getCreeps: () => [], // Default to no alive creeps
             getSpawnQueue: () => [],
             colonyInfo: {
+                rooms: [{ name: "room_id" }],
                 energyManagement: {
                     sources: [],
+                },
+                infrastructureManagement: {
+                    nextUpdate: 0,
                 },
             },
         } as any;

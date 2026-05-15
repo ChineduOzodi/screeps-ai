@@ -96,6 +96,16 @@ export class ConstructionManager {
         }
     }
 
+    public deleteProject(projectName: string): void {
+        const room = this.colony.getMainRoom();
+        if (!room || !room.memory || !room.memory.constructionProjects) return;
+
+        if (room.memory.constructionProjects[projectName]) {
+            delete room.memory.constructionProjects[projectName];
+            console.log(`ConstructionManager: Deleted project ${projectName}`);
+        }
+    }
+
     private processProject(projectName: string): void {
         const room = this.colony.getMainRoom();
         if (!room || !room.memory || !room.memory.constructionProjects) return;

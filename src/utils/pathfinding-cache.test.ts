@@ -47,7 +47,7 @@ describe("PathfindingCache", () => {
         PathfindingCache.setPath(from, to, 0, path);
 
         // @ts-ignore
-        global.Game.time = 201; // TTL is 100
+        global.Game.time = 3000; // TTL is 1000
 
         const retrieved = PathfindingCache.getPath(from, to, 0);
         expect(retrieved).to.equal(undefined);

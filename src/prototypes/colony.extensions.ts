@@ -39,7 +39,11 @@ interface ColonyEnergyManagement extends BaseSystemInfo {
     storedEnergyPercent: number;
 }
 
-interface ColonyInfrastructureManagement extends BaseSystemInfo {}
+interface ColonyInfrastructureManagement extends BaseSystemInfo {
+    roadCount?: number;
+    roadMaintenanceCost?: number;
+    lastRoadMaintenanceCheck?: number;
+}
 
 interface ColonyGoapManagement extends BaseSystemInfo {
     activeGoalName?: string;
