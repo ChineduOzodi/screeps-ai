@@ -46,7 +46,8 @@ describe("ColonyManager", () => {
         it("should return undefined when no storage or container exists", () => {
             // @ts-ignore
             Game.rooms.E1S1.storage = undefined;
-            colonyData.containerId = undefined;
+            // @ts-ignore
+            Game.rooms.E1S1.find = () => [];
 
             const result = colonyManager.getPrimaryStorage();
             assert.isUndefined(result);
@@ -65,7 +66,7 @@ describe("ColonyManager", () => {
             assert.equal(result, mockStorage as any);
         });
 
-        it("should return main container if storage is missing/inactive", () => {
+        it("should return a container if storage is missing/inactive", () => {
             // @ts-ignore
             Game.rooms.E1S1.storage = undefined;
 
@@ -73,12 +74,12 @@ describe("ColonyManager", () => {
                 id: "container1",
                 structureType: "container",
                 store: { getFreeCapacity: () => 100 },
+                pos: { findClosestByRange: () => null },
             };
-            colonyData.containerId = "container1" as any;
             // @ts-ignore
-            (global.Game as any).getObjectById = id => {
-                if (id === "container1") return mockContainer;
-                return null;
+            Game.rooms.E1S1.find = (type: any) => {
+                if (type === FIND_STRUCTURES) return [mockContainer];
+                return [];
             };
 
             const result = colonyManager.getPrimaryStorage();
@@ -97,7 +98,11 @@ describe("ColonyManager", () => {
                 id: "container1",
                 structureType: "container",
             };
-            colonyData.containerId = "container1" as any;
+            // @ts-ignore
+            Game.rooms.E1S1.find = (type: any) => {
+                if (type === FIND_STRUCTURES) return [mockContainer];
+                return [];
+            };
 
             const result = colonyManager.getPrimaryStorage();
             assert.equal(result, mockStorage as any);
@@ -115,11 +120,10 @@ describe("ColonyManager", () => {
                 id: "container1",
                 structureType: "container",
             };
-            colonyData.containerId = "container1" as any;
             // @ts-ignore
-            (global.Game as any).getObjectById = id => {
-                if (id === "container1") return mockContainer;
-                return null;
+            Game.rooms.E1S1.find = (type: any) => {
+                if (type === FIND_STRUCTURES) return [mockContainer];
+                return [];
             };
 
             const result = colonyManager.getPrimaryStorage();

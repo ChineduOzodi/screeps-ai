@@ -261,22 +261,21 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     public shouldUseMiners(): boolean {
+        // Emergency recovery check: if no collectors are alive, fall back to harvesters
         if (this.noEnergyCollectors()) {
             return false;
         }
 
         /*
             When to transition?
-            1. Storage is built
-            2. Energy Capacity is high enough to support a Miner (5 WORK = 500) + Carrier (Min 100-200)?
-               - Miner: 500 (5 WORK)
-               - Carrier: 200 (2 CARRY, 2 MOVE)
+            1. Room capacity is high enough to support a Miner (5 WORK = 500)
+               Miners can sit and deplete a source just before it regenerates.
         */
         const room = this.colony.getMainRoom();
-        const storage = this.colony.getPrimaryStorage();
+        if (!room) return false;
+
         const capacity = room.energyCapacityAvailable;
-        // Miner (5 WORK) = 500. Carrier (2 CARRY 2 MOVE) = 200. 500 because they are not spawned at the same time.
-        return storage !== undefined && capacity >= 500;
+        return capacity >= 500;
     }
 
     private manageMiningInfrastructure(): void {
@@ -284,20 +283,25 @@ export class EnergySystem extends BaseSystemImpl {
             return;
         }
 
-        // We only build 1 container per source for now?
-        // Prioritize building after storage is done (checked by shouldUseMiners)
-        // Checks construction every 10 ticks?
+        // We only build 1 container per source for now.
         if (Game.time % 20 !== 0) return;
 
         this.systemInfo.sources.forEach(sourceData => {
             if (!sourceData.miningPosition) this.setSources();
             if (!sourceData.miningPosition) return;
 
+            const posObj = sourceData.miningPosition;
+            const pos = new RoomPosition(posObj.x, posObj.y, posObj.roomName);
+            const look = pos.lookFor(LOOK_STRUCTURES);
+            const container = look.find(s => s.structureType === STRUCTURE_CONTAINER);
+
+            if (container) return; // Already built
+
             const projectName = `MiningContainer_${sourceData.sourceId}`;
             const structure: ProjectStructure = {
-                x: sourceData.miningPosition.x,
-                y: sourceData.miningPosition.y,
-                roomName: sourceData.miningPosition.roomName,
+                x: pos.x,
+                y: pos.y,
+                roomName: pos.roomName,
                 type: STRUCTURE_CONTAINER,
             };
 

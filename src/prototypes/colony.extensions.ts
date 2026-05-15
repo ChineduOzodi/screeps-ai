@@ -3,7 +3,6 @@ interface Colony {
     setupComplete?: boolean;
     level: number;
     spawnEnergy: number;
-    containerId?: Id<StructureContainer>;
     creeps: ColonyCreeps | undefined;
     rooms: RoomData[];
     mainSpawnId: Id<StructureSpawn>;
@@ -97,7 +96,6 @@ interface RoomData {
 interface SourceData {
     id: string;
     position: RoomPosition;
-    containerId?: string;
     minerId?: string;
     collectorIds: string[];
 }

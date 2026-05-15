@@ -264,7 +264,8 @@ export class ColonyManagerImpl implements ColonyManager {
             .getSpawnerProfilesList()
             .forEach((x: CreepSpawnerProfileInfo) => (upkeep += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)));
 
-        this.systems.energy.systemInfo.estimatedEnergyProductionRate = gross - upkeep;
+        const productionRate = gross - upkeep;
+        this.systems.energy.systemInfo.estimatedEnergyProductionRate = productionRate;
         (this.systems.energy.systemInfo as any).grossProduction = gross;
         (this.systems.energy.systemInfo as any).upkeep = upkeep;
 
@@ -272,21 +273,52 @@ export class ColonyManagerImpl implements ColonyManager {
         if (storedEnergyPercent > 0.9) {
             this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.5;
         } else if (storedEnergyPercent > 0.8) {
-            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1;
+            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.1;
+        } else if (storedEnergyPercent > 0.5) {
+            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.0;
         } else {
             this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
         }
         this.systems.energy.systemInfo.storedEnergyPercent = storedEnergyPercent;
+
+        const systems = this.getSystemsList().filter(s => s !== this.systems.energy);
+
+        // --- Pass 1: Proportional Allocation ---
         this.setEnergyUsageMod();
+        systems.forEach(system => this.manageEnergySystem(system));
 
-        const s = this.systems as unknown as { [k: string]: BaseSystem };
+        // --- Pass 2: Iterative Redistribution of Surplus ---
+        let totalSurplus = 0;
+        const deficitSystems: { system: BaseSystem; deficit: number; weight: number }[] = [];
 
-        for (const key in s) {
-            if (key === "energy") {
-                continue;
+        systems.forEach(system => {
+            const demand = system.getEnergyDemand();
+            const allocation = system.energyUsageTracking.allowedEnergyWorkRate;
+
+            if (allocation > demand) {
+                const surplus = allocation - demand;
+                system.energyUsageTracking.allowedEnergyWorkRate = demand;
+                totalSurplus += surplus;
+            } else if (allocation < demand) {
+                deficitSystems.push({
+                    system,
+                    deficit: demand - allocation,
+                    weight: system.energyUsageTracking.requestedEnergyUsageWeight,
+                });
             }
-            const system = s[key];
-            this.manageEnergySystem(system);
+        });
+
+        if (totalSurplus > 0 && deficitSystems.length > 0) {
+            let totalDeficitWeight = 0;
+            deficitSystems.forEach(ds => (totalDeficitWeight += ds.weight));
+
+            if (totalDeficitWeight > 0) {
+                deficitSystems.forEach(ds => {
+                    const extra = (ds.weight / totalDeficitWeight) * totalSurplus;
+                    const granted = Math.min(extra, ds.deficit);
+                    ds.system.energyUsageTracking.allowedEnergyWorkRate += granted;
+                });
+            }
         }
     }
 
@@ -296,33 +328,17 @@ export class ColonyManagerImpl implements ColonyManager {
             return 0;
         }
 
-        if (!this.colonyInfo.containerId) {
-            const containers = room.find(FIND_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_CONTAINER,
-            }) as StructureContainer[];
-
-            const mainSpawn = this.getMainSpawn();
-            if (mainSpawn) {
-                this.colonyInfo.containerId = mainSpawn.pos.findClosestByRange(containers)?.id;
-            }
-        }
-
-        if (!this.colonyInfo.containerId) {
+        const primaryStorage = this.getPrimaryStorage();
+        if (!primaryStorage) {
             return 0;
         }
 
-        const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
-        if (!container || container.structureType !== STRUCTURE_CONTAINER || !container.store) {
-            this.colonyInfo.containerId = undefined;
-            return 0;
-        }
+        let energy = primaryStorage.store[RESOURCE_ENERGY] || 0;
+        let capacity = primaryStorage.store.getCapacity(RESOURCE_ENERGY) || 1;
 
-        let energy = container.store[RESOURCE_ENERGY] || 0;
-        let capacity = container.store.getCapacity(RESOURCE_ENERGY) || 1;
-
-        if (this.getMainRoom().storage) {
-            energy += this.getMainRoom().storage?.store[RESOURCE_ENERGY] || 0;
-            capacity += this.getMainRoom().storage?.store?.getCapacity(RESOURCE_ENERGY) || 0;
+        if (room.storage && primaryStorage.id !== room.storage.id) {
+            energy += room.storage.store[RESOURCE_ENERGY] || 0;
+            capacity += room.storage.store.getCapacity(RESOURCE_ENERGY) || 0;
         }
 
         return energy / capacity;
@@ -568,14 +584,21 @@ export class ColonyManagerImpl implements ColonyManager {
             return room.storage;
         }
 
-        if (this.colonyInfo.containerId) {
-            const container = Game.getObjectById<StructureContainer>(this.colonyInfo.containerId);
-            if (container && container.structureType === STRUCTURE_CONTAINER) {
-                return container;
-            } else {
-                this.colonyInfo.containerId = undefined;
+        // Dynamic discovery: find containers near spawn or sources
+        const mainSpawn = this.getMainSpawn();
+        const containers = room.find(FIND_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_CONTAINER,
+        }) as StructureContainer[];
+
+        if (containers.length > 0) {
+            // Prefer container closest to spawn
+            if (mainSpawn) {
+                const closest = mainSpawn.pos.findClosestByRange(containers);
+                if (closest) return closest;
             }
+            return containers[0];
         }
+
         return undefined;
     }
 

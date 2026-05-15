@@ -132,13 +132,8 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         }
 
         // Determine Dropoff
-        let dropoff: Structure | null = null;
-        if (colony.colonyInfo.containerId) {
-            const container = Game.getObjectById<StructureContainer>(colony.colonyInfo.containerId);
-            if (container) dropoff = container;
-        }
+        let dropoff: Structure | null = colony.getPrimaryStorage() || null;
         // Fallback to spawn if no container/storage
-        if (!dropoff && colony.getMainRoom().storage) dropoff = colony.getMainRoom().storage || null;
         if (!dropoff) dropoff = spawn;
 
         // Pathing

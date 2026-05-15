@@ -100,6 +100,10 @@ export abstract class BaseSystemImpl implements BaseSystem {
         return this.colony.getCreepCount(role);
     }
 
+    public getEnergyDemand(): number {
+        return this.energyUsageTracking.estimatedEnergyWorkRate;
+    }
+
     public abstract onStart(): void;
     /**
      * Main run loop for the system.

@@ -75,6 +75,9 @@ export interface BaseSystem {
      */
     getRoleCount(role: CreepRole): number;
 
+    /** Returns the amount of energy per tick that the system is demanding. */
+    getEnergyDemand(): number;
+
     getObjectives(): Objective[];
 }
 

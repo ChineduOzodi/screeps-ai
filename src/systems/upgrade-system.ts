@@ -45,6 +45,15 @@ export class UpgradeSystem extends BaseSystemImpl {
         return [CreepRole.UPGRADER];
     }
 
+    public override getEnergyDemand(): number {
+        // Upgrade system can always use more energy (until RCL 8, but that's handled in objectives)
+        const room = this.room;
+        if (room && room.controller && room.controller.level === 8) {
+            return this.energyUsageTracking.estimatedEnergyWorkRate;
+        }
+        return 999;
+    }
+
     public override getObjectives(): Objective[] {
         const room = this.room;
         if (!room || !room.controller) return [];

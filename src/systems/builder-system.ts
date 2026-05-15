@@ -60,6 +60,14 @@ export class BuilderSystem extends BaseSystemImpl {
         return [CreepRole.BUILDER];
     }
 
+    public override getEnergyDemand(): number {
+        const queue = this.systemInfo.buildQueue || [];
+        if (queue.length === 0) {
+            return 0;
+        }
+        return this.energyUsageTracking.estimatedEnergyWorkRate;
+    }
+
     public override getObjectives(): Objective[] {
         const room = this.colony.getMainRoom();
         if (!room) return [];
