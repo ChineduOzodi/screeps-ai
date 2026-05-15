@@ -3,6 +3,7 @@ import { CreepRunner } from "prototypes/creep";
 import { ColonyManagerImpl } from "prototypes/colony";
 import { BuilderCreep } from "creep-roles/builder-creep";
 import { DefenderCreep } from "creep-roles/defender-creep";
+import { HealerCreep } from "creep-roles/healer-creep";
 import { HarvesterCreep } from "creep-roles/harvester-creep";
 import { MinerCreep } from "creep-roles/miner-creep";
 import { Movement } from "infrastructure/movement";
@@ -53,6 +54,8 @@ export class CreepManagement {
                 return new BuilderCreep(creep);
             case CreepRole.DEFENDER:
                 return new DefenderCreep(creep);
+            case CreepRole.HEALER:
+                return new HealerCreep(creep);
             case CreepRole.MINER:
                 return new MinerCreep(creep);
             case CreepRole.CARRIER:

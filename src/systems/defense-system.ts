@@ -2,6 +2,7 @@ import { BaseSystemImpl } from "./base-system";
 import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { DefenderCreepSpawner } from "creep-roles/defender-creep";
+import { HealerCreepSpawner } from "creep-roles/healer-creep";
 import { Objective } from "objectives/types";
 
 export class DefenseSystem extends BaseSystemImpl {
@@ -44,11 +45,11 @@ export class DefenseSystem extends BaseSystemImpl {
     }
 
     public override getCreepSpawners(): CreepSpawner[] {
-        return [new DefenderCreepSpawner()];
+        return [new DefenderCreepSpawner(), new HealerCreepSpawner()];
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
-        return [CreepRole.DEFENDER];
+        return [CreepRole.DEFENDER, CreepRole.HEALER];
     }
 
     public override getObjectives(): Objective[] {

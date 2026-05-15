@@ -324,4 +324,12 @@ export abstract class CreepRunner {
         }
         return actionStatus;
     }
+
+    protected heal(target: TargetType): CreepActionReturnCode {
+        const actionStatus = this.creep.heal(target as any);
+        if (actionStatus === OK) {
+            // this.setAction(CreepWorkPastAction.HEAL);
+        }
+        return actionStatus;
+    }
 }
