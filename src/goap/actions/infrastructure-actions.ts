@@ -48,26 +48,15 @@ export class BuildExtensionsAction implements Action {
         const spawn = this.colony.getMainSpawn();
         if (!room || !spawn) return true;
 
-        const currentExtensions = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_EXTENSION },
-        }).length;
-
-        // If we have enough actual structures, we are definitely done.
-        if (currentExtensions >= this.targetCount) {
-            return true;
-        }
-
-        const projectName = `Extensions_Target_${this.targetCount}`;
-
-        // If project is complete (sites exist or structures exist), we consider this action "done" regarding planning.
-        if (this.colony.constructionManager.isProjectComplete(projectName)) {
+        // If we have enough actual structures or sites, we are definitely done with planning.
+        if (this.colony.constructionManager.hasPlannedStructures(STRUCTURE_EXTENSION, this.targetCount)) {
             return true;
         }
 
         const center = ConstructionUtils.findSuitableExtensionClusterPosition(spawn, room);
         if (center) {
             const structures = ConstructionUtils.getExtensionClusterStructures(center, room);
-            this.colony.constructionManager.buildProject(projectName, structures);
+            this.colony.constructionManager.placeConstructionSites(structures);
         }
 
         return true;
@@ -143,13 +132,12 @@ export class BuildContainerAction implements Action {
         const spawn = this.colony.getMainSpawn();
         if (!room || !spawn) return true;
 
-        const projectName = "First_Container";
-        if (this.colony.constructionManager.isProjectComplete(projectName)) {
+        if (this.colony.constructionManager.hasPlannedStructures(STRUCTURE_CONTAINER, 1)) {
             return true;
         }
 
         const structures = ConstructionUtils.getFirstContainerStructures(spawn);
-        this.colony.constructionManager.buildProject(projectName, structures);
+        this.colony.constructionManager.placeConstructionSites(structures);
 
         return true;
     }
@@ -182,14 +170,17 @@ export class BuildTowerAction implements Action {
 
     execute(): boolean {
         this.colony.systems.builder.setEnergyBudgetWeight(1.0);
+        const room = this.colony.getMainRoom();
         const spawn = this.colony.getMainSpawn();
-        if (!spawn) return true;
+        if (!room || !spawn) return true;
 
-        const projectName = "First_Tower";
+        if (this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1)) {
+            return true;
+        }
 
         const structures = ConstructionUtils.getFirstTowerStructures(spawn);
         if (structures.length > 0) {
-            this.colony.constructionManager.buildProject(projectName, structures);
+            this.colony.constructionManager.placeConstructionSites(structures);
         }
 
         return true;

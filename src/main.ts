@@ -32,6 +32,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     // Automatically delete memory of rooms that are no longer tracked by any colony and we don't have vision of
     for (const roomName in Memory.rooms) {
+        // Cleanup old construction system memory
+        if ((Memory.rooms[roomName] as any).constructionProjects) {
+            delete (Memory.rooms[roomName] as any).constructionProjects;
+        }
+
         if (!(roomName in Game.rooms)) {
             let isTracked = false;
             for (const colonyId in Memory.colonies) {

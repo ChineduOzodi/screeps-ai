@@ -13,9 +13,6 @@ export class RoadManager {
         const spawn = this.colony.getMainSpawn();
         if (!room || !spawn) return;
 
-        // Clean up old project tracking
-        this.colony.constructionManager.deleteProject("ColonyRoads");
-
         const roadPositions: RoomPosition[] = [];
 
         // Perimeter roads (around spawn)

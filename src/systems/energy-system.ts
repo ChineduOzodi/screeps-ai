@@ -297,7 +297,6 @@ export class EnergySystem extends BaseSystemImpl {
 
             if (container) return; // Already built
 
-            const projectName = `MiningContainer_${sourceData.sourceId}`;
             const structure: ProjectStructure = {
                 x: pos.x,
                 y: pos.y,
@@ -305,7 +304,7 @@ export class EnergySystem extends BaseSystemImpl {
                 type: STRUCTURE_CONTAINER,
             };
 
-            this.colony.constructionManager.buildProject(projectName, [structure]);
+            this.colony.constructionManager.placeConstructionSites([structure]);
         });
     }
 }

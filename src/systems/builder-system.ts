@@ -80,7 +80,7 @@ export class BuilderSystem extends BaseSystemImpl {
             name: "Build Extensions to 5",
             priority: 100,
             isReady: () => rcl >= 2,
-            isComplete: () => this.colony.constructionManager.isProjectComplete("Extensions_Target_5"),
+            isComplete: () => this.colony.constructionManager.hasPlannedStructures(STRUCTURE_EXTENSION, 5),
             execute: () => {
                 new BuildExtensionsAction(this.colony, 5).execute();
             },
@@ -91,7 +91,7 @@ export class BuilderSystem extends BaseSystemImpl {
             name: "Build Extensions to 10",
             priority: 100,
             isReady: () => rcl >= 3,
-            isComplete: () => this.colony.constructionManager.isProjectComplete("Extensions_Target_10"),
+            isComplete: () => this.colony.constructionManager.hasPlannedStructures(STRUCTURE_EXTENSION, 10),
             execute: () => {
                 new BuildExtensionsAction(this.colony, 10).execute();
             },
@@ -102,7 +102,7 @@ export class BuilderSystem extends BaseSystemImpl {
             name: "Build First Container",
             priority: 50,
             isReady: () => rcl >= 1,
-            isComplete: () => this.colony.constructionManager.isProjectComplete("First_Container"),
+            isComplete: () => this.colony.constructionManager.hasPlannedStructures(STRUCTURE_CONTAINER, 1),
             execute: () => {
                 new BuildContainerAction(this.colony).execute();
             },
@@ -124,7 +124,7 @@ export class BuilderSystem extends BaseSystemImpl {
             name: "Build Tower",
             priority: 80,
             isReady: () => rcl >= 3,
-            isComplete: () => this.colony.constructionManager.isProjectComplete("First_Tower"),
+            isComplete: () => this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1),
             execute: () => {
                 new BuildTowerAction(this.colony).execute();
             },
