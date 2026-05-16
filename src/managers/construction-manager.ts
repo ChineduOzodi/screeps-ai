@@ -118,8 +118,8 @@ export class ConstructionManager {
                 }
             }
 
-            // Also place roads for this cluster if we have ANY extension here (existing or just placed)
-            if (placedInCluster > 0 || existingInCluster > 0) {
+            // Also place roads for this cluster if we just placed a NEW extension
+            if (placedInCluster > 0) {
                 for (const offset of roadOffsets) {
                     const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
                     if (ConstructionUtils.isTileClearForStructure(pos, room, true)) {

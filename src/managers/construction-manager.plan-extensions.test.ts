@@ -182,4 +182,27 @@ describe("ConstructionManager.planExtensions", () => {
         const extensionCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "extension");
         assert.equal(extensionCalls.length, 10);
     });
+
+    it("should NOT place roads for clusters if no new extensions were placed", () => {
+        // RCL 2 allows 5 extensions. We already have 5.
+        roomMock.find.withArgs(1).returns(new Array(5));
+        roomMock.find.withArgs(2).returns([]);
+
+        // Mock lookFor to return extensions for the first cluster positions
+        const lookForStub = sinon.stub(MockRoomPosition.prototype, "lookFor");
+        lookForStub.callsFake(function (this: MockRoomPosition, type: string) {
+            // Check if this position is in the first cluster (center 25, 21)
+            const dx = Math.abs(this.x - 25);
+            const dy = Math.abs(this.y - 21);
+            if (dx <= 1 && dy <= 1 && (dx + dy <= 1) && type === "structures") {
+                return [{ structureType: "extension" }];
+            }
+            return [];
+        });
+
+        (constructionManager as any).planExtensions();
+
+        const roadCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "road");
+        assert.equal(roadCalls.length, 0, "Should not have placed roads because no new extensions were placed");
+    });
 });

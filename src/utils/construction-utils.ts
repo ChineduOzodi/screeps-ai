@@ -182,7 +182,29 @@ export class ConstructionUtils {
             ignoreCreeps: true,
             ignoreDestructibleStructures: true,
             range,
-            swampCost: 1.2,
+            plainCost: 10,
+            swampCost: 50,
+            // @ts-ignore
+            favorExistingRoads: true,
+            costCallback: (roomName, costMatrix) => {
+                const room = Game.rooms[roomName];
+                if (!room) return undefined;
+
+                const roads = room.find(FIND_STRUCTURES, {
+                    filter: s => s.structureType === STRUCTURE_ROAD,
+                });
+                for (const road of roads) {
+                    costMatrix.set(road.pos.x, road.pos.y, 1);
+                }
+
+                const sites = room.find(FIND_CONSTRUCTION_SITES, {
+                    filter: s => s.structureType === STRUCTURE_ROAD,
+                });
+                for (const site of sites) {
+                    costMatrix.set(site.pos.x, site.pos.y, 1);
+                }
+                return costMatrix;
+            },
         });
 
         return path.map(step => ({

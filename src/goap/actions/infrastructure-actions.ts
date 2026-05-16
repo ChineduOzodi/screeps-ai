@@ -3,44 +3,6 @@ import { Action, WorldState } from "../types";
 import { ColonyManager } from "../../prototypes/types";
 import { ConstructionUtils } from "../../utils/construction-utils";
 
-export class BuildRoadsAction implements Action {
-    name = "Build Roads";
-    cost = 5;
-    private colony: ColonyManager;
-
-    constructor(colony: ColonyManager) {
-        this.colony = colony;
-    }
-
-    get preconditions(): WorldState {
-        return {
-            rcl: 1,
-        };
-    }
-
-    get effects(): WorldState {
-        return {
-            hasRoads: true,
-        };
-    }
-
-    getCost() {
-        return this.cost;
-    }
-
-    isValid() {
-        return true;
-    }
-
-    execute(): boolean {
-        this.colony.systems.builder.setEnergyBudgetWeight(1.0);
-
-        this.colony.roadManager.planColonyRoads();
-
-        return true;
-    }
-}
-
 export class BuildContainerAction implements Action {
     name = "Build Container";
     cost = 10;

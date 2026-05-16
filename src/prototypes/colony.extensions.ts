@@ -42,6 +42,7 @@ interface ColonyInfrastructureManagement extends BaseSystemInfo {
     roadCount?: number;
     roadMaintenanceCost?: number;
     lastRoadMaintenanceCheck?: number;
+    lastRclPlanned?: number;
 }
 
 interface ColonyGoapManagement extends BaseSystemInfo {

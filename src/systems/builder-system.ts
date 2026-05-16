@@ -2,7 +2,7 @@ import { BaseSystemImpl } from "./base-system";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";
 import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
-import { BuildContainerAction, BuildRoadsAction, BuildTowerAction } from "goap/actions/infrastructure-actions";
+import { BuildContainerAction, BuildTowerAction } from "goap/actions/infrastructure-actions";
 import { Objective } from "objectives/types";
 
 export class BuilderSystem extends BaseSystemImpl {
@@ -88,7 +88,7 @@ export class BuilderSystem extends BaseSystemImpl {
             isReady: () => rcl >= 1,
             isComplete: () => this.colony.roadManager.areColonyRoadsBuilt(),
             execute: () => {
-                new BuildRoadsAction(this.colony).execute();
+                this.setEnergyBudgetWeight(1.0);
             },
         });
 

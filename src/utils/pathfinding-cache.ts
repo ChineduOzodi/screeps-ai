@@ -66,13 +66,14 @@ export class PathfindingCache {
     public static findPath(
         from: RoomPosition,
         to: RoomPosition | _HasRoomPosition,
-        options: FindPathOpts = {},
+        options: FindPathOpts & { favorExistingRoads?: boolean } = {},
     ): PathStep[] {
         const targetPos = (to as any).pos || (to as RoomPosition);
         const range = options.range || 0;
 
         // Don't cache if there's a costCallback (unless we want to support it later)
-        if (options.costCallback) {
+        // EXCEPT if favorExistingRoads is true, we have a standard callback
+        if (options.costCallback && !options.favorExistingRoads) {
             return from.findPathTo(to, options);
         }
 
@@ -105,13 +106,19 @@ export class PathfindingCache {
         }
     }
 
-    private static getCacheKey(from: RoomPosition, to: RoomPosition, range: number, options?: FindPathOpts): string {
+    private static getCacheKey(
+        from: RoomPosition,
+        to: RoomPosition,
+        range: number,
+        options?: FindPathOpts & { favorExistingRoads?: boolean },
+    ): string {
         let key = `${from.roomName}:${from.x},${from.y}_${to.roomName}:${to.x},${to.y}_r${range}`;
         if (options) {
             if (options.ignoreCreeps) key += "_ic";
             if (options.ignoreDestructibleStructures) key += "_ids";
             if (options.swampCost) key += `_sc${options.swampCost}`;
             if (options.plainCost) key += `_pc${options.plainCost}`;
+            if (options.favorExistingRoads) key += "_fer";
         }
         return key;
     }

@@ -38,6 +38,21 @@ export class InfrastructureSystem extends BaseSystemImpl {
         super.run();
         this.checkRepairNeeds();
         this.colony.roadManager.updateRoadStats();
+        this.checkRoadPlanning();
+    }
+
+    private checkRoadPlanning(): void {
+        const info = this.systemInfo;
+        const rcl = this.colony.getMainRoom()?.controller?.level || 0;
+
+        if (typeof info.lastRclPlanned === "undefined") {
+            info.lastRclPlanned = 0;
+        }
+
+        if (rcl > info.lastRclPlanned) {
+            this.colony.roadManager.planColonyRoads();
+            info.lastRclPlanned = rcl;
+        }
     }
 
     private checkRepairNeeds(): void {
