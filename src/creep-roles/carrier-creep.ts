@@ -82,13 +82,13 @@ export class CarrierCreep extends CreepRunner {
             memory.working = true;
         }
 
-        // Logic check: if we are not working (gathering), but there's nothing left to gather 
+        // Logic check: if we are not working (gathering), but there's nothing left to gather
         // AND we have some energy, let's just go deliver it (to prevent idling).
         if (!memory.working && creep.store[RESOURCE_ENERGY] > 0) {
             const container = creep.room.find(FIND_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(source.pos, 1),
             })[0] as StructureContainer;
-            
+
             const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
                 filter: r => r.resourceType === RESOURCE_ENERGY && r.pos.inRangeTo(source.pos, 3),
             });
@@ -120,10 +120,20 @@ export class CarrierCreep extends CreepRunner {
         if (pullResult === OK) {
             // Swap Logic
             if (this.creep.pos.isEqualTo(targetPos)) {
+                // We are at the target, but miner is adjacent. Swap with miner.
+                // Clear path to allow manual move
+                if (this.creep.memory.movementSystem) {
+                    delete this.creep.memory.movementSystem.path;
+                }
                 this.creep.move(this.creep.pos.getDirectionTo(miner));
             } else {
                 // Move carrier to target (pulling miner behind)
                 if (this.creep.pos.isNearTo(targetPos)) {
+                    // One step away from target. Pull miner and step onto target.
+                    // Clear path to allow manual move
+                    if (this.creep.memory.movementSystem) {
+                        delete this.creep.memory.movementSystem.path;
+                    }
                     this.creep.move(this.creep.pos.getDirectionTo(targetPos));
                 } else {
                     this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
@@ -256,41 +266,42 @@ export class CarrierCreepSpawner extends CreepSpawnerImpl {
     private createProfile(energyCap: number, colonySource: ColonySource, colony: ColonyManager, priority: number) {
         // Body: Heavy CARRY, good MOVE.
         // Ratio: 1 CARRY : 1 MOVE for Roads (full speed).
-        // If we want to pull miner, we need MOVE parts.
-
-        // Simple Logic: Half CARRY, Half MOVE.
-        const totalParts = Math.floor(energyCap / 100);
-        let parts = Math.min(totalParts, 20); // Cap at 20 (1000 energy) for now
-        if (parts < 2) parts = 2; // Min body
-
-        const body: BodyPartConstant[] = [];
-        for (let i = 0; i < parts; i++) {
-            body.push(CARRY);
-            body.push(MOVE);
-        }
 
         const source = Game.getObjectById<Source>(colonySource.sourceId);
         const dist = source ? EnergyCalculator.calculateTravelTime(colony.getMainSpawn().pos, source.pos) : 25;
 
-        // Desired Amount?
-        // 1 Carrier per source is usually enough if large enough.
-        // If source is far or carrier is small, might need 2.
         // Throughput needed: 10 energy/tick.
-        // Carrier capacity: parts * 50.
-        // Round trip: (Dist * 1 * 2) + 2.
-        // Capacity / RoundTrip >= 10?
-        // Capacity >= 10 * RoundTrip.
+        // Round trip: (Dist * 2) + 5 buffer.
+        // Buffer 1.2x for extra distance/idle/congestion
+        const roundTrip = dist * 2 + 5;
+        const requiredCapacity = 10 * roundTrip * 1.2;
 
-        const roundTrip = dist * 2 + 5; // buffer
-        const requiredCapacity = 10 * roundTrip;
-        const oneCarrierCapacity = parts * 50;
+        // Max possible parts based on energyCap
+        // 1 CARRY (50) + 1 MOVE (50) = 100 energy per 2 parts
+        const maxParts = Math.floor(energyCap / 100);
+        const maxCapacityPossible = maxParts * 50;
 
-        const desiredAmount = Math.ceil(requiredCapacity / oneCarrierCapacity);
+        // Determine how many carriers we need. Favor fewer larger ones.
+        const desiredAmount = Math.ceil(requiredCapacity / Math.min(maxCapacityPossible, 1000)); // Cap single carrier capacity at 1000 (20 parts)
+
+        // Calculate capacity needed per carrier
+        const capacityPerCarrier = Math.ceil(requiredCapacity / desiredAmount);
+        let carryParts = Math.ceil(capacityPerCarrier / 50);
+
+        // Ensure we don't exceed maxParts
+        if (carryParts > maxParts) carryParts = maxParts;
+        if (carryParts < 1) carryParts = 1;
+
+        const body: BodyPartConstant[] = [];
+        for (let i = 0; i < carryParts; i++) {
+            body.push(CARRY);
+            body.push(MOVE);
+        }
 
         const memory: AddCreepToQueueOptions = {
             workTargetId: colonySource.sourceId,
             workAmount: 0,
-            averageEnergyConsumptionProductionPerTick: 0, // It transfers, doesn't produce
+            averageEnergyConsumptionProductionPerTick: 0,
             workDuration: 100,
             role: CreepRole.CARRIER,
         };

@@ -33,8 +33,9 @@ export class CreepManagement {
             const colony = new ColonyManagerImpl(colonyData);
             creepRunner.setColony(colony);
 
-            if (colony.creeps && creep.name in colony.creeps) {
-                colony.creeps[creep.name].id = creep.id;
+            const colonyCreepData = colony.getCreepData(creep.name);
+            if (colonyCreepData) {
+                colonyCreepData.id = creep.id;
             }
         }
 

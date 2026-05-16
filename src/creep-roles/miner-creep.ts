@@ -61,10 +61,10 @@ export class MinerCreep extends CreepRunner {
                         filter: c =>
                             c.memory.role === CreepRole.CARRIER && c.memory.workTargetId === memory.workTargetId,
                     });
-                    if (carrier) {
+                    if (carrier && !atPosition) {
                         // We must call move(pullingCreep) to accept a pull.
                         creep.move(carrier);
-                    } else {
+                    } else if (!carrier) {
                         creep.say("No Carrier!");
                     }
                 } else {

@@ -395,12 +395,8 @@ export class ColonyManagerImpl implements ColonyManager {
     public getCreeps(): Creep[] {
         const creeps: Creep[] = [];
         for (const name in this.colonyInfo.creeps) {
-            const creepData = this.colonyInfo.creeps[name];
-            if (!creepData.id) {
-                continue;
-            }
-            const creep = Game.getObjectById<Creep>(creepData.id);
-            if (creep) {
+            const creep = Game.creeps[name];
+            if (creep && creep.memory.colonyId === this.colonyInfo.id) {
                 creeps.push(creep);
             }
         }
