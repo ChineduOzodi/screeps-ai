@@ -194,7 +194,7 @@ describe("ConstructionManager.planExtensions", () => {
             // Check if this position is in the first cluster (center 25, 21)
             const dx = Math.abs(this.x - 25);
             const dy = Math.abs(this.y - 21);
-            if (dx <= 1 && dy <= 1 && (dx + dy <= 1) && type === "structures") {
+            if (dx <= 1 && dy <= 1 && dx + dy <= 1 && type === "structures") {
                 return [{ structureType: "extension" }];
             }
             return [];
