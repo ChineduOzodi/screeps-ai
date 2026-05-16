@@ -3,6 +3,8 @@ interface RoomMemory {
     constructionProjects: Record<string, ConstructionProject>;
     repairStats?: {
         totalNeeded: number;
+        maintenanceHits: number;
+        fortificationHits: number;
         lastCheck: number;
     };
 }

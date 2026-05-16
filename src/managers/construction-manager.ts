@@ -1,5 +1,6 @@
 import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
+import { RepairUtils } from "../utils/repair-utils";
 
 declare global {
     interface Game {
@@ -18,6 +19,8 @@ export interface ProjectStructure {
 
 export interface RepairStats {
     totalNeeded: number;
+    maintenanceHits: number;
+    fortificationHits: number;
     lastCheck: number;
 }
 
@@ -260,28 +263,40 @@ export class ConstructionManager {
     public getRepairStats(): RepairStats {
         const room = this.colony.getMainRoom();
         if (!room || !room.memory) {
-            return { totalNeeded: 0, lastCheck: Game.time };
+            return { totalNeeded: 0, maintenanceHits: 0, fortificationHits: 0, lastCheck: Game.time };
         }
 
         if (!room.memory.repairStats) {
             room.memory.repairStats = {
                 totalNeeded: 0,
+                maintenanceHits: 0,
+                fortificationHits: 0,
                 lastCheck: 0,
             };
         }
 
         const stats = room.memory.repairStats;
         if (Game.time - stats.lastCheck > 50) {
-            const targets = room.find(FIND_STRUCTURES, {
-                filter: object => object.hits < object.hitsMax,
-            });
+            const targets = room.find(FIND_STRUCTURES);
+            const rcl = room.controller?.level || 0;
 
             let totalNeeded = 0;
+            let fortificationHits = 0;
+
             for (const target of targets) {
-                totalNeeded += target.hitsMax - target.hits;
+                const targetHits = RepairUtils.getStructureTargetHits(target, rcl);
+                if (target.hits < targetHits) {
+                    const diff = targetHits - target.hits;
+                    totalNeeded += diff;
+                    if (target.structureType === STRUCTURE_WALL || target.structureType === STRUCTURE_RAMPART) {
+                        fortificationHits += diff;
+                    }
+                }
             }
 
             stats.totalNeeded = totalNeeded;
+            stats.maintenanceHits = RepairUtils.calculateMaintenanceNeed(room);
+            stats.fortificationHits = fortificationHits;
             stats.lastCheck = Game.time;
         }
 

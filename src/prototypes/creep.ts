@@ -1,5 +1,7 @@
 import { Movement } from "infrastructure/movement";
 import { ColonyManager, CreepProfiles, CreepRole, CreepStatus } from "./types";
+import { RepairUtils } from "utils/repair-utils";
+import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "constants/repair-constants";
 
 export abstract class CreepRunner {
     public creep: Creep;
@@ -91,7 +93,62 @@ export abstract class CreepRunner {
             return false;
         }
         const t: AnyStructure = target as any;
-        return typeof t.hits !== "undefined" && typeof t.hitsMax !== "undefined" && t.hits !== t.hitsMax;
+        if (typeof t.hits === "undefined") return false;
+
+        const rcl = t.room?.controller?.level || 0;
+        const targetHits = RepairUtils.getStructureTargetHits(t, rcl);
+
+        return t.hits < targetHits;
+    }
+
+    protected findTieredRepairTarget(): AnyStructure | null {
+        const room = this.creep.room;
+        const rcl = room.controller?.level || 0;
+
+        // Tier 1: Emergency (Non-wall/rampart < 20% or roads/containers < 1000)
+        const emergency = room.find(FIND_STRUCTURES, {
+            filter: s => {
+                if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) return false;
+                return s.hits < s.hitsMax * REPAIR_THRESHOLD_EMERGENCY || s.hits < REPAIR_THRESHOLD_DECAY_PREVENTION;
+            },
+        });
+        if (emergency.length > 0) return emergency.sort((a, b) => a.hits - b.hits)[0];
+
+        // Tier 2: Decay Prevention (Walls/Ramparts < 1000)
+        const decayPrevention = room.find(FIND_STRUCTURES, {
+            filter: s => {
+                return (
+                    (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) &&
+                    s.hits < REPAIR_THRESHOLD_DECAY_PREVENTION
+                );
+            },
+        });
+        if (decayPrevention.length > 0) return decayPrevention.sort((a, b) => a.hits - b.hits)[0];
+
+        // Tier 3: Maintenance (General Infrastructure < 100%)
+        const maintenance = room.find(FIND_STRUCTURES, {
+            filter: s => {
+                if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) return false;
+                return s.hits < s.hitsMax;
+            },
+        });
+        if (maintenance.length > 0) return this.creep.pos.findClosestByPath(maintenance);
+
+        // Tier 4: Fortification (Walls/Ramparts < Target HP) - Sorted by Hits for UNIFORMITY
+        const fortification = room.find(FIND_STRUCTURES, {
+            filter: s => {
+                const targetHits = RepairUtils.getStructureTargetHits(s, rcl);
+                return (
+                    (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) && s.hits < targetHits
+                );
+            },
+        });
+        if (fortification.length > 0) {
+            // Sort by absolute hits to ensure the weakest parts are reinforced first (uniformity)
+            return fortification.sort((a, b) => a.hits - b.hits)[0];
+        }
+
+        return null;
     }
 
     protected targetIsStructureExtensionFullEnergy(target: TargetType | null): boolean {

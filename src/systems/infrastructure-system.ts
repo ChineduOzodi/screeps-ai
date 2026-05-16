@@ -3,6 +3,7 @@ import { CreepSpawner } from "prototypes/CreepSpawner";
 
 import { BaseSystemImpl } from "./base-system";
 import { RepairerCreepSpawner } from "creep-roles/repairer-creep";
+import { RepairUtils } from "utils/repair-utils";
 
 import { Action, Goal, WorldState } from "goap/types";
 
@@ -61,11 +62,23 @@ export class InfrastructureSystem extends BaseSystemImpl {
         }
 
         const stats = this.colony.constructionManager.getRepairStats();
+        const rcl = this.room?.controller?.level || 0;
+        const storageTarget = RepairUtils.getStorageTarget(rcl);
+        const currentStorage = this.colony.getPrimaryStorage()?.store[RESOURCE_ENERGY] || 0;
+
+        let weight = 0;
+
         if (stats.totalNeeded > 0) {
-            this.energyUsageTracking.requestedEnergyUsageWeight = 0.25;
-        } else {
-            this.energyUsageTracking.requestedEnergyUsageWeight = 0;
+            // Maintenance budget (Base)
+            weight = 0.1;
+
+            // Fortification budget (Bonus)
+            if (stats.fortificationHits > 0 && currentStorage > storageTarget) {
+                weight += 0.15;
+            }
         }
+
+        this.energyUsageTracking.requestedEnergyUsageWeight = weight;
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
