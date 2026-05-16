@@ -46,7 +46,20 @@ export class ConstructionManager {
         if (Game.time % 10 === 0) {
             this.rebuildRuins();
             this.planExtensions();
+            this.planStorage();
         }
+    }
+
+    private planStorage(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || room.controller.level < 4) return;
+
+        // Only 1 storage per room
+        if (this.hasPlannedStructures(STRUCTURE_STORAGE, 1)) return;
+
+        const structures = ConstructionUtils.getFirstStorageStructures(spawn);
+        this.placeConstructionSites(structures);
     }
 
     private planExtensions(): void {

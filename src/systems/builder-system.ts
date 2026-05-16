@@ -2,7 +2,7 @@ import { BaseSystemImpl } from "./base-system";
 import { BuilderCreepSpawner } from "creep-roles/builder-creep";
 import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
-import { BuildContainerAction, BuildTowerAction } from "goap/actions/infrastructure-actions";
+import { BuildTowerAction } from "goap/actions/infrastructure-actions";
 import { Objective } from "objectives/types";
 
 export class BuilderSystem extends BaseSystemImpl {
@@ -69,17 +69,6 @@ export class BuilderSystem extends BaseSystemImpl {
         const rcl = room.controller?.level || 0;
 
         const objectives: Objective[] = [];
-
-        // First Container
-        objectives.push({
-            name: "Build First Container",
-            priority: 50,
-            isReady: () => rcl >= 1,
-            isComplete: () => this.colony.constructionManager.hasPlannedStructures(STRUCTURE_CONTAINER, 1),
-            execute: () => {
-                new BuildContainerAction(this.colony).execute();
-            },
-        });
 
         // Roads
         objectives.push({

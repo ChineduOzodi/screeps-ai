@@ -151,13 +151,13 @@ export class ConstructionUtils {
         }));
     }
 
-    public static getFirstContainerStructures(spawn: StructureSpawn): ProjectStructure[] {
+    public static getFirstStorageStructures(spawn: StructureSpawn): ProjectStructure[] {
         return [
             {
                 x: spawn.pos.x + 2,
                 y: spawn.pos.y,
                 roomName: spawn.pos.roomName,
-                type: STRUCTURE_CONTAINER,
+                type: STRUCTURE_STORAGE,
             },
         ];
     }
