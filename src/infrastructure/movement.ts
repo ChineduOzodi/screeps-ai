@@ -213,7 +213,6 @@ export class Movement {
             return;
         }
 
-        console.log(`[Movement] moveToWithReservation: ${creep.name} to target`);
         PathfindingUtils.unreservePosition(creep, creep.room, creep.pos);
         const pathInfo = PathfindingUtils.findPathWithReservation(creep, target, range, workDuration, ignoreRoles);
 

@@ -13,7 +13,6 @@ export class MinerCreep extends CreepRunner {
 
     public override onRun(): void {
         const { creep, memory } = this;
-        console.log(`[MinerCreep] onRun: ${creep.name} working: ${memory.working}`);
 
         if (!memory.workTargetId) {
             throw new Error(`creep does not have sourceId in memory: ${creep.id}`);

@@ -40,7 +40,6 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public run(): void {
-        console.log(`[Colony] starting run for ${this.colonyInfo.id}`);
         const mainRoom = this.getMainRoom();
         if (!mainRoom) {
             console.log(`No vision of colony room ${this.colonyInfo.id}, removing from memory...`);
