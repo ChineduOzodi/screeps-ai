@@ -27,41 +27,8 @@ export class ConstructionUtils {
         return true;
     }
 
-    public static findSuitableExtensionClusterPosition(spawn: StructureSpawn, room: Room): RoomPosition | null {
-        const spawnPos = spawn.pos;
-        const roomName = room.name;
-
-        const extensionOffsets = [
-            { x: 0, y: 0 },
-            { x: 0, y: -1 },
-            { x: 0, y: 1 },
-            { x: -1, y: 0 },
-            { x: 1, y: 0 },
-        ];
-        const roadOffsets = [
-            { x: -1, y: -1 },
-            { x: 1, y: -1 },
-            { x: -1, y: 1 },
-            { x: 1, y: 1 },
-            { x: 0, y: -2 },
-            { x: 0, y: 2 },
-            { x: -2, y: 0 },
-            { x: 2, y: 0 },
-        ];
-
-        const isClusterValidAtCenter = (center: RoomPosition): boolean => {
-            for (const offset of extensionOffsets) {
-                const extPos = new RoomPosition(center.x + offset.x, center.y + offset.y, roomName);
-                if (!ConstructionUtils.isTileClearForStructure(extPos, room)) return false;
-            }
-            for (const offset of roadOffsets) {
-                const roadPos = new RoomPosition(center.x + offset.x, center.y + offset.y, roomName);
-                if (!ConstructionUtils.isTileClearForStructure(roadPos, room, true)) return false;
-            }
-            return true;
-        };
-
-        const spotCandidates = [
+    public static getExtensionClusterCandidates(): { dx: number; dy: number }[] {
+        return [
             { dx: 0, dy: -4 },
             { dx: -2, dy: -6 },
             { dx: 2, dy: -6 },
@@ -75,6 +42,51 @@ export class ConstructionUtils {
             { dx: 2, dy: 6 },
             { dx: 0, dy: 8 },
         ];
+    }
+
+    public static getExtensionClusterOffsets(): { x: number; y: number }[] {
+        return [
+            { x: 0, y: 0 },
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: 0 },
+        ];
+    }
+
+    public static getExtensionRoadOffsets(): { x: number; y: number }[] {
+        return [
+            { x: -1, y: -1 },
+            { x: 1, y: -1 },
+            { x: -1, y: 1 },
+            { x: 1, y: 1 },
+            { x: 0, y: -2 },
+            { x: 0, y: 2 },
+            { x: -2, y: 0 },
+            { x: 2, y: 0 },
+        ];
+    }
+
+    public static findSuitableExtensionClusterPosition(spawn: StructureSpawn, room: Room): RoomPosition | null {
+        const spawnPos = spawn.pos;
+        const roomName = room.name;
+
+        const extensionOffsets = ConstructionUtils.getExtensionClusterOffsets();
+        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
+
+        const isClusterValidAtCenter = (center: RoomPosition): boolean => {
+            for (const offset of extensionOffsets) {
+                const extPos = new RoomPosition(center.x + offset.x, center.y + offset.y, roomName);
+                if (!ConstructionUtils.isTileClearForStructure(extPos, room)) return false;
+            }
+            for (const offset of roadOffsets) {
+                const roadPos = new RoomPosition(center.x + offset.x, center.y + offset.y, roomName);
+                if (!ConstructionUtils.isTileClearForStructure(roadPos, room, true)) return false;
+            }
+            return true;
+        };
+
+        const spotCandidates = ConstructionUtils.getExtensionClusterCandidates();
 
         // Check primary spots
         for (const pDelta of spotCandidates) {
@@ -97,23 +109,8 @@ export class ConstructionUtils {
     public static getExtensionClusterStructures(centerPos: RoomPosition, room: Room): ProjectStructure[] {
         const roomName = room.name;
         const structures: ProjectStructure[] = [];
-        const extensionOffsets = [
-            { x: 0, y: 0 },
-            { x: 0, y: -1 },
-            { x: 0, y: 1 },
-            { x: -1, y: 0 },
-            { x: 1, y: 0 },
-        ];
-        const roadOffsets = [
-            { x: -1, y: -1 },
-            { x: 1, y: -1 },
-            { x: -1, y: 1 },
-            { x: 1, y: 1 },
-            { x: 0, y: -2 },
-            { x: 0, y: 2 },
-            { x: -2, y: 0 },
-            { x: 2, y: 0 },
-        ];
+        const extensionOffsets = ConstructionUtils.getExtensionClusterOffsets();
+        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
 
         for (const offset of extensionOffsets) {
             structures.push({

@@ -1,4 +1,5 @@
 import { ColonyManager } from "../prototypes/types";
+import { ConstructionUtils } from "../utils/construction-utils";
 
 declare global {
     interface Game {
@@ -44,7 +45,126 @@ export class ConstructionManager {
         // Rebuild ruins we "own" (or are in our controlled/reserved rooms), except roads.
         if (Game.time % 10 === 0) {
             this.rebuildRuins();
+            this.planExtensions();
         }
+    }
+
+    private planExtensions(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller) return;
+
+        const rcl = room.controller.level;
+        const maxExtensions = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][rcl] || 0;
+
+        // Count existing extensions and construction sites
+        const currentCount =
+            room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_EXTENSION,
+            }).length +
+            room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_EXTENSION,
+            }).length;
+
+        if (currentCount >= maxExtensions) return;
+
+        let needed = maxExtensions - currentCount;
+        const candidates = ConstructionUtils.getExtensionClusterCandidates();
+        const extOffsets = ConstructionUtils.getExtensionClusterOffsets();
+        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
+
+        for (const delta of candidates) {
+            const centerX = spawn.pos.x + delta.dx;
+            const centerY = spawn.pos.y + delta.dy;
+            if (centerX < 2 || centerX > 47 || centerY < 2 || centerY > 47) continue;
+
+            if (!this.isClusterPatternPossible(room, centerX, centerY)) continue;
+
+            let placedInCluster = 0;
+            // Count already placed extensions in this cluster to avoid road-only clusters
+            let existingInCluster = 0;
+
+            // Try to place extensions in this cluster
+            for (const offset of extOffsets) {
+                const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
+
+                // Check if an extension already exists or is planned here
+                const existingExt = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_EXTENSION);
+                const existingSite = pos
+                    .lookFor(LOOK_CONSTRUCTION_SITES)
+                    .find(s => s.structureType === STRUCTURE_EXTENSION);
+
+                if (existingExt || existingSite) {
+                    existingInCluster++;
+                    continue;
+                }
+
+                if (needed > 0 && ConstructionUtils.isTileClearForStructure(pos, room, true)) {
+                    // Destroy road or remove road site if blocking
+                    const road = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
+                    if (road) {
+                        road.destroy();
+                    }
+                    const roadSite = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_ROAD);
+                    if (roadSite) {
+                        roadSite.remove();
+                    }
+
+                    const result = room.createConstructionSite(pos, STRUCTURE_EXTENSION);
+                    if (result === OK) {
+                        needed--;
+                        placedInCluster++;
+                    }
+                }
+            }
+
+            // Also place roads for this cluster if we have ANY extension here (existing or just placed)
+            if (placedInCluster > 0 || existingInCluster > 0) {
+                for (const offset of roadOffsets) {
+                    const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
+                    if (ConstructionUtils.isTileClearForStructure(pos, room, true)) {
+                        room.createConstructionSite(pos, STRUCTURE_ROAD);
+                    }
+                }
+            }
+
+            if (needed <= 0) break;
+        }
+    }
+
+    private isClusterPatternPossible(room: Room, centerX: number, centerY: number): boolean {
+        const extOffsets = ConstructionUtils.getExtensionClusterOffsets();
+        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
+
+        for (const offset of extOffsets) {
+            const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
+            const structures = pos.lookFor(LOOK_STRUCTURES);
+            const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+
+            const hasExtension = structures.some(s => s.structureType === STRUCTURE_EXTENSION);
+            const hasExtensionSite = sites.some(s => s.structureType === STRUCTURE_EXTENSION);
+
+            if (!hasExtension && !hasExtensionSite) {
+                // If no extension, it MUST be clear for a new one (ignoring roads)
+                if (!ConstructionUtils.isTileClearForStructure(pos, room, true)) return false;
+            }
+        }
+
+        for (const offset of roadOffsets) {
+            const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
+            const structures = pos.lookFor(LOOK_STRUCTURES);
+            const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+
+            const hasRoad = structures.some(s => s.structureType === STRUCTURE_ROAD);
+            const hasRoadSite = sites.some(s => s.structureType === STRUCTURE_ROAD);
+
+            if (!hasRoad && !hasRoadSite) {
+                // If no road, it MUST be clear for a new one
+                if (!ConstructionUtils.isTileClearForStructure(pos, room, true)) return false;
+            }
+        }
+
+        return true;
     }
 
     private rebuildRuins(): void {

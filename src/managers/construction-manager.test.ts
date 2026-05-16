@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import * as sinon from "sinon";
+import sinon from "sinon";
 import { Game, Memory } from "../../test/utils/mock";
 import { ConstructionManager } from "./construction-manager";
 import { loop } from "../main";
@@ -59,10 +59,11 @@ describe("Construction Manager", () => {
                 return [];
             }),
         };
-        global.Game.rooms["W1N1"] = roomMock;
+        global.Game.rooms.W1N1 = roomMock;
 
         colonyMock = {
             getMainRoom: () => roomMock,
+            getMainSpawn: () => ({ pos: new MockRoomPosition(25, 25, "W1N1") }),
             getCreeps: () => [],
             getSpawnQueue: () => [],
         };
@@ -78,13 +79,13 @@ describe("Construction Manager", () => {
 
     it("placeConstructionSites should call createConstructionSite for missing structures", () => {
         const structures = [{ x: 10, y: 10, roomName: "W1N1", type: STRUCTURE_EXTENSION }];
-        
+
         // Mock lookFor to return empty (meaning structure/site missing)
         const lookForStub = sinon.stub(MockRoomPosition.prototype, "lookFor").returns([]);
 
         constructionManager.placeConstructionSites(structures);
         assert.isTrue(roomMock.createConstructionSite.calledOnce);
-        
+
         lookForStub.restore();
     });
 
@@ -97,9 +98,9 @@ describe("Construction Manager", () => {
             {
                 structure: { structureType: STRUCTURE_ROAD },
                 pos: new MockRoomPosition(11, 11, "W1N1"),
-            }
+            },
         ];
-        
+
         // Mock lookFor for ruins
         const lookForStub = sinon.stub(MockRoomPosition.prototype, "lookFor").returns([]);
 
@@ -108,13 +109,13 @@ describe("Construction Manager", () => {
         // Should be called for extension, but not for road
         assert.isTrue(roomMock.createConstructionSite.calledWith(sinon.match.any, STRUCTURE_EXTENSION));
         assert.isFalse(roomMock.createConstructionSite.calledWith(sinon.match.any, STRUCTURE_ROAD));
-        
+
         lookForStub.restore();
     });
 
     it("main loop should cleanup constructionProjects memory", () => {
-        ((global as any).Memory.rooms as any)["W1N1"] = { constructionProjects: {} };
+        ((global as any).Memory.rooms as any).W1N1 = { constructionProjects: {} };
         loop();
-        assert.isUndefined((((global as any).Memory.rooms as any)["W1N1"] as any).constructionProjects);
+        assert.isUndefined((((global as any).Memory.rooms as any).W1N1 as any).constructionProjects);
     });
 });

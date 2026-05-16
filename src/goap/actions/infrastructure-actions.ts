@@ -3,66 +3,6 @@ import { Action, WorldState } from "../types";
 import { ColonyManager } from "../../prototypes/types";
 import { ConstructionUtils } from "../../utils/construction-utils";
 
-export class BuildExtensionsAction implements Action {
-    name: string;
-    cost = 10;
-
-    private colony: ColonyManager;
-    private targetCount: number;
-
-    constructor(colony: ColonyManager, targetCount: number) {
-        this.colony = colony;
-        this.targetCount = targetCount;
-        this.name = `Build Extensions ${targetCount}`;
-    }
-
-    private getRequiredRCL(): number {
-        if (this.targetCount <= 5) return 2;
-        if (this.targetCount <= 10) return 3;
-        return 4; // etc
-    }
-
-    get preconditions(): WorldState {
-        return {
-            rcl: this.getRequiredRCL(),
-        };
-    }
-
-    get effects(): WorldState {
-        return {
-            extensions: this.targetCount,
-        };
-    }
-
-    getCost() {
-        return this.cost;
-    }
-
-    isValid() {
-        return (this.colony.getMainRoom().controller?.level || 0) >= this.getRequiredRCL();
-    }
-
-    execute(): boolean {
-        this.colony.systems.builder.setEnergyBudgetWeight(1.0);
-        const room = this.colony.getMainRoom();
-        const spawn = this.colony.getMainSpawn();
-        if (!room || !spawn) return true;
-
-        // If we have enough actual structures or sites, we are definitely done with planning.
-        if (this.colony.constructionManager.hasPlannedStructures(STRUCTURE_EXTENSION, this.targetCount)) {
-            return true;
-        }
-
-        const center = ConstructionUtils.findSuitableExtensionClusterPosition(spawn, room);
-        if (center) {
-            const structures = ConstructionUtils.getExtensionClusterStructures(center, room);
-            this.colony.constructionManager.placeConstructionSites(structures);
-        }
-
-        return true;
-    }
-}
-
 export class BuildRoadsAction implements Action {
     name = "Build Roads";
     cost = 5;
