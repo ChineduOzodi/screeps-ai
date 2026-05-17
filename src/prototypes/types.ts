@@ -41,6 +41,7 @@ export enum CreepRole {
     CARRIER = "carrier",
     SCOUT = "scout",
     RESERVER = "reserver",
+    EXTENSION_FILLER = "extension_filler",
 }
 
 export interface CreepProfiles {

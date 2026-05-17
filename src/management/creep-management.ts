@@ -8,6 +8,7 @@ import { HarvesterCreep } from "creep-roles/harvester-creep";
 import { MinerCreep } from "creep-roles/miner-creep";
 import { Movement } from "infrastructure/movement";
 import { CarrierCreep } from "creep-roles/carrier-creep";
+import { ExtensionFillerCreep } from "creep-roles/extension-filler-creep";
 import { RepairerCreep } from "./../creep-roles/repairer-creep";
 import { UpgraderCreep } from "creep-roles/upgrader-creep";
 import { ScoutCreep } from "creep-roles/scout-creep";
@@ -63,6 +64,8 @@ export class CreepManagement {
                 return new MinerCreep(creep);
             case CreepRole.CARRIER:
                 return new CarrierCreep(creep);
+            case CreepRole.EXTENSION_FILLER:
+                return new ExtensionFillerCreep(creep);
             case CreepRole.SCOUT:
                 return new ScoutCreep(creep);
             case CreepRole.RESERVER:

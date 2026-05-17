@@ -4,6 +4,7 @@ import { CreepSpawner } from "prototypes/CreepSpawner";
 import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
 import { MinerCreepSpawner } from "creep-roles/miner-creep";
 import { CarrierCreepSpawner } from "creep-roles/carrier-creep";
+import { ExtensionFillerCreepSpawner } from "creep-roles/extension-filler-creep";
 import { ReserverCreepSpawner } from "creep-roles/reserver-creep";
 import { ScoutCreepSpawner } from "creep-roles/scout-creep";
 
@@ -259,7 +260,12 @@ export class EnergySystem extends BaseSystemImpl {
     public override getCreepSpawners(): CreepSpawner[] {
         const spawners: CreepSpawner[] = [new ScoutCreepSpawner()];
         if (this.shouldUseMiners()) {
-            spawners.push(new MinerCreepSpawner(), new CarrierCreepSpawner(), new ReserverCreepSpawner());
+            spawners.push(
+                new MinerCreepSpawner(),
+                new CarrierCreepSpawner(),
+                new ExtensionFillerCreepSpawner(),
+                new ReserverCreepSpawner(),
+            );
         } else {
             spawners.push(new HarvesterCreepSpawner());
         }
@@ -267,7 +273,7 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
-        return [CreepRole.HARVESTER, CreepRole.MINER, CreepRole.CARRIER];
+        return [CreepRole.HARVESTER, CreepRole.MINER, CreepRole.CARRIER, CreepRole.EXTENSION_FILLER];
     }
 
     public noEnergyCollectors(): boolean {

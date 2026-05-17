@@ -3,6 +3,7 @@ import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
+import { STORAGE_TARGETS } from "constants/repair-constants";
 
 export class CarrierCreep extends CreepRunner {
     public constructor(creep: Creep) {
@@ -113,8 +114,8 @@ export class CarrierCreep extends CreepRunner {
         if (this.creep.room.name !== miner.room.name) {
             // Desync: Move to boundary or wait for miner to cross
             if (this.creep.pos.isNearTo(miner.pos) || this.creep.pos.isEqualTo(miner.pos)) {
-                 // Handshake: Move deeper into the room to pull miner in
-                 this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
+                // Handshake: Move deeper into the room to pull miner in
+                this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
             } else {
                 // Wait near the entrance for the miner
                 const entrancePos = new RoomPosition(25, 25, this.creep.room.name);
@@ -144,8 +145,12 @@ export class CarrierCreep extends CreepRunner {
                 this.creep.move(this.creep.pos.getDirectionTo(miner));
             } else {
                 // Check if we are about to cross a boundary
-                const isOnExit = this.creep.pos.x === 0 || this.creep.pos.x === 49 || this.creep.pos.y === 0 || this.creep.pos.y === 49;
-                
+                const isOnExit =
+                    this.creep.pos.x === 0 ||
+                    this.creep.pos.x === 49 ||
+                    this.creep.pos.y === 0 ||
+                    this.creep.pos.y === 49;
+
                 if (isOnExit) {
                     // Move into the room, miner should follow using its MOVE part next tick
                     this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
@@ -215,7 +220,47 @@ export class CarrierCreep extends CreepRunner {
     private deliverEnergy() {
         const { creep } = this;
         const colony = this.getColony();
+        const mainRoom = colony?.getMainRoom();
+        const storage = mainRoom?.storage;
 
+        if (storage && storage.isActive()) {
+            // Safety: If no ALIVE EXTENSION_FILLER is present, Carrier must help fill extensions/spawns first
+            // to ensure we can spawn the filler. colony.getCreepCount includes queued creeps, so we check alive creeps specifically.
+            const aliveFillerCount = colony ? colony.getCreeps().filter(c => c.memory.role === CreepRole.EXTENSION_FILLER).length : 1;
+            if (aliveFillerCount === 0) {
+                const spawnExtension = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+                    filter: s =>
+                        (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
+                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+                });
+                if (spawnExtension) {
+                    if (this.transfer(spawnExtension, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        this.moveToWithReservation(spawnExtension, 5);
+                    }
+                    return;
+                }
+            }
+
+            // Storage exists: Priority 1 is Storage
+            if (this.transfer(storage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.moveToWithReservation(storage, 5);
+            }
+
+            // If we still have energy (e.g. storage full or transfer failed for other reasons)
+            // AND storage is above threshold, upgrade controller.
+            if (creep.store[RESOURCE_ENERGY] > 0) {
+                const rcl = mainRoom?.controller?.level || 0;
+                const threshold = STORAGE_TARGETS[rcl] || 0;
+                if (storage.store[RESOURCE_ENERGY] >= threshold && mainRoom?.controller) {
+                    if (this.upgradeController(mainRoom.controller) === ERR_NOT_IN_RANGE) {
+                        this.moveToWithReservation(mainRoom.controller, 5, 3);
+                    }
+                }
+            }
+            return;
+        }
+
+        // NO Storage: Fallback to current logic (Spawns/Extensions -> PrimaryStorage (Containers) -> Towers -> Upgrade)
         // Priority 1: Spawns/Extensions (Local Room)
         let target: Structure | null = creep.pos.findClosestByPath(FIND_STRUCTURES, {
             filter: s =>
@@ -223,7 +268,7 @@ export class CarrierCreep extends CreepRunner {
                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
         });
 
-        // Priority 2: Primary Storage (Colony Wide)
+        // Priority 2: Primary Storage (Colony Wide - likely a container)
         if (!target && colony) {
             const primaryStorage = colony.getPrimaryStorage();
             if (primaryStorage && primaryStorage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
