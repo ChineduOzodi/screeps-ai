@@ -110,6 +110,36 @@ export class BuilderSystem extends BaseSystemImpl {
                 sites.push(site);
             }
         }
+
+        const priority: Partial<Record<StructureConstant, number>> = {
+            [STRUCTURE_TOWER]: 100,
+            [STRUCTURE_EXTENSION]: 90,
+            [STRUCTURE_SPAWN]: 80,
+            [STRUCTURE_STORAGE]: 70,
+            [STRUCTURE_TERMINAL]: 70,
+            [STRUCTURE_CONTAINER]: 60,
+            [STRUCTURE_LINK]: 60,
+            [STRUCTURE_LAB]: 50,
+            [STRUCTURE_FACTORY]: 50,
+            [STRUCTURE_EXTRACTOR]: 40,
+            [STRUCTURE_NUKER]: 30,
+            [STRUCTURE_OBSERVER]: 30,
+            [STRUCTURE_POWER_SPAWN]: 30,
+            [STRUCTURE_WALL]: 20,
+            [STRUCTURE_RAMPART]: 20,
+            [STRUCTURE_ROAD]: 10,
+        };
+
+        sites.sort((a, b) => {
+            const priorityA = priority[a.structureType] || 0;
+            const priorityB = priority[b.structureType] || 0;
+            if (priorityA !== priorityB) {
+                return priorityB - priorityA;
+            }
+            // Secondary sort by progress
+            return b.progress - a.progress;
+        });
+
         this.colony.colonyInfo.builderManagement.buildQueue = sites.map(s => s.id);
     }
 }

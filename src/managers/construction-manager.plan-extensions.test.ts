@@ -28,6 +28,7 @@ describe("ConstructionManager.planExtensions", () => {
         global.Game = {
             time: 10,
             rooms: {},
+            constructionSites: {},
         };
         // @ts-ignore
         global.Memory = {};
