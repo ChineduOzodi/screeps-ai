@@ -6,10 +6,10 @@ describe("RoomUtils", () => {
         // Reset globals
         (global as any).Game = {
             map: {
-                describeExits: () => ({})
+                describeExits: () => ({}),
             },
             rooms: {},
-            time: 1000
+            time: 1000,
         };
     });
 
@@ -19,9 +19,9 @@ describe("RoomUtils", () => {
                 getMainRoom: () => ({ name: "W1N1" }),
                 colonyInfo: {
                     rooms: {
-                        "W1N1": { name: "W1N1", isMain: true, lastScouted: 1000 }
-                    }
-                }
+                        W1N1: { name: "W1N1", isMain: true, lastScouted: 1000 },
+                    },
+                },
             } as any;
 
             (global as any).Game.map.describeExits = () => ({ "1": "W1N2", "3": "W2N1" });
@@ -35,9 +35,9 @@ describe("RoomUtils", () => {
                 getMainRoom: () => ({ name: "W1N1" }),
                 colonyInfo: {
                     rooms: {
-                        "W1N2": { name: "W1N2", lastScouted: 100 }
-                    }
-                }
+                        W1N2: { name: "W1N2", lastScouted: 100 },
+                    },
+                },
             } as any;
 
             (global as any).Game.time = 1200;
@@ -52,14 +52,14 @@ describe("RoomUtils", () => {
                 getMainRoom: () => ({ name: "W1N1" }),
                 colonyInfo: {
                     rooms: {
-                        "W1N2": { name: "W1N2", lastScouted: 1150 }
-                    }
-                }
+                        W1N2: { name: "W1N2", lastScouted: 1150 },
+                    },
+                },
             } as any;
 
             (global as any).Game.time = 1200;
             (global as any).Game.map.describeExits = () => ({ "1": "W1N2" });
-            (global as any).Game.rooms["W1N2"] = {}; // Simulating vision
+            (global as any).Game.rooms.W1N2 = {}; // Simulating vision
 
             const needing = RoomUtils.getRoomsNeedingScout(mockColony);
             expect(needing).to.not.include("W1N2");
@@ -72,10 +72,10 @@ describe("RoomUtils", () => {
                 getMainRoom: () => ({ name: "W1N1" }),
                 colonyInfo: {
                     rooms: {
-                        "W1N2": { name: "W1N2", lastScouted: 500 },
-                        "W2N1": { name: "W2N1", lastScouted: 100 }
-                    }
-                }
+                        W1N2: { name: "W1N2", lastScouted: 500 },
+                        W2N1: { name: "W2N1", lastScouted: 100 },
+                    },
+                },
             } as any;
 
             (global as any).Game.time = 2000;

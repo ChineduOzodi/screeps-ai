@@ -82,4 +82,25 @@ export const loop = ErrorMapper.wrapLoop(() => {
         const room = new RoomExtras(Game.rooms[name]);
         room.run();
     }
+
+    // Periodic global reservation cleanup
+    if (Game.time % 10 === 0) {
+        for (const roomName in Memory.rooms) {
+            const roomMemory = Memory.rooms[roomName];
+            if (roomMemory.positionReservations) {
+                for (const posKey in roomMemory.positionReservations) {
+                    const entry = roomMemory.positionReservations[posKey];
+                    for (let i = entry.reservations.length - 1; i >= 0; i--) {
+                        const res = entry.reservations[i];
+                        if (res.endTime < Game.time || !Game.creeps[res.creepName]) {
+                            entry.reservations.splice(i, 1);
+                        }
+                    }
+                    if (entry.reservations.length === 0) {
+                        delete roomMemory.positionReservations[posKey];
+                    }
+                }
+            }
+        }
+    }
 });

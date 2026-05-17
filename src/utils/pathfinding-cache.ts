@@ -82,6 +82,34 @@ export class PathfindingCache {
         }
     }
 
+    public static getStandardCostMatrix(roomName: string): CostMatrix {
+        const room = Game.rooms[roomName];
+        if (!room) return new PathFinder.CostMatrix();
+
+        const costs = new PathFinder.CostMatrix();
+
+        // Add roads
+        room.find(FIND_STRUCTURES).forEach(struct => {
+            if (struct.structureType === STRUCTURE_ROAD) {
+                costs.set(struct.pos.x, struct.pos.y, 1);
+            } else if (
+                struct.structureType !== STRUCTURE_CONTAINER &&
+                (struct.structureType !== STRUCTURE_RAMPART || !(struct as StructureRampart).my)
+            ) {
+                costs.set(struct.pos.x, struct.pos.y, 0xff);
+            }
+        });
+
+        // Avoid construction sites (except roads)
+        room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
+            if (site.structureType !== STRUCTURE_ROAD) {
+                costs.set(site.pos.x, site.pos.y, 0xff);
+            }
+        });
+
+        return costs;
+    }
+
     /**
      * Helper to find a path using the cache.
      */
@@ -110,34 +138,10 @@ export class PathfindingCache {
 
         // Implement default multi-room pathfinding with PathFinder.search
         const searchOptions: PathFinderOpts = {
-            plainCost: (options as any).plainCost || 2,
-            swampCost: (options as any).swampCost || 10,
+            plainCost: (options as any).plainCost || 3,
+            swampCost: (options as any).swampCost || 15,
             roomCallback: (roomName: string) => {
-                const room = Game.rooms[roomName];
-                if (!room) return new PathFinder.CostMatrix();
-
-                const costs = new PathFinder.CostMatrix();
-
-                // Add roads
-                room.find(FIND_STRUCTURES).forEach(struct => {
-                    if (struct.structureType === STRUCTURE_ROAD) {
-                        costs.set(struct.pos.x, struct.pos.y, 1);
-                    } else if (
-                        struct.structureType !== STRUCTURE_CONTAINER &&
-                        (struct.structureType !== STRUCTURE_RAMPART || !(struct as StructureRampart).my)
-                    ) {
-                        costs.set(struct.pos.x, struct.pos.y, 0xff);
-                    }
-                });
-
-                // Avoid construction sites (except roads, but only if planning roads - handled by favorExistingRoads)
-                room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
-                    if (site.structureType !== STRUCTURE_ROAD) {
-                        costs.set(site.pos.x, site.pos.y, 0xff);
-                    }
-                });
-
-                return costs;
+                return PathfindingCache.getStandardCostMatrix(roomName);
             },
         };
 

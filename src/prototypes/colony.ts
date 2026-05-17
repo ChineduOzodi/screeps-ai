@@ -251,7 +251,7 @@ export class ColonyManagerImpl implements ColonyManager {
         let y = 15;
 
         room.visual.text("System Tasks:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
-        
+
         const systems = this.getSystemsList();
         let anyTask = false;
 

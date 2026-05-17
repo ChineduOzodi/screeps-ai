@@ -99,7 +99,7 @@ export class RoomExtras {
 
         for (const position in this.room.memory.positionReservations) {
             const reservation = this.room.memory.positionReservations[position];
-            PathfindingUtils.unreservePositions(this.room, reservation.pos);
+            PathfindingUtils.unreservePositions(this.room.name, reservation.pos);
 
             if (reservation.reservations.length > 0) {
                 this.room.visual.circle(reservation.pos.x, reservation.pos.y);

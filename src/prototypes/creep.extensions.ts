@@ -35,6 +35,8 @@ declare global {
         pathStuck: number;
         reservationStartTime?: number;
         reservationEndTime?: number;
+        reservedRoomName?: string;
+        reservedPos?: { x: number; y: number };
         path?: RoomPosition[];
     }
 

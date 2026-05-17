@@ -226,7 +226,9 @@ export class CarrierCreep extends CreepRunner {
         if (storage && storage.isActive()) {
             // Safety: If no ALIVE EXTENSION_FILLER is present, Carrier must help fill extensions/spawns first
             // to ensure we can spawn the filler. colony.getCreepCount includes queued creeps, so we check alive creeps specifically.
-            const aliveFillerCount = colony ? colony.getCreeps().filter(c => c.memory.role === CreepRole.EXTENSION_FILLER).length : 1;
+            const aliveFillerCount = colony
+                ? colony.getCreeps().filter(c => c.memory.role === CreepRole.EXTENSION_FILLER).length
+                : 1;
             if (aliveFillerCount === 0) {
                 const spawnExtension = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: s =>
