@@ -8,13 +8,12 @@ export class PathfindingUtils {
         workDuration: number,
         ignoreRoles?: string[],
     ): {
-        path: PathStep[];
+        path: RoomPosition[];
         startTime: number;
         endTime: number;
     } {
         const moveTimePath = PathfindingCache.findPath(creep.pos, target, {
             range,
-            ignoreCreeps: true,
         });
         const moveTime = moveTimePath.length;
 
@@ -26,20 +25,23 @@ export class PathfindingUtils {
         const startTime = Game.time + moveTime;
         const endTime = Game.time + moveTime + workDuration;
 
-        const path = creep.pos.findPathTo(target, {
+        const path = PathfindingCache.findPath(creep.pos, target, {
             range,
-            ignoreCreeps: true,
-            costCallback(roomName, costMatrix) {
+            roomCallback(roomName: string) {
                 const room = Game.rooms[roomName];
-                if (!room) return;
+                if (!room) return new PathFinder.CostMatrix();
 
+                const costs = new PathFinder.CostMatrix();
+
+                // Add roads from Cache's default or explicitly here?
+                // For now, let's just handle reservations
                 PathfindingUtils.checkRoomReservationSetup(room);
 
-                if (creep.room.memory.positionReservations) {
-                    const keys = Object.keys(creep.room.memory.positionReservations);
+                if (room.memory.positionReservations) {
+                    const keys = Object.keys(room.memory.positionReservations);
 
                     for (const key of keys) {
-                        const reservation = creep.room.memory.positionReservations[key];
+                        const reservation = room.memory.positionReservations[key];
 
                         if (reservation.reservations) {
                             if (
@@ -51,14 +53,27 @@ export class PathfindingUtils {
                                     ignoreRoles,
                                 )
                             ) {
-                                // console.log(`${reservation.pos.x}, ${reservation.pos.y} not available`);
-                                costMatrix.set(reservation.pos.x, reservation.pos.y, 255);
+                                costs.set(reservation.pos.x, reservation.pos.y, 0xff);
                             }
                         }
                     }
                 }
+
+                // Also add standard obstacles to CostMatrix
+                room.find(FIND_STRUCTURES).forEach(s => {
+                    if (s.structureType === STRUCTURE_ROAD) {
+                        costs.set(s.pos.x, s.pos.y, 1);
+                    } else if (
+                        s.structureType !== STRUCTURE_CONTAINER &&
+                        (s.structureType !== STRUCTURE_RAMPART || !(s as StructureRampart).my)
+                    ) {
+                        costs.set(s.pos.x, s.pos.y, 0xff);
+                    }
+                });
+
+                return costs;
             },
-        });
+        } as any);
 
         return { path, startTime, endTime };
     }

@@ -9,9 +9,9 @@ export class RoadManager {
     }
 
     public planColonyRoads(): void {
-        const room = this.colony.getMainRoom();
+        const mainRoom = this.colony.getMainRoom();
         const spawn = this.colony.getMainSpawn();
-        if (!room || !spawn) return;
+        if (!mainRoom || !spawn) return;
 
         const roadPositions: RoomPosition[] = [];
 
@@ -19,26 +19,56 @@ export class RoadManager {
         const spawnPerimeter = ConstructionUtils.getRoadsAroundPosition(spawn.pos);
         roadPositions.push(...spawnPerimeter.map(s => new RoomPosition(s.x, s.y, s.roomName)));
 
-        // Roads to Sources
-        const sources = room.find(FIND_SOURCES);
-        for (const source of sources) {
-            const path = ConstructionUtils.calculateRoads(spawn.pos, source.pos, 1);
-            roadPositions.push(...path.map(s => new RoomPosition(s.x, s.y, s.roomName)));
+        // Roads to Colony Sources (Main + Remotes)
+        const energyManagement = this.colony.colonyInfo.energyManagement;
+        if (energyManagement && energyManagement.sources) {
+            for (const sourceInfo of energyManagement.sources) {
+                // Use the calculated mining position if available, otherwise source pos
+                const targetPos = sourceInfo.miningPosition
+                    ? new RoomPosition(
+                          sourceInfo.miningPosition.x,
+                          sourceInfo.miningPosition.y,
+                          sourceInfo.miningPosition.roomName,
+                      )
+                    : new RoomPosition(sourceInfo.position.x, sourceInfo.position.y, sourceInfo.position.roomName);
+
+                const path = ConstructionUtils.calculateRoads(spawn.pos, targetPos, 0);
+                roadPositions.push(...path.map(s => new RoomPosition(s.x, s.y, s.roomName)));
+            }
         }
 
-        // Roads to Controller
-        if (room.controller) {
-            const path = ConstructionUtils.calculateRoads(spawn.pos, room.controller.pos, 3);
-            roadPositions.push(...path.map(s => new RoomPosition(s.x, s.y, s.roomName)));
+        // Roads to Controllers in all colony rooms (where we have vision)
+        for (const roomName in this.colony.colonyInfo.rooms) {
+            const room = Game.rooms[roomName];
+            if (room && room.controller) {
+                const path = ConstructionUtils.calculateRoads(spawn.pos, room.controller.pos, 3);
+                roadPositions.push(...path.map(s => new RoomPosition(s.x, s.y, s.roomName)));
+            }
         }
+
+        // Filter duplicates and invalid positions
+        const uniquePositions = this.getUniquePositions(roadPositions);
 
         // Place roads
-        for (const pos of roadPositions) {
+        for (const pos of uniquePositions) {
             this.buildRoadAt(pos);
         }
 
         // Update stats immediately after planning
         this.updateRoadStats();
+    }
+
+    private getUniquePositions(positions: RoomPosition[]): RoomPosition[] {
+        const seen = new Set<string>();
+        const unique: RoomPosition[] = [];
+        for (const pos of positions) {
+            const key = `${pos.roomName}:${pos.x},${pos.y}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(pos);
+            }
+        }
+        return unique;
     }
 
     private buildRoadAt(pos: RoomPosition): void {
@@ -53,9 +83,10 @@ export class RoadManager {
         const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
         if (sites.some(s => s.structureType === STRUCTURE_ROAD)) return;
 
+        // Check global construction site limit
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
         // Check if tile is blocked by something other than a road/container
-        // (Simplified check: just try to create the site and see if it fails?)
-        // Better to use the utility
         if (!ConstructionUtils.isTileClearForStructure(pos, room, true)) return;
 
         room.createConstructionSite(pos, STRUCTURE_ROAD);

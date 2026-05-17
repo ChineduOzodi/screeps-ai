@@ -29,9 +29,9 @@ describe("PathfindingCache", () => {
     });
 
     it("should store and retrieve a path", () => {
-        const from = { x: 10, y: 10, roomName: "W1N1" } as RoomPosition;
-        const to = { x: 20, y: 20, roomName: "W1N1" } as RoomPosition;
-        const path: PathStep[] = [{ x: 11, y: 11, dx: 1, dy: 1, direction: 4 }];
+        const from = new RoomPosition(10, 10, "W1N1");
+        const to = new RoomPosition(20, 20, "W1N1");
+        const path: RoomPosition[] = [new RoomPosition(11, 11, "W1N1")];
 
         PathfindingCache.setPath(from, to, 0, path);
         const retrieved = PathfindingCache.getPath(from, to, 0);
@@ -40,9 +40,9 @@ describe("PathfindingCache", () => {
     });
 
     it("should return undefined for expired paths", () => {
-        const from = { x: 10, y: 10, roomName: "W1N1" } as RoomPosition;
-        const to = { x: 20, y: 20, roomName: "W1N1" } as RoomPosition;
-        const path: PathStep[] = [{ x: 11, y: 11, dx: 1, dy: 1, direction: 4 }];
+        const from = new RoomPosition(10, 10, "W1N1");
+        const to = new RoomPosition(20, 20, "W1N1");
+        const path: RoomPosition[] = [new RoomPosition(11, 11, "W1N1")];
 
         PathfindingCache.setPath(from, to, 0, path);
 
@@ -54,14 +54,11 @@ describe("PathfindingCache", () => {
     });
 
     it("should return a reversed path", () => {
-        const from = { x: 10, y: 10, roomName: "W1N1" } as RoomPosition;
-        const to = { x: 12, y: 12, roomName: "W1N1" } as RoomPosition;
+        const from = new RoomPosition(10, 10, "W1N1");
+        const to = new RoomPosition(12, 12, "W1N1");
 
         // Path: (10,10) -> (11,11) -> (12,12)
-        const path: PathStep[] = [
-            { x: 11, y: 11, dx: 1, dy: 1, direction: 4 }, // BOTTOM_RIGHT
-            { x: 12, y: 12, dx: 1, dy: 1, direction: 4 }, // BOTTOM_RIGHT
-        ];
+        const path: RoomPosition[] = [new RoomPosition(11, 11, "W1N1"), new RoomPosition(12, 12, "W1N1")];
 
         PathfindingCache.setPath(from, to, 0, path);
 
@@ -71,18 +68,10 @@ describe("PathfindingCache", () => {
         expect(reversed).to.not.equal(undefined);
         expect(reversed!.length).to.equal(2);
 
-        // First step of reverse: (12,12) -> (11,11)
+        // Reversed path should contain positions in reverse order
         expect(reversed![0].x).to.equal(11);
         expect(reversed![0].y).to.equal(11);
-        expect(reversed![0].dx).to.equal(-1);
-        expect(reversed![0].dy).to.equal(-1);
-        expect(reversed![0].direction).to.equal(8); // TOP_LEFT
-
-        // Second step of reverse: (11,11) -> (10,10)
         expect(reversed![1].x).to.equal(10);
         expect(reversed![1].y).to.equal(10);
-        expect(reversed![1].dx).to.equal(-1);
-        expect(reversed![1].dy).to.equal(-1);
-        expect(reversed![1].direction).to.equal(8); // TOP_LEFT
     });
 });

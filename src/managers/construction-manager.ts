@@ -37,6 +37,7 @@ export class ConstructionManager {
      */
     public placeConstructionSites(structures: ProjectStructure[]): void {
         for (const s of structures) {
+            if (Object.keys(Game.constructionSites).length >= 100) break;
             this.createSiteIfNeeded(s);
         }
     }
@@ -60,6 +61,9 @@ export class ConstructionManager {
 
         // Only 1 storage per room
         if (this.hasPlannedStructures(STRUCTURE_STORAGE, 1)) return;
+
+        // Global limit check
+        if (Object.keys(Game.constructionSites).length >= 100) return;
 
         const structures = ConstructionUtils.getFirstStorageStructures(spawn);
         this.placeConstructionSites(structures);
@@ -90,6 +94,8 @@ export class ConstructionManager {
         const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
 
         for (const delta of candidates) {
+            if (Object.keys(Game.constructionSites).length >= 100) break;
+
             const centerX = spawn.pos.x + delta.dx;
             const centerY = spawn.pos.y + delta.dy;
             if (centerX < 2 || centerX > 47 || centerY < 2 || centerY > 47) continue;
@@ -102,6 +108,8 @@ export class ConstructionManager {
 
             // Try to place extensions in this cluster
             for (const offset of extOffsets) {
+                if (Object.keys(Game.constructionSites).length >= 100) break;
+
                 const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
 
                 // Check if an extension already exists or is planned here
@@ -137,6 +145,8 @@ export class ConstructionManager {
             // Also place roads for this cluster if we just placed a NEW extension
             if (placedInCluster > 0) {
                 for (const offset of roadOffsets) {
+                    if (Object.keys(Game.constructionSites).length >= 100) break;
+
                     const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
                     if (ConstructionUtils.isTileClearForStructure(pos, room, true)) {
                         room.createConstructionSite(pos, STRUCTURE_ROAD);
@@ -211,6 +221,8 @@ export class ConstructionManager {
             });
 
             for (const ruin of ruins) {
+                if (Object.keys(Game.constructionSites).length >= 100) break;
+
                 // Check if site already exists
                 const sites = ruin.pos.lookFor(LOOK_CONSTRUCTION_SITES);
                 if (sites.length > 0) continue;
@@ -238,6 +250,9 @@ export class ConstructionManager {
         // Check if site exists
         const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(st => st.structureType === s.type);
         if (site) return;
+
+        // Limit check
+        if (Object.keys(Game.constructionSites).length >= 100) return;
 
         room.createConstructionSite(pos, s.type);
     }

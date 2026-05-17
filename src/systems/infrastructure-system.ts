@@ -50,9 +50,19 @@ export class InfrastructureSystem extends BaseSystemImpl {
             info.lastRclPlanned = 0;
         }
 
-        if (rcl > info.lastRclPlanned) {
+        if (typeof info.lastPlannedTick === "undefined") {
+            info.lastPlannedTick = 0;
+        }
+
+        const timeSinceLastPlan = Game.time - info.lastPlannedTick;
+
+        if (rcl > info.lastRclPlanned || timeSinceLastPlan > 2000) {
+            console.log(
+                `[Infrastructure] Triggering road planning for colony ${this.colony.colonyInfo.id} (RCL: ${rcl}, Ticks since last: ${timeSinceLastPlan})`,
+            );
             this.colony.roadManager.planColonyRoads();
             info.lastRclPlanned = rcl;
+            info.lastPlannedTick = Game.time;
         }
     }
 

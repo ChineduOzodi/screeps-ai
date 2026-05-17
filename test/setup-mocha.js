@@ -133,3 +133,26 @@ global.RoomPosition = class {
     }
 };
 
+global.PathFinder = {
+    search: (from, to, opts) => ({ path: [], ops: 0, cost: 0, incomplete: false }),
+    CostMatrix: class {
+        constructor() {
+            this._matrix = new Uint8Array(2500);
+        }
+        set(x, y, cost) {
+            this._matrix[y * 50 + x] = cost;
+        }
+        get(x, y) {
+            return this._matrix[y * 50 + x];
+        }
+        clone() {
+            const newCM = new global.PathFinder.CostMatrix();
+            newCM._matrix = new Uint8Array(this._matrix);
+            return newCM;
+        }
+        serialize() {
+            return Array.from(this._matrix);
+        }
+    },
+};
+

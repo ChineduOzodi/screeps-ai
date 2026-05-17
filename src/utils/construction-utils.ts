@@ -179,38 +179,50 @@ export class ConstructionUtils {
 
     public static calculateRoads(startPos: RoomPosition, endPos: RoomPosition, range: number): ProjectStructure[] {
         const path = PathfindingCache.findPath(startPos, endPos, {
-            ignoreCreeps: true,
-            ignoreDestructibleStructures: true,
             range,
-            plainCost: 10,
-            swampCost: 50,
             // @ts-ignore
             favorExistingRoads: true,
-            costCallback: (roomName, costMatrix) => {
+            roomCallback: (roomName: string) => {
                 const room = Game.rooms[roomName];
-                if (!room) return undefined;
+                if (!room) return new PathFinder.CostMatrix();
 
+                const costs = new PathFinder.CostMatrix();
+
+                // Favor existing roads
                 const roads = room.find(FIND_STRUCTURES, {
                     filter: s => s.structureType === STRUCTURE_ROAD,
                 });
                 for (const road of roads) {
-                    costMatrix.set(road.pos.x, road.pos.y, 1);
+                    costs.set(road.pos.x, road.pos.y, 1);
                 }
 
+                // Favor road construction sites
                 const sites = room.find(FIND_CONSTRUCTION_SITES, {
                     filter: s => s.structureType === STRUCTURE_ROAD,
                 });
                 for (const site of sites) {
-                    costMatrix.set(site.pos.x, site.pos.y, 1);
+                    costs.set(site.pos.x, site.pos.y, 1);
                 }
-                return costMatrix;
-            },
-        });
 
-        return path.map(step => ({
-            x: step.x,
-            y: step.y,
-            roomName: startPos.roomName,
+                // Avoid obstacles
+                room.find(FIND_STRUCTURES).forEach(s => {
+                    if (
+                        s.structureType !== STRUCTURE_ROAD &&
+                        s.structureType !== STRUCTURE_CONTAINER &&
+                        (s.structureType !== STRUCTURE_RAMPART || !(s as StructureRampart).my)
+                    ) {
+                        costs.set(s.pos.x, s.pos.y, 0xff);
+                    }
+                });
+
+                return costs;
+            },
+        } as any);
+
+        return path.map(pos => ({
+            x: pos.x,
+            y: pos.y,
+            roomName: pos.roomName,
             type: STRUCTURE_ROAD,
         }));
     }

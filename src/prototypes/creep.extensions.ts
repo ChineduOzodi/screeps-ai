@@ -35,7 +35,7 @@ declare global {
         pathStuck: number;
         reservationStartTime?: number;
         reservationEndTime?: number;
-        path?: PathStep[];
+        path?: RoomPosition[];
     }
 
     interface CreepData {
