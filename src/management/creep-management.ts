@@ -10,6 +10,8 @@ import { Movement } from "infrastructure/movement";
 import { CarrierCreep } from "creep-roles/carrier-creep";
 import { RepairerCreep } from "./../creep-roles/repairer-creep";
 import { UpgraderCreep } from "creep-roles/upgrader-creep";
+import { ScoutCreep } from "creep-roles/scout-creep";
+import { ReserverCreep } from "creep-roles/reserver-creep";
 
 export class CreepManagement {
     public static run(creep: Creep): void {
@@ -61,6 +63,10 @@ export class CreepManagement {
                 return new MinerCreep(creep);
             case CreepRole.CARRIER:
                 return new CarrierCreep(creep);
+            case CreepRole.SCOUT:
+                return new ScoutCreep(creep);
+            case CreepRole.RESERVER:
+                return new ReserverCreep(creep);
             default:
                 console.log(`ERROR: creep (${creep.name}) role "${creep.memory.role}" not setup`);
                 return;

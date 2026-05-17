@@ -19,7 +19,7 @@ export class SpawnExtras {
             mainSpawnId: this.spawn.id,
             level: 0,
             spawnEnergy: 200,
-            rooms: [],
+            rooms: {},
             creeps: {},
             spawnQueue: [],
             stats: {

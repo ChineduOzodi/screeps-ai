@@ -39,6 +39,8 @@ export enum CreepRole {
     UPGRADER = "upgrader",
     MINER = "miner",
     CARRIER = "carrier",
+    SCOUT = "scout",
+    RESERVER = "reserver",
 }
 
 export interface CreepProfiles {

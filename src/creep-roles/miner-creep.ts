@@ -115,17 +115,14 @@ export class MinerCreepSpawner extends CreepSpawnerImpl {
 
     private createProfile(energyCap: number, colonySource: ColonySource, priority: number) {
         // Max 5 WORK parts = 10 energy/tick = 3000 energy / 300 ticks. Perfect for standard source.
-        // If owned room, 6-7 might be safer for center rooms?
-        // Let's aim for 5 or 6.
-        // 5 WORK = 500 energy.
-        // We do NOT add MOVE parts.
-        // We do NOT add CARRY parts (User request).
-
-        let workPartCount = Math.floor(energyCap / 100);
+        // We add exactly 1 MOVE part to allow the miner to cross room boundaries when towed.
+        // 1 MOVE = 50 energy. 
+        
+        let workPartCount = Math.floor((energyCap - 50) / 100);
         if (workPartCount > 6) workPartCount = 6;
         if (workPartCount < 1) workPartCount = 1;
 
-        const body: BodyPartConstant[] = [];
+        const body: BodyPartConstant[] = [MOVE];
         for (let i = 0; i < workPartCount; i++) {
             body.push(WORK);
         }

@@ -110,6 +110,22 @@ export class CarrierCreep extends CreepRunner {
     }
 
     private performTow(miner: Creep, targetPos: RoomPosition) {
+        if (this.creep.room.name !== miner.room.name) {
+            // Desync: Move to boundary or wait for miner to cross
+            if (this.creep.pos.isNearTo(miner.pos) || this.creep.pos.isEqualTo(miner.pos)) {
+                 // Handshake: Move deeper into the room to pull miner in
+                 this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
+            } else {
+                // Wait near the entrance for the miner
+                const entrancePos = new RoomPosition(25, 25, this.creep.room.name);
+                if (!this.creep.pos.inRangeTo(entrancePos, 20)) {
+                    this.moveToWithReservation({ pos: entrancePos } as any, 0, 10);
+                }
+                this.creep.say("Waiting...");
+            }
+            return;
+        }
+
         if (!this.creep.pos.isNearTo(miner)) {
             // Go to miner
             this.moveToWithReservation(miner, 0);
@@ -127,16 +143,24 @@ export class CarrierCreep extends CreepRunner {
                 }
                 this.creep.move(this.creep.pos.getDirectionTo(miner));
             } else {
-                // Move carrier to target (pulling miner behind)
-                if (this.creep.pos.isNearTo(targetPos)) {
-                    // One step away from target. Pull miner and step onto target.
-                    // Clear path to allow manual move
-                    if (this.creep.memory.movementSystem) {
-                        delete this.creep.memory.movementSystem.path;
-                    }
-                    this.creep.move(this.creep.pos.getDirectionTo(targetPos));
-                } else {
+                // Check if we are about to cross a boundary
+                const isOnExit = this.creep.pos.x === 0 || this.creep.pos.x === 49 || this.creep.pos.y === 0 || this.creep.pos.y === 49;
+                
+                if (isOnExit) {
+                    // Move into the room, miner should follow using its MOVE part next tick
                     this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
+                } else {
+                    // Move carrier to target (pulling miner behind)
+                    if (this.creep.pos.isNearTo(targetPos)) {
+                        // One step away from target. Pull miner and step onto target.
+                        // Clear path to allow manual move
+                        if (this.creep.memory.movementSystem) {
+                            delete this.creep.memory.movementSystem.path;
+                        }
+                        this.creep.move(this.creep.pos.getDirectionTo(targetPos));
+                    } else {
+                        this.moveToWithReservation({ pos: targetPos } as any, 0, 0);
+                    }
                 }
             }
         }
@@ -267,8 +291,7 @@ export class CarrierCreepSpawner extends CreepSpawnerImpl {
         // Body: Heavy CARRY, good MOVE.
         // Ratio: 1 CARRY : 1 MOVE for Roads (full speed).
 
-        const source = Game.getObjectById<Source>(colonySource.sourceId);
-        const dist = source ? EnergyCalculator.calculateTravelTime(colony.getMainSpawn().pos, source.pos) : 25;
+        const dist = EnergyCalculator.calculateTravelTime(colony.getMainSpawn().pos, colonySource.position);
 
         // Throughput needed: 10 energy/tick.
         // Round trip: (Dist * 2) + 5 buffer.

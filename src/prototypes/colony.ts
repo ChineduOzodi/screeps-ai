@@ -47,6 +47,15 @@ export class ColonyManagerImpl implements ColonyManager {
             return;
         }
 
+        // Migration: rooms from array to object
+        if (Array.isArray(this.colonyInfo.rooms)) {
+            const roomsArray = this.colonyInfo.rooms as any as any[];
+            this.colonyInfo.rooms = {};
+            roomsArray.forEach(r => {
+                this.colonyInfo.rooms[r.name] = r;
+            });
+        }
+
         // Detect potential colony restart:
         // We have setupComplete, but the registered spawn is gone, we have no creeps,
         // AND there is a new spawn in the room.
@@ -506,13 +515,13 @@ export class ColonyManagerImpl implements ColonyManager {
             delete Memory.rooms[room.name];
         }
 
-        this.colonyInfo.rooms = [
-            {
+        this.colonyInfo.rooms = {
+            [room.name]: {
                 name: room.name,
                 isMain: true,
                 alertLevel: 0,
             },
-        ];
+        };
 
         // Reset management objects
         this.colonyInfo.spawnQueue = [];
@@ -543,7 +552,7 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public getScreepRoom(name: string): RoomData | undefined {
-        return this.colonyInfo.rooms.find(x => x.name === name);
+        return this.colonyInfo.rooms[name];
     }
 
     public getMainRoom(): Room {

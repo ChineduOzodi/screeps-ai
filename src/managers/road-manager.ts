@@ -72,7 +72,8 @@ export class RoadManager {
         let totalRoads = 0;
         let totalCost = 0;
 
-        for (const roomData of this.colony.colonyInfo.rooms) {
+        for (const roomName in this.colony.colonyInfo.rooms) {
+            const roomData = this.colony.colonyInfo.rooms[roomName];
             const room = Game.rooms[roomData.name];
             if (!room) continue;
 

@@ -41,9 +41,16 @@ export const loop = ErrorMapper.wrapLoop(() => {
             let isTracked = false;
             for (const colonyId in Memory.colonies) {
                 const colony = Memory.colonies[colonyId];
-                if (colony && colony.rooms && colony.rooms.some(r => r.name === roomName)) {
-                    isTracked = true;
-                    break;
+                if (colony && colony.rooms) {
+                    if (Array.isArray(colony.rooms)) {
+                        if ((colony.rooms as any[]).some(r => r.name === roomName)) {
+                            isTracked = true;
+                            break;
+                        }
+                    } else if (colony.rooms[roomName]) {
+                        isTracked = true;
+                        break;
+                    }
                 }
             }
             if (!isTracked) {

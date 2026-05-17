@@ -32,8 +32,8 @@ export class HealerCreepSpawner extends CreepSpawnerImpl {
     public onCreateProfiles(energyCap: number, colony: ColonyManager): CreepProfiles {
         const rooms = colony.colonyInfo.rooms;
         const profiles: CreepProfiles = {};
-
-        for (const roomInfo of rooms) {
+        for (const roomName in rooms) {
+            const roomInfo = rooms[roomName];
             const room = Game.rooms[roomInfo.name];
             if (!room) continue;
 

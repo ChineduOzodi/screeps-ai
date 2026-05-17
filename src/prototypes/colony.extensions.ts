@@ -4,7 +4,7 @@ interface Colony {
     level: number;
     spawnEnergy: number;
     creeps: ColonyCreeps | undefined;
-    rooms: RoomData[];
+    rooms: { [roomName: string]: RoomData };
     mainSpawnId: Id<StructureSpawn>;
     spawnQueue: SpawnRequest[] | undefined;
     stats: ColonyStats;
@@ -92,6 +92,12 @@ interface RoomData {
     name: string;
     isMain?: boolean;
     alertLevel: number;
+    sourceCount?: number;
+    lastScouted?: number;
+    distance?: number;
+    owner?: string;
+    reservation?: string;
+    otherResources?: ResourceConstant[];
 }
 
 interface SourceData {

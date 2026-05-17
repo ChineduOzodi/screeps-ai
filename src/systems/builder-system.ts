@@ -106,7 +106,7 @@ export class BuilderSystem extends BaseSystemImpl {
         const sites: ConstructionSite[] = [];
         for (const id in Game.constructionSites) {
             const site = Game.constructionSites[id];
-            if (site && this.colony.colonyInfo.rooms.some(r => r.name === site.room?.name)) {
+            if (site && site.room && this.colony.colonyInfo.rooms[site.room.name]) {
                 sites.push(site);
             }
         }

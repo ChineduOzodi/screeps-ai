@@ -4,15 +4,23 @@ import { CreepSpawner } from "prototypes/CreepSpawner";
 import { HarvesterCreepSpawner } from "creep-roles/harvester-creep";
 import { MinerCreepSpawner } from "creep-roles/miner-creep";
 import { CarrierCreepSpawner } from "creep-roles/carrier-creep";
+import { ReserverCreepSpawner } from "creep-roles/reserver-creep";
+import { ScoutCreepSpawner } from "creep-roles/scout-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { ProjectStructure } from "managers/construction-manager";
+import { RemoteDiscoveryObjective } from "../objectives/remote-discovery-objective";
+import { Objective } from "../objectives/types";
 
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
  */
 export class EnergySystem extends BaseSystemImpl {
+    public override getObjectives(): Objective[] {
+        return [new RemoteDiscoveryObjective(this.colony)];
+    }
+
     public override get systemInfo(): ColonyEnergyManagement {
         if (!this.colony.colonyInfo.energyManagement) {
             this.colony.colonyInfo.energyManagement = {
@@ -60,55 +68,62 @@ export class EnergySystem extends BaseSystemImpl {
         const energyManagement = this.colony.colonyInfo.energyManagement;
         if (!energyManagement) return;
 
-        const room = this.colony.getMainRoom();
-        const sources = room && typeof room.find === "function" ? room.find(FIND_SOURCES) : [];
         energyManagement.sources = [];
+        const rooms = this.colony.colonyInfo.rooms;
+        const spawn = this.colony.getMainSpawn();
+        const rcl = this.colony.getMainRoom()?.controller?.level || 0;
+        const desiredRemoteRoomCount = Math.floor(rcl / 2);
 
-        sources.forEach(source => {
-            // Calculate available slots (walkable tiles)
-            let slots = 0;
-            const terrain = source.room.getTerrain();
-            let miningPosition: RoomPosition | undefined;
-            let bestDist = Infinity;
-            const spawn = this.colony.getMainSpawn();
+        // Filter and sort remote rooms by distance
+        const validRemoteRooms = Object.keys(rooms)
+            .filter(name => !rooms[name].isMain && rooms[name].alertLevel <= 1 && !!rooms[name].distance)
+            .sort((a, b) => (rooms[a].distance || 0) - (rooms[b].distance || 0))
+            .slice(0, desiredRemoteRoomCount);
 
-            for (let x = -1; x <= 1; x++) {
-                for (let y = -1; y <= 1; y++) {
-                    if (x === 0 && y === 0) continue;
-                    if (!source || !source.pos) continue;
-                    const px = source.pos.x + x;
-                    const py = source.pos.y + y;
-                    if (px < 0 || px > 49 || py < 0 || py > 49) continue;
+        const roomsToMine = [this.colony.getMainRoom().name, ...validRemoteRooms];
 
-                    let pos: RoomPosition | undefined;
-                    try {
-                        pos = new RoomPosition(px, py, source.pos.roomName);
-                    } catch (e) {
-                        continue;
-                    }
+        roomsToMine.forEach(roomName => {
+            const roomData = rooms[roomName];
+            // Only mine if alertLevel <= 1
+            if (roomData.alertLevel > 1) return;
 
-                    if (pos && terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
-                        slots++;
+            const room = Game.rooms[roomName];
+            if (!room) return; // No vision
 
-                        // We strictly want the mining position to be range 1 from source.
-                        // And preferably closer to spawn?
-                        // Actually, if we use container, we want it to be valid build position.
-                        // We can use ConstructionUtils to check if it's buildable (no walls, no other structures except road/container)
-                        // For now, let's just pick the first valid one or closest to spawn.
-                        const dist = spawn ? EnergyCalculator.calculateTravelTime(spawn.pos, pos) : 0;
-                        if (!miningPosition || dist < bestDist) {
-                            miningPosition = pos;
-                            bestDist = dist;
+            const sources = room.find(FIND_SOURCES);
+            sources.forEach(source => {
+                // Calculate available slots (walkable tiles)
+                let slots = 0;
+                const terrain = room.getTerrain();
+                let miningPosition: RoomPosition | undefined;
+                let bestDist = Infinity;
+
+                for (let x = -1; x <= 1; x++) {
+                    for (let y = -1; y <= 1; y++) {
+                        if (x === 0 && y === 0) continue;
+                        const px = source.pos.x + x;
+                        const py = source.pos.y + y;
+                        if (px < 0 || px > 49 || py < 0 || py > 49) continue;
+
+                        const pos = new RoomPosition(px, py, roomName);
+                        if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
+                            slots++;
+
+                            const dist = spawn ? EnergyCalculator.calculateTravelTime(spawn.pos, pos) : 0;
+                            if (!miningPosition || dist < bestDist) {
+                                miningPosition = pos;
+                                bestDist = dist;
+                            }
                         }
                     }
                 }
-            }
 
-            energyManagement.sources.push({
-                accessCount: slots,
-                sourceId: source.id,
-                position: source.pos,
-                miningPosition,
+                energyManagement.sources.push({
+                    accessCount: slots,
+                    sourceId: source.id,
+                    position: source.pos,
+                    miningPosition,
+                });
             });
         });
     }
@@ -220,6 +235,11 @@ export class EnergySystem extends BaseSystemImpl {
     public override run(): void {
         super.run();
 
+        // Periodically refresh sources to discover new remote rooms
+        if (Game.time % 100 === 0) {
+            this.setSources();
+        }
+
         this.manageMiningInfrastructure();
 
         // Cleanup spawn queue if we switch away from Miners
@@ -237,10 +257,13 @@ export class EnergySystem extends BaseSystemImpl {
     }
 
     public override getCreepSpawners(): CreepSpawner[] {
+        const spawners: CreepSpawner[] = [new ScoutCreepSpawner()];
         if (this.shouldUseMiners()) {
-            return [new MinerCreepSpawner(), new CarrierCreepSpawner()];
+            spawners.push(new MinerCreepSpawner(), new CarrierCreepSpawner(), new ReserverCreepSpawner());
+        } else {
+            spawners.push(new HarvesterCreepSpawner());
         }
-        return [new HarvesterCreepSpawner()];
+        return spawners;
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
