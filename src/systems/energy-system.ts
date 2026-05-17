@@ -11,15 +11,25 @@ import { ScoutCreepSpawner } from "creep-roles/scout-creep";
 import { Action, Goal, WorldState } from "goap/types";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { ProjectStructure } from "managers/construction-manager";
-import { RemoteDiscoveryObjective } from "../objectives/remote-discovery-objective";
-import { Objective } from "../objectives/types";
 
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
  */
 export class EnergySystem extends BaseSystemImpl {
-    public override getObjectives(): Objective[] {
-        return [new RemoteDiscoveryObjective(this.colony)];
+    public override getStatus(): string | null {
+        return this.getRoomsToScout().length > 0 ? "Discovering Remotes" : null;
+    }
+
+    private getRoomsToScout(): string[] {
+        const room = this.colony.getMainRoom();
+        if (!room) return [];
+
+        const adjacentRooms = Object.values(Game.map.describeExits(room.name));
+
+        return adjacentRooms.filter(roomName => {
+            const data = this.colony.colonyInfo.rooms[roomName];
+            return !data || !Game.rooms[roomName] || Game.time - (data.lastScouted || 0) > 1000;
+        });
     }
 
     public override get systemInfo(): ColonyEnergyManagement {

@@ -3,7 +3,6 @@ import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { DefenderCreepSpawner } from "creep-roles/defender-creep";
 import { HealerCreepSpawner } from "creep-roles/healer-creep";
-import { Objective } from "objectives/types";
 
 export class DefenseSystem extends BaseSystemImpl {
     public override get systemInfo(): BaseSystemInfo {
@@ -52,20 +51,9 @@ export class DefenseSystem extends BaseSystemImpl {
         return [CreepRole.DEFENDER, CreepRole.HEALER];
     }
 
-    public override getObjectives(): Objective[] {
+    public override getStatus(): string | null {
         const room = this.colony.getMainRoom();
         const hostiles = room.find(FIND_HOSTILE_CREEPS);
-
-        return [
-            {
-                name: "Defend Room",
-                priority: 1000,
-                isReady: () => hostiles.length > 0,
-                isComplete: () => hostiles.length === 0,
-                execute: () => {
-                    this.energyUsageTracking.requestedEnergyUsageWeight = 10;
-                },
-            },
-        ];
+        return hostiles.length > 0 ? "Defending Room" : null;
     }
 }

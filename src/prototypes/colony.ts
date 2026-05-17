@@ -9,8 +9,6 @@ import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
-import { ObjectiveSystem } from "../systems/objective-system";
-import { Objective } from "../objectives/types";
 
 function getSystems(colony: ColonyManager): Systems {
     return {
@@ -19,7 +17,6 @@ function getSystems(colony: ColonyManager): Systems {
         infrastructure: new InfrastructureSystem(colony),
         upgrade: new UpgradeSystem(colony),
         builder: new BuilderSystem(colony),
-        objective: new ObjectiveSystem(colony),
     };
 }
 
@@ -150,7 +147,7 @@ export class ColonyManagerImpl implements ColonyManager {
         const visualizeSystems = this.getEnergyTrackingSystems();
         this.visualizeSystems(visualizeSystems);
         this.visualizeSpawnQueue();
-        this.visualizeObjectiveStats();
+        this.visualizeSystemTasks();
     }
 
     private getEnergyTrackingSystems(): EnergyTrackingSystem[] {
@@ -248,19 +245,26 @@ export class ColonyManagerImpl implements ColonyManager {
         }
     }
 
-    private visualizeObjectiveStats(): void {
+    private visualizeSystemTasks(): void {
         const room = this.getMainRoom();
-        const objectiveSystem = this.systems.objective;
         const x = 3;
         let y = 15;
 
-        room.visual.text("Objective State:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
-        const objective = objectiveSystem.activeObjective;
-        if (objective) {
-            room.visual.text(`Active: ${objective.name}`, x, y++, { align: "left", font: 0.7, color: "#00ff00" });
-            room.visual.text(`Priority: ${objective.priority}`, x, y++, { align: "left", font: 0.5, color: "#cccccc" });
-        } else {
-            room.visual.text(`Active: None`, x, y++, { align: "left", font: 0.7, color: "#ff6666" });
+        room.visual.text("System Tasks:", x, y++, { align: "left", color: "#aaaaaa", opacity: 0.8 });
+        
+        const systems = this.getSystemsList();
+        let anyTask = false;
+
+        for (const system of systems) {
+            const status = system.getStatus();
+            if (status) {
+                room.visual.text(`- ${status}`, x, y++, { align: "left", font: 0.5, color: "#00ff00" });
+                anyTask = true;
+            }
+        }
+
+        if (!anyTask) {
+            room.visual.text("- Idle -", x, y++, { align: "left", font: 0.5, color: "#666666" });
         }
     }
 

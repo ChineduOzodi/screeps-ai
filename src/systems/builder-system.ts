@@ -3,7 +3,6 @@ import { BuilderCreepSpawner } from "creep-roles/builder-creep";
 import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { BuildTowerAction } from "goap/actions/infrastructure-actions";
-import { Objective } from "objectives/types";
 
 export class BuilderSystem extends BaseSystemImpl {
     public override get systemInfo(): ColonyBuilderManagement {
@@ -35,11 +34,24 @@ export class BuilderSystem extends BaseSystemImpl {
         super.run();
         this.updateBuildQueue();
 
-        const queue = this.colony.colonyInfo.builderManagement?.buildQueue || [];
-        if (queue.length > 0) {
-            this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
+        const room = this.colony.getMainRoom();
+        const rcl = room.controller?.level || 0;
+
+        // 1. Tower Construction
+        if (rcl >= 3 && !this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1)) {
+            new BuildTowerAction(this.colony).execute();
+        }
+
+        // 2. Weight calculation
+        if (!this.colony.roadManager.areColonyRoadsBuilt()) {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 1.0;
         } else {
-            this.energyUsageTracking.requestedEnergyUsageWeight = 0;
+            const queue = this.colony.colonyInfo.builderManagement?.buildQueue || [];
+            if (queue.length > 0) {
+                this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
+            } else {
+                this.energyUsageTracking.requestedEnergyUsageWeight = 0;
+            }
         }
     }
 
@@ -63,36 +75,24 @@ export class BuilderSystem extends BaseSystemImpl {
         return this.energyUsageTracking.estimatedEnergyWorkRate;
     }
 
-    public override getObjectives(): Objective[] {
+    public override getStatus(): string | null {
         const room = this.colony.getMainRoom();
-        if (!room) return [];
         const rcl = room.controller?.level || 0;
 
-        const objectives: Objective[] = [];
+        if (rcl >= 3 && !this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1)) {
+            return "Building Tower";
+        }
 
-        // Roads
-        objectives.push({
-            name: "Build Roads",
-            priority: 40,
-            isReady: () => rcl >= 1,
-            isComplete: () => this.colony.roadManager.areColonyRoadsBuilt(),
-            execute: () => {
-                this.setEnergyBudgetWeight(1.0);
-            },
-        });
+        if (!this.colony.roadManager.areColonyRoadsBuilt()) {
+            return "Building Roads";
+        }
 
-        // Tower
-        objectives.push({
-            name: "Build Tower",
-            priority: 80,
-            isReady: () => rcl >= 3,
-            isComplete: () => this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1),
-            execute: () => {
-                new BuildTowerAction(this.colony).execute();
-            },
-        });
+        const queueCount = this.colony.colonyInfo.builderManagement?.buildQueue?.length || 0;
+        if (queueCount > 0) {
+            return `Constructing ${queueCount} Sites`;
+        }
 
-        return objectives;
+        return null;
     }
 
     private updateBuildQueue(): void {

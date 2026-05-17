@@ -1,5 +1,3 @@
-import { Objective } from "../objectives/types";
-
 export enum CreepStatus {
     WORKING = "working",
     IDLE = "idle",
@@ -81,7 +79,7 @@ export interface BaseSystem {
     /** Returns the amount of energy per tick that the system is demanding. */
     getEnergyDemand(): number;
 
-    getObjectives(): Objective[];
+    getStatus(): string | null;
 }
 
 export interface Systems {
@@ -90,7 +88,6 @@ export interface Systems {
     infrastructure: any;
     upgrade: any;
     builder: any;
-    objective: any;
 }
 
 export interface ColonyManager {

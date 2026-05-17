@@ -2,7 +2,6 @@ import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { BaseSystemImpl } from "./base-system";
 import { UpgraderCreepSpawner } from "creep-roles/upgrader-creep";
-import { Objective } from "objectives/types";
 
 export class UpgradeSystem extends BaseSystemImpl {
     public override get systemInfo(): ColonyUpgradeManagement {
@@ -34,7 +33,12 @@ export class UpgradeSystem extends BaseSystemImpl {
 
     public override run(): void {
         super.run();
-        this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
+        const room = this.room;
+        if (room && room.controller && room.controller.level < 8) {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 1.0;
+        } else {
+            this.energyUsageTracking.requestedEnergyUsageWeight = 0.5;
+        }
     }
 
     public override getCreepSpawners(): CreepSpawner[] {
@@ -54,22 +58,12 @@ export class UpgradeSystem extends BaseSystemImpl {
         return 999;
     }
 
-    public override getObjectives(): Objective[] {
+    public override getStatus(): string | null {
         const room = this.room;
-        if (!room || !room.controller) return [];
+        if (!room || !room.controller) return null;
         const level = room.controller.level;
-        if (level >= 8) return [];
+        if (level >= 8) return null;
 
-        return [
-            {
-                name: `Upgrade Controller to ${level + 1}`,
-                priority: 20,
-                isReady: () => true,
-                isComplete: () => (this.room.controller?.level || 0) > level,
-                execute: () => {
-                    this.energyUsageTracking.requestedEnergyUsageWeight = 1.0;
-                },
-            },
-        ];
+        return `Upgrading to RCL ${level + 1}`;
     }
 }
