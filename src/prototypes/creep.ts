@@ -2,6 +2,7 @@ import { Movement } from "infrastructure/movement";
 import { ColonyManager, CreepProfiles, CreepRole, CreepStatus } from "./types";
 import { RepairUtils } from "utils/repair-utils";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "constants/repair-constants";
+import { RoomUtils } from "utils/room-utils";
 
 export abstract class CreepRunner {
     public creep: Creep;
@@ -26,7 +27,18 @@ export abstract class CreepRunner {
             return;
         }
 
+        this.updateRoomVisibility();
         this.onRun();
+    }
+
+    private updateRoomVisibility(): void {
+        if (Game.time % 50 !== 0) return;
+        const colony = this.getColony();
+        if (!colony) return;
+
+        // Update room data if we have vision of a room that is not the main colony room
+        // or if it's the main room and we haven't updated in a while.
+        RoomUtils.updateRoomData(colony, this.creep.room);
     }
 
     protected abstract onRun(): void;
