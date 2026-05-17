@@ -171,7 +171,13 @@ export class Movement {
         const path = PathfindingUtils.findPathWithReservation(creep, target, range, 1).path;
 
         if (path && path.length > 0) {
-            this.moveToTargetByPath(creep, (target as any).id, (target as any).id ? undefined : target.pos, range, path);
+            this.moveToTargetByPath(
+                creep,
+                (target as any).id,
+                (target as any).id ? undefined : target.pos,
+                range,
+                path,
+            );
         }
     }
 

@@ -1,5 +1,6 @@
 import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
+import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "../constants/repair-constants";
 import { RepairUtils } from "../utils/repair-utils";
 
 declare global {
@@ -21,6 +22,7 @@ export interface RepairStats {
     totalNeeded: number;
     maintenanceHits: number;
     fortificationHits: number;
+    emergencyHits: number;
     lastCheck: number;
 }
 
@@ -278,7 +280,13 @@ export class ConstructionManager {
     public getRepairStats(): RepairStats {
         const room = this.colony.getMainRoom();
         if (!room || !room.memory) {
-            return { totalNeeded: 0, maintenanceHits: 0, fortificationHits: 0, lastCheck: Game.time };
+            return {
+                totalNeeded: 0,
+                maintenanceHits: 0,
+                fortificationHits: 0,
+                emergencyHits: 0,
+                lastCheck: Game.time,
+            };
         }
 
         if (!room.memory.repairStats) {
@@ -286,17 +294,19 @@ export class ConstructionManager {
                 totalNeeded: 0,
                 maintenanceHits: 0,
                 fortificationHits: 0,
+                emergencyHits: 0,
                 lastCheck: 0,
             };
         }
 
-        const stats = room.memory.repairStats;
+        const stats = room.memory.repairStats as RepairStats;
         if (Game.time - stats.lastCheck > 50) {
             const targets = room.find(FIND_STRUCTURES);
             const rcl = room.controller?.level || 0;
 
             let totalNeeded = 0;
             let fortificationHits = 0;
+            let emergencyHits = 0;
 
             for (const target of targets) {
                 const targetHits = RepairUtils.getStructureTargetHits(target, rcl);
@@ -305,6 +315,14 @@ export class ConstructionManager {
                     totalNeeded += diff;
                     if (target.structureType === STRUCTURE_WALL || target.structureType === STRUCTURE_RAMPART) {
                         fortificationHits += diff;
+                        if (target.hits < REPAIR_THRESHOLD_DECAY_PREVENTION) {
+                            emergencyHits += REPAIR_THRESHOLD_DECAY_PREVENTION - target.hits;
+                        }
+                    } else if (
+                        target.hits < target.hitsMax * REPAIR_THRESHOLD_EMERGENCY ||
+                        target.hits < REPAIR_THRESHOLD_DECAY_PREVENTION
+                    ) {
+                        emergencyHits += diff;
                     }
                 }
             }
@@ -312,6 +330,7 @@ export class ConstructionManager {
             stats.totalNeeded = totalNeeded;
             stats.maintenanceHits = RepairUtils.calculateMaintenanceNeed(room);
             stats.fortificationHits = fortificationHits;
+            stats.emergencyHits = emergencyHits;
             stats.lastCheck = Game.time;
         }
 

@@ -18,7 +18,6 @@ export class RepairerCreep extends CreepRunner {
             let target = this.getTarget();
             if (target && !this.targetNeedsRepair(target)) {
                 this.removeTarget();
-                return;
             }
 
             let newTarget = false;

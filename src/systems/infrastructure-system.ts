@@ -82,6 +82,11 @@ export class InfrastructureSystem extends BaseSystemImpl {
             // Maintenance budget (Base)
             weight = 0.1;
 
+            // Emergency budget (Prioritize over maintenance if something is critical)
+            if (stats.emergencyHits > 0) {
+                weight = 0.2;
+            }
+
             // Fortification budget (Bonus)
             if (stats.fortificationHits > 0 && currentStorage > storageTarget) {
                 weight += 0.15;
@@ -89,6 +94,25 @@ export class InfrastructureSystem extends BaseSystemImpl {
         }
 
         this.energyUsageTracking.requestedEnergyUsageWeight = weight;
+    }
+
+    public override getEnergyDemand(): number {
+        const stats = this.colony.constructionManager.getRepairStats();
+        if (stats.totalNeeded > 0) {
+            return 999;
+        }
+        return 0;
+    }
+
+    public override getStatus(): string | null {
+        const stats = this.colony.constructionManager.getRepairStats();
+        if (stats.emergencyHits > 0) {
+            return "Emergency Repairs";
+        }
+        if (stats.totalNeeded > 0) {
+            return "Maintaining Infrastructure";
+        }
+        return null;
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {

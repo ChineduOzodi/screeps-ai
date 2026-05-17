@@ -51,6 +51,7 @@ export class PathfindingUtils {
                                     startTime,
                                     endTime,
                                     ignoreRoles,
+                                    creep.id,
                                 )
                             ) {
                                 costs.set(reservation.pos.x, reservation.pos.y, 0xff);
@@ -84,9 +85,13 @@ export class PathfindingUtils {
         startTime: number,
         endTime?: number,
         ignoreRoles?: string[],
+        excludeCreepId?: string,
     ): boolean {
         this.checkRoomReservationSetup(room, pos);
         for (const reservation of room.memory.positionReservations[`${pos.x},${pos.y}`].reservations) {
+            if (excludeCreepId && reservation.creepId === excludeCreepId) {
+                continue;
+            }
             if (startTime <= reservation.endTime && (!ignoreRoles || !(reservation.role in ignoreRoles))) {
                 // console.log(`${pos.x},${pos.y} reservation check: arriving too soon (${startTime} <= ${reservation.endTime})`);
                 return false;

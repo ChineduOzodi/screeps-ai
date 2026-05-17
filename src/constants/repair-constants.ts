@@ -1,6 +1,6 @@
 export const WALL_TARGET_HPS: { [rcl: number]: number } = {
     1: 0,
-    2: 0,
+    2: 1000,
     3: 10000,
     4: 50000,
     5: 100000,
@@ -11,8 +11,8 @@ export const WALL_TARGET_HPS: { [rcl: number]: number } = {
 
 export const RAMPART_TARGET_HPS: { [rcl: number]: number } = {
     1: 0,
-    2: 0,
-    3: 0,
+    2: 1000,
+    3: 5000,
     4: 10000,
     5: 50000,
     6: 150000,

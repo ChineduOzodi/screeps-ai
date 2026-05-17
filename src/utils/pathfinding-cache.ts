@@ -37,7 +37,10 @@ export class PathfindingCache {
         }
 
         // Try to find a reverse path if range is 0 and it's a standard pathfinding
-        if (range === 0 && (!options || (!options.roomCallback && !options.costCallback && options.ignoreCreeps !== false))) {
+        if (
+            range === 0 &&
+            (!options || (!options.roomCallback && !options.costCallback && options.ignoreCreeps !== false))
+        ) {
             const reverseKey = this.getCacheKey(to, from, 0, options);
             const reverseCached = Memory.pathfindingCache[reverseKey];
             if (reverseCached && Game.time - reverseCached.timestamp < ttl) {
@@ -98,8 +101,8 @@ export class PathfindingCache {
                 return pathSteps.map(s => new RoomPosition(s.x, s.y, from.roomName));
             }
             // Otherwise use PathFinder.search
-            const result = PathFinder.search(from, { pos: targetPos, range }, options as PathFinderOpts);
-            return result.path;
+            const customResult = PathFinder.search(from, { pos: targetPos, range }, options as PathFinderOpts);
+            return customResult.path;
         }
 
         const cached = this.getPath(from, targetPos, range, options);
@@ -140,7 +143,7 @@ export class PathfindingCache {
 
         const result = PathFinder.search(from, { pos: targetPos, range }, searchOptions);
         const path = result.path;
-        
+
         this.setPath(from, targetPos, range, path, options);
         return path;
     }
@@ -166,12 +169,7 @@ export class PathfindingCache {
         }
     }
 
-    private static getCacheKey(
-        from: RoomPosition,
-        to: RoomPosition,
-        range: number,
-        options?: any,
-    ): string {
+    private static getCacheKey(from: RoomPosition, to: RoomPosition, range: number, options?: any): string {
         let key = `${from.roomName}:${from.x},${from.y}_${to.roomName}:${to.x},${to.y}_r${range}`;
         if (options) {
             if (options.ignoreCreeps) key += "_ic";
@@ -179,6 +177,8 @@ export class PathfindingCache {
             if (options.swampCost) key += `_sc${options.swampCost}`;
             if (options.plainCost) key += `_pc${options.plainCost}`;
             if (options.favorExistingRoads) key += "_fer";
+            if (options.roomCallback) key += "_rc";
+            if (options.costCallback) key += "_cc";
         }
         return key;
     }

@@ -5,6 +5,7 @@ interface RoomMemory {
         totalNeeded: number;
         maintenanceHits: number;
         fortificationHits: number;
+        emergencyHits: number;
         lastCheck: number;
     };
 }

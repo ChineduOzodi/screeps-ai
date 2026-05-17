@@ -69,10 +69,10 @@ export class BuilderSystem extends BaseSystemImpl {
 
     public override getEnergyDemand(): number {
         const queue = this.systemInfo.buildQueue || [];
-        if (queue.length === 0) {
-            return 0;
+        if (queue.length > 0) {
+            return 999;
         }
-        return this.energyUsageTracking.estimatedEnergyWorkRate;
+        return 0;
     }
 
     public override getStatus(): string | null {
