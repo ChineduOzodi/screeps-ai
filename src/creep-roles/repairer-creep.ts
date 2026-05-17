@@ -43,15 +43,27 @@ export class RepairerCreep extends CreepRunner {
             }
 
             if (target) {
+                const t: AnyStructure = target as any;
+                const workDuration = t.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10;
+                const range = t.structureType === STRUCTURE_EXTENSION ? 1 : 3;
+
                 if (
                     this.repair(target) !== OK &&
                     this.transfer(target, RESOURCE_ENERGY) !== OK &&
                     this.build(target as any as ConstructionSite) !== OK
                 ) {
-                    const t: AnyStructure = target as any;
-                    const workDuration = t.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10;
-                    const range = t.structureType === STRUCTURE_EXTENSION ? 1 : 3;
                     this.moveToWithReservation(target, workDuration, range);
+
+                    // If we couldn't find a path and we're not in range, the target might be unreachable.
+                    // We clear it so we can try to find a different target next tick.
+                    if (
+                        !creep.memory.movementSystem?.path &&
+                        creep.pos.getRangeTo(target.pos) > range &&
+                        Game.time % 5 === 0 // Don't flip-flop every tick
+                    ) {
+                        this.removeTarget();
+                        creep.say("unreachable");
+                    }
                 }
             }
         } else {

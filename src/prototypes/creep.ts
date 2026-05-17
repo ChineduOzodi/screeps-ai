@@ -58,7 +58,27 @@ export abstract class CreepRunner {
     /** Since this function modifies the memory, will only return true once. */
     protected switchFromNotWorkingToWorkingFullEnergy(): boolean {
         const { memory } = this.creep;
-        if (!memory.working && this.creep.store[RESOURCE_ENERGY] === this.creep.store.getCapacity()) {
+        if (memory.working) {
+            return false;
+        }
+
+        const isFull = this.creep.store[RESOURCE_ENERGY] === this.creep.store.getCapacity();
+        const hasSomeEnergy = this.creep.store[RESOURCE_ENERGY] > 0;
+
+        let shouldWork = isFull;
+
+        if (!shouldWork && hasSomeEnergy) {
+            // Check for emergency if we have some energy but are not full
+            const colony = this.getColony();
+            if (colony) {
+                const stats = colony.constructionManager.getRepairStats();
+                if (stats.emergencyHits > 0) {
+                    shouldWork = true;
+                }
+            }
+        }
+
+        if (shouldWork) {
             memory.working = true;
             delete memory.targetId;
             delete memory.movementSystem?.path;
@@ -124,7 +144,10 @@ export abstract class CreepRunner {
                 return s.hits < s.hitsMax * REPAIR_THRESHOLD_EMERGENCY || s.hits < REPAIR_THRESHOLD_DECAY_PREVENTION;
             },
         });
-        if (emergency.length > 0) return emergency.sort((a, b) => a.hits - b.hits)[0];
+        if (emergency.length > 0) {
+            const target = this.creep.pos.findClosestByPath(emergency);
+            if (target) return target;
+        }
 
         // Tier 2: Decay Prevention (Walls/Ramparts < 1000)
         const decayPrevention = room.find(FIND_STRUCTURES, {
@@ -135,7 +158,10 @@ export abstract class CreepRunner {
                 );
             },
         });
-        if (decayPrevention.length > 0) return decayPrevention.sort((a, b) => a.hits - b.hits)[0];
+        if (decayPrevention.length > 0) {
+            const target = this.creep.pos.findClosestByPath(decayPrevention);
+            if (target) return target;
+        }
 
         // Tier 3: Maintenance (General Infrastructure < 100%)
         const maintenance = room.find(FIND_STRUCTURES, {
@@ -144,9 +170,12 @@ export abstract class CreepRunner {
                 return s.hits < s.hitsMax;
             },
         });
-        if (maintenance.length > 0) return this.creep.pos.findClosestByPath(maintenance);
+        if (maintenance.length > 0) {
+            const target = this.creep.pos.findClosestByPath(maintenance);
+            if (target) return target;
+        }
 
-        // Tier 4: Fortification (Walls/Ramparts < Target HP) - Sorted by Hits for UNIFORMITY
+        // Tier 4: Fortification (Walls/Ramparts < Target HP)
         const fortification = room.find(FIND_STRUCTURES, {
             filter: s => {
                 const targetHits = RepairUtils.getStructureTargetHits(s, rcl);
@@ -157,7 +186,11 @@ export abstract class CreepRunner {
         });
         if (fortification.length > 0) {
             // Sort by absolute hits to ensure the weakest parts are reinforced first (uniformity)
-            return fortification.sort((a, b) => a.hits - b.hits)[0];
+            // But we still need to check reachability.
+            // Efficient way: find closest by path among the weakest?
+            // For now, let's just find closest by path to ensure it's reachable.
+            const target = this.creep.pos.findClosestByPath(fortification);
+            if (target) return target;
         }
 
         return null;
