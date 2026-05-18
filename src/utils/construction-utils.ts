@@ -177,49 +177,64 @@ export class ConstructionUtils {
         return [];
     }
 
-    public static calculateRoads(startPos: RoomPosition, endPos: RoomPosition, range: number): ProjectStructure[] {
-        const path = PathfindingCache.findPath(startPos, endPos, {
-            range,
-            // @ts-ignore
-            favorExistingRoads: true,
-            roomCallback: (roomName: string) => {
-                const room = Game.rooms[roomName];
-                if (!room) return new PathFinder.CostMatrix();
+    public static calculateRoads(
+        startPos: RoomPosition,
+        endPos: RoomPosition,
+        range: number,
+        plannedRoads: RoomPosition[] = [],
+    ): ProjectStructure[] {
+        const result = PathFinder.search(
+            startPos,
+            { pos: endPos, range },
+            {
+                plainCost: 3,
+                swampCost: 15,
+                roomCallback: (roomName: string) => {
+                    const room = Game.rooms[roomName];
+                    const costs = new PathFinder.CostMatrix();
 
-                const costs = new PathFinder.CostMatrix();
+                    if (room) {
+                        // Favor existing roads
+                        const roads = room.find(FIND_STRUCTURES, {
+                            filter: s => s.structureType === STRUCTURE_ROAD,
+                        });
+                        for (const road of roads) {
+                            costs.set(road.pos.x, road.pos.y, 1);
+                        }
 
-                // Favor existing roads
-                const roads = room.find(FIND_STRUCTURES, {
-                    filter: s => s.structureType === STRUCTURE_ROAD,
-                });
-                for (const road of roads) {
-                    costs.set(road.pos.x, road.pos.y, 1);
-                }
+                        // Favor road construction sites
+                        const sites = room.find(FIND_CONSTRUCTION_SITES, {
+                            filter: s => s.structureType === STRUCTURE_ROAD,
+                        });
+                        for (const site of sites) {
+                            costs.set(site.pos.x, site.pos.y, 1);
+                        }
 
-                // Favor road construction sites
-                const sites = room.find(FIND_CONSTRUCTION_SITES, {
-                    filter: s => s.structureType === STRUCTURE_ROAD,
-                });
-                for (const site of sites) {
-                    costs.set(site.pos.x, site.pos.y, 1);
-                }
-
-                // Avoid obstacles
-                room.find(FIND_STRUCTURES).forEach(s => {
-                    if (
-                        s.structureType !== STRUCTURE_ROAD &&
-                        s.structureType !== STRUCTURE_CONTAINER &&
-                        (s.structureType !== STRUCTURE_RAMPART || !(s as StructureRampart).my)
-                    ) {
-                        costs.set(s.pos.x, s.pos.y, 0xff);
+                        // Avoid obstacles
+                        room.find(FIND_STRUCTURES).forEach(s => {
+                            if (
+                                s.structureType !== STRUCTURE_ROAD &&
+                                s.structureType !== STRUCTURE_CONTAINER &&
+                                (s.structureType !== STRUCTURE_RAMPART || !(s as StructureRampart).my)
+                            ) {
+                                costs.set(s.pos.x, s.pos.y, 0xff);
+                            }
+                        });
                     }
-                });
 
-                return costs;
+                    // Apply planned roads costs (even if room is not visible!)
+                    for (const plannedRoad of plannedRoads) {
+                        if (plannedRoad.roomName === roomName) {
+                            costs.set(plannedRoad.x, plannedRoad.y, 1);
+                        }
+                    }
+
+                    return costs;
+                },
             },
-        } as any);
+        );
 
-        return path.map(pos => ({
+        return result.path.map(pos => ({
             x: pos.x,
             y: pos.y,
             roomName: pos.roomName,

@@ -32,7 +32,7 @@ export class RoadManager {
                       )
                     : new RoomPosition(sourceInfo.position.x, sourceInfo.position.y, sourceInfo.position.roomName);
 
-                const path = ConstructionUtils.calculateRoads(spawn.pos, targetPos, 0);
+                const path = ConstructionUtils.calculateRoads(spawn.pos, targetPos, 0, roadPositions);
                 roadPositions.push(...path.map(s => new RoomPosition(s.x, s.y, s.roomName)));
             }
         }
@@ -41,7 +41,7 @@ export class RoadManager {
         for (const roomName in this.colony.colonyInfo.rooms) {
             const room = Game.rooms[roomName];
             if (room && room.controller) {
-                const path = ConstructionUtils.calculateRoads(spawn.pos, room.controller.pos, 3);
+                const path = ConstructionUtils.calculateRoads(spawn.pos, room.controller.pos, 3, roadPositions);
                 roadPositions.push(...path.map(s => new RoomPosition(s.x, s.y, s.roomName)));
             }
         }
