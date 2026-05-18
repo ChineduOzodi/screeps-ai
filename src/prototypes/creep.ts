@@ -3,6 +3,7 @@ import { ColonyManager, CreepProfiles, CreepRole, CreepStatus } from "./types";
 import { RepairUtils } from "utils/repair-utils";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "constants/repair-constants";
 import { RoomUtils } from "utils/room-utils";
+import { Logger } from "utils/logger";
 
 export abstract class CreepRunner {
     public creep: Creep;
@@ -152,15 +153,15 @@ export abstract class CreepRunner {
         // Tier 2: Decay Prevention (Walls/Ramparts < 1000)
         const decayPrevention = room.find(FIND_STRUCTURES, {
             filter: s => {
-                return (
-                    (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) &&
-                    s.hits < REPAIR_THRESHOLD_DECAY_PREVENTION
-                );
+                const isWallRampart = s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART;
+                const needsDecayPrevention = s.hits < REPAIR_THRESHOLD_DECAY_PREVENTION;
+                return isWallRampart && needsDecayPrevention;
             },
         });
         if (decayPrevention.length > 0) {
+            Logger.debug(`[Creep] ${this.creep.name} found ${decayPrevention.length} structures for decay prevention`);
             const target = this.creep.pos.findClosestByPath(decayPrevention);
-            if (target) return target;
+            if (target) return target as AnyStructure;
         }
 
         // Tier 3: Maintenance (General Infrastructure < 100%)
@@ -403,6 +404,7 @@ export abstract class CreepRunner {
     protected repair(target: TargetType): -6 | CreepActionReturnCode {
         const actionStatus = this.creep.repair(target as any);
         if (actionStatus === OK) {
+            Logger.debug(`[Creep] ${this.creep.name} (${this.memory.role}) repairing ${target?.id}`);
             // this.setAction(CreepWorkPastAction.REPAIR);
         }
         return actionStatus;
@@ -411,6 +413,7 @@ export abstract class CreepRunner {
     protected build(target: TargetType): -6 | -14 | CreepActionReturnCode {
         const actionStatus = this.creep.build(target as any);
         if (actionStatus === OK) {
+            Logger.debug(`[Creep] ${this.creep.name} (${this.memory.role}) building ${target?.id}`);
             // this.setAction(CreepWorkPastAction.BUILD);
         }
         return actionStatus;
@@ -427,6 +430,7 @@ export abstract class CreepRunner {
     protected upgradeController(target: TargetType): ScreepsReturnCode {
         const actionStatus = this.creep.upgradeController(target as any);
         if (actionStatus === OK) {
+            Logger.debug(`[Creep] ${this.creep.name} (${this.memory.role}) upgrading controller`);
             // this.setAction(CreepWorkPastAction.UPGRADE_CONTROLLER);
         }
         return actionStatus;

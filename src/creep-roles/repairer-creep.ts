@@ -3,6 +3,7 @@ import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
+import { Logger } from "utils/logger";
 
 export class RepairerCreep extends CreepRunner {
     public constructor(creep: Creep) {
@@ -27,6 +28,7 @@ export class RepairerCreep extends CreepRunner {
                 }
 
                 if (!isValid) {
+                    Logger.debug(`[Repairer] ${creep.name} target ${target.id} is no longer valid.`);
                     this.removeTarget();
                     target = null;
                 }
@@ -35,13 +37,14 @@ export class RepairerCreep extends CreepRunner {
             if (!target) {
                 // 1. Current room repairs
                 target = this.findTieredRepairTarget();
+                if (target) Logger.info(`[Repairer] ${creep.name} found tiered repair target: ${target.id}`);
 
                 // 2. Current room extensions
                 if (!target) {
                     target = this.findClosestStructureExtension(1);
+                    if (target) Logger.info(`[Repairer] ${creep.name} found extension to fill: ${target.id}`);
                 }
 
-                // 3. Other colony room repairs (if visible)
                 if (!target) {
                     const colony = this.getColony();
                     if (colony) {
@@ -57,7 +60,15 @@ export class RepairerCreep extends CreepRunner {
                     }
                 }
 
+                // 4. Last resort: Upgrade controller
+                if (!target && creep.room.controller && creep.room.controller.my) {
+                    target = creep.room.controller as any;
+                    Logger.info(`[Repairer] ${creep.name} falling back to upgrading controller`);
+                }
+
                 if (target) {
+                    creep.memory.targetId = target.id;
+                    delete creep.memory.targetId; // Clear it for next tick if it's a fallback? No, keep it.
                     creep.memory.targetId = target.id;
                     delete creep.memory.movementSystem?.path;
                 }
@@ -71,16 +82,22 @@ export class RepairerCreep extends CreepRunner {
                 const repairStatus = this.repair(target);
                 const transferStatus = this.transfer(target, RESOURCE_ENERGY);
                 const buildStatus = this.build(target as any as ConstructionSite);
+                let upgradeStatus: ScreepsReturnCode = ERR_INVALID_TARGET;
+                if (t.structureType === STRUCTURE_CONTROLLER) {
+                    upgradeStatus = this.upgradeController(target);
+                }
 
                 if (
                     repairStatus !== OK &&
                     transferStatus !== OK &&
-                    buildStatus !== OK
+                    buildStatus !== OK &&
+                    upgradeStatus !== OK
                 ) {
                     if (
                         repairStatus === ERR_NOT_IN_RANGE ||
                         transferStatus === ERR_NOT_IN_RANGE ||
-                        buildStatus === ERR_NOT_IN_RANGE
+                        buildStatus === ERR_NOT_IN_RANGE ||
+                        upgradeStatus === ERR_NOT_IN_RANGE
                     ) {
                         this.moveToWithReservation(target, workDuration, range);
 

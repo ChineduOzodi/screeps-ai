@@ -2,6 +2,7 @@ import { SerializableRoomPosition } from "utils/pathfinding-cache";
 
 declare global {
     interface Memory {
+        debug?: boolean;
         colonies: {
             [colonyId: string]: Colony | undefined;
         };
