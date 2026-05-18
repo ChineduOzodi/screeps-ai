@@ -100,6 +100,7 @@ describe("RepairerCreep", () => {
 
         // Mock getColony
         const colony = {
+            colonyInfo: { rooms: { E1S1: {} } },
             constructionManager: {
                 getRepairStats: () => ({ emergencyHits: 100 }),
             },

@@ -133,8 +133,8 @@ export abstract class CreepRunner {
         return t.hits < targetHits;
     }
 
-    protected findTieredRepairTarget(): AnyStructure | null {
-        const room = this.creep.room;
+    protected findTieredRepairTarget(targetRoom?: Room): AnyStructure | null {
+        const room = targetRoom || this.creep.room;
         const rcl = room.controller?.level || 0;
 
         // Tier 1: Emergency (Non-wall/rampart < 20% or roads/containers < 1000)
@@ -166,7 +166,12 @@ export abstract class CreepRunner {
         // Tier 3: Maintenance (General Infrastructure < 100%)
         const maintenance = room.find(FIND_STRUCTURES, {
             filter: s => {
-                if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) return false;
+                if (
+                    s.structureType === STRUCTURE_WALL ||
+                    s.structureType === STRUCTURE_RAMPART ||
+                    s.structureType === STRUCTURE_CONTROLLER
+                )
+                    return false;
                 return s.hits < s.hitsMax;
             },
         });

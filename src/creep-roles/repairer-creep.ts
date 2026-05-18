@@ -16,30 +16,51 @@ export class RepairerCreep extends CreepRunner {
 
         if (memory.working) {
             let target = this.getTarget();
-            if (target && !this.targetNeedsRepair(target)) {
-                this.removeTarget();
+            if (target) {
+                let isValid = false;
+                if (target instanceof StructureExtension) {
+                    isValid = target.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                } else if (target instanceof ConstructionSite) {
+                    isValid = true;
+                } else {
+                    isValid = this.targetNeedsRepair(target);
+                }
+
+                if (!isValid) {
+                    this.removeTarget();
+                    target = null;
+                }
             }
 
-            let newTarget = false;
-
             if (!target) {
+                // 1. Current room repairs
                 target = this.findTieredRepairTarget();
-                newTarget = true;
-            }
 
-            if (!target) {
-                target = this.findClosestStructureExtension(1);
-                newTarget = true;
-            }
+                // 2. Current room extensions
+                if (!target) {
+                    target = this.findClosestStructureExtension(1);
+                }
 
-            if (!target) {
-                target = this.findNextTargetInBuildQueue();
-                newTarget = true;
-            }
+                // 3. Other colony room repairs (if visible)
+                if (!target) {
+                    const colony = this.getColony();
+                    if (colony) {
+                        const roomNames = Object.keys(colony.colonyInfo.rooms);
+                        for (const roomName of roomNames) {
+                            if (roomName === creep.room.name) continue;
+                            const room = Game.rooms[roomName];
+                            if (room) {
+                                target = this.findTieredRepairTarget(room);
+                                if (target) break;
+                            }
+                        }
+                    }
+                }
 
-            if (newTarget) {
-                delete creep.memory.movementSystem?.path;
-                creep.memory.targetId = target?.id;
+                if (target) {
+                    creep.memory.targetId = target.id;
+                    delete creep.memory.movementSystem?.path;
+                }
             }
 
             if (target) {
@@ -47,22 +68,35 @@ export class RepairerCreep extends CreepRunner {
                 const workDuration = t.structureType === STRUCTURE_EXTENSION ? 2 : memory.workAmount || 10;
                 const range = t.structureType === STRUCTURE_EXTENSION ? 1 : 3;
 
-                if (
-                    this.repair(target) !== OK &&
-                    this.transfer(target, RESOURCE_ENERGY) !== OK &&
-                    this.build(target as any as ConstructionSite) !== OK
-                ) {
-                    this.moveToWithReservation(target, workDuration, range);
+                const repairStatus = this.repair(target);
+                const transferStatus = this.transfer(target, RESOURCE_ENERGY);
+                const buildStatus = this.build(target as any as ConstructionSite);
 
-                    // If we couldn't find a path and we're not in range, the target might be unreachable.
-                    // We clear it so we can try to find a different target next tick.
+                if (
+                    repairStatus !== OK &&
+                    transferStatus !== OK &&
+                    buildStatus !== OK
+                ) {
                     if (
-                        !creep.memory.movementSystem?.path &&
-                        creep.pos.getRangeTo(target.pos) > range &&
-                        Game.time % 5 === 0 // Don't flip-flop every tick
+                        repairStatus === ERR_NOT_IN_RANGE ||
+                        transferStatus === ERR_NOT_IN_RANGE ||
+                        buildStatus === ERR_NOT_IN_RANGE
                     ) {
+                        this.moveToWithReservation(target, workDuration, range);
+
+                        // If we couldn't find a path and we're not in range, the target might be unreachable.
+                        if (
+                            !creep.memory.movementSystem?.path &&
+                            creep.pos.getRangeTo(target.pos) > range &&
+                            Game.time % 5 === 0
+                        ) {
+                            console.log(`${creep.name}: target ${target.id} unreachable.`);
+                            this.removeTarget();
+                            creep.say("unreachable");
+                        }
+                    } else {
+                        // Some other error (e.g. invalid target type like Controller)
                         this.removeTarget();
-                        creep.say("unreachable");
                     }
                 }
             }
