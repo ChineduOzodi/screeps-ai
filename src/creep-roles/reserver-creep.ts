@@ -38,7 +38,15 @@ export class ReserverCreepSpawner extends CreepSpawnerImpl {
         const colonySpawns: CreepProfiles = {};
         const rooms = colony.colonyInfo.rooms;
 
+        const validRooms = new Set<string>();
+        if (colony.colonyInfo.energyManagement?.sources) {
+            colony.colonyInfo.energyManagement.sources.forEach(source => {
+                validRooms.add(source.position.roomName);
+            });
+        }
+
         Object.keys(rooms).forEach(roomName => {
+            if (!validRooms.has(roomName)) return;
             const roomData = rooms[roomName];
             if (roomData.isMain) return;
             if (roomData.alertLevel > 1) return;

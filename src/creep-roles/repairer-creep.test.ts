@@ -143,6 +143,9 @@ describe("RepairerCreep", () => {
             },
             say: () => {},
             repair: () => OK,
+            transfer: () => OK,
+            withdraw: () => OK,
+            build: () => OK,
         } as any;
 
         const runner = new RepairerCreep(creep);
