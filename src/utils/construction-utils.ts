@@ -1,4 +1,5 @@
 import { PathfindingCache } from "./pathfinding-cache";
+import { Logger } from "./logger";
 
 export class ConstructionUtils {
     public static isTileClearForStructure(pos: RoomPosition, room: Room, ignoreRoads: boolean = false): boolean {
@@ -99,7 +100,7 @@ export class ConstructionUtils {
                     return candidateCenter;
                 }
             } catch (e) {
-                console.log(`Failed to create candidate for extension: ${x},${y} in ${roomName}`);
+                Logger.error(`Failed to create candidate for extension: ${x},${y} in ${roomName}`);
             }
         }
 

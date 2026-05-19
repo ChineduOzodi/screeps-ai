@@ -1,3 +1,4 @@
+import { Logger } from "utils/logger";
 import { PathfindingUtils } from "../utils/pathfinding-utils";
 
 export class Movement {
@@ -63,7 +64,7 @@ export class Movement {
             if (creep.memory.targetId) {
                 const target = Game.getObjectById<Structure>(creep.memory.targetId);
                 if (!target) {
-                    console.log(`${creep.name}: target no longer exists (ID: ${creep.memory.targetId})`);
+                    Logger.warning(`${creep.name}: target no longer exists (ID: ${creep.memory.targetId})`);
                     PathfindingUtils.unreserveAll(creep);
                     delete creep.memory.movementSystem.path;
                     delete creep.memory.targetId;
@@ -113,7 +114,7 @@ export class Movement {
                         const status = creep.move(direction);
 
                         if (status !== OK && status !== ERR_TIRED) {
-                            console.log(
+                            Logger.error(
                                 `${creep.name}: move to ${nextStep} failed with status ${status}. Target: ${targetPos}`,
                             );
                             creep.say(`resetting`);
@@ -128,7 +129,7 @@ export class Movement {
                         }
                     } else {
                         // Off path - might have jumped a room or been pushed
-                        console.log(`${creep.name}: off path at ${creep.pos}. Next step: ${nextStep}`);
+                        Logger.debug(`${creep.name}: off path at ${creep.pos}. Next step: ${nextStep}`);
                         PathfindingUtils.unreserveAll(creep);
                         delete creep.memory.movementSystem.path;
                         delete creep.memory.targetId;
@@ -140,7 +141,7 @@ export class Movement {
                         creep.memory.movementSystem.path
                     ) {
                         const nextStepLog = creep.memory.movementSystem.path[0];
-                        console.log(
+                        Logger.warning(
                             `${creep.name}: path stuck at ${creep.pos}. Next step: ${nextStepLog}. Target: ${targetPos}. Idle: ${creep.memory.movementSystem.idle}`,
                         );
                         creep.say("path stuck");
@@ -181,7 +182,7 @@ export class Movement {
             creep.memory.targetRange = targetRange;
             creep.memory.movementSystem.pathStuck = 0;
         } else {
-            console.log(`movement-system | creep ${creep.id} could not move because no movement system`);
+            Logger.error(`movement-system | creep ${creep.id} could not move because no movement system`);
         }
     }
 
@@ -205,7 +206,7 @@ export class Movement {
 
             PathfindingUtils.reserveLocation(creep, path[path.length - 1], startTime, endTime);
         } else {
-            console.log(`movement-system | creep ${creep.id} could not move because no movement system`);
+            Logger.error(`movement-system | creep ${creep.id} could not move because no movement system`);
         }
     }
 
@@ -236,7 +237,7 @@ export class Movement {
         ignoreRoles?: string[],
     ): void {
         if (creep.spawning) {
-            console.log(`creep still spawning:`, creep.name);
+            Logger.debug(`creep still spawning:`, creep.name);
             return;
         }
 
@@ -258,7 +259,7 @@ export class Movement {
                 pathInfo.endTime,
             );
         } else {
-            console.log(`${creep.name}: did not found path`);
+            Logger.warning(`${creep.name}: did not found path`);
         }
     }
 }

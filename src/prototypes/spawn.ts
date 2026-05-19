@@ -1,3 +1,5 @@
+import { Logger } from "utils/logger";
+
 export class SpawnExtras {
     public spawn: StructureSpawn;
     public constructor(spawn: StructureSpawn) {
@@ -13,7 +15,7 @@ export class SpawnExtras {
 
     /** Creates a colony for the room. */
     private initialRoomSetup(): void {
-        console.log("Creating initial colony in room:", this.spawn.room.name);
+        Logger.info(`Creating initial colony in room: ${this.spawn.room.name}`);
         const colony: Colony = {
             id: this.spawn.room.name,
             mainSpawnId: this.spawn.id,

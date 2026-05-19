@@ -1,4 +1,5 @@
 import { ColonyManager, CreepRole } from "prototypes/types";
+import { Logger } from "utils/logger";
 
 export class Spawning {
     private colony: ColonyManager;
@@ -37,7 +38,7 @@ export class Spawning {
             const request = queue[i];
             const sig = this.getProfileSignature(request.memory);
             if (!validSignatures.has(sig)) {
-                console.log(`Pruning orphaned spawn request: ${request.memory.role} (name: ${request.memory.name})`);
+                Logger.info(`Pruning orphaned spawn request: ${request.memory.role} (name: ${request.memory.name})`);
                 this.colony.removeSpawnRequest(request.memory.name);
             }
         }
@@ -95,7 +96,7 @@ export class Spawning {
         const bodyCost = this.calculateBodyCost(body);
         const capacity = spawn.room.energyCapacityAvailable;
         if (bodyCost > capacity) {
-            console.log(
+            Logger.info(
                 `colony ${this.colony.colonyInfo.id} | Pruning impossible spawn request (cost: ${bodyCost}, capacity: ${capacity}): ${memory.role} (name: ${memory.name})`,
             );
             this.colony.removeSpawnRequest(memory.name);
@@ -104,7 +105,7 @@ export class Spawning {
 
         const creepData = this.colony.getCreepData(memory.name);
         if (!creepData) {
-            console.log(`colony | could not get creep data for ${memory.name}}`);
+            Logger.warning(`colony | could not get creep data for ${memory.name}}`);
             return;
         }
 
@@ -127,7 +128,7 @@ export class Spawning {
                 spawnQueue.splice(0, 1);
                 break;
             case ERR_NAME_EXISTS:
-                console.log(
+                Logger.info(
                     `colony ${this.colony.colonyInfo.id} | spawn skipping creep since name already exists: ${memory.name}`,
                 );
                 spawnQueue.splice(0, 1);
@@ -137,17 +138,17 @@ export class Spawning {
                     this.colony.systems.energy.noEnergyCollectors() &&
                     (memory.spawnCost || 0) > SPAWN_ENERGY_CAPACITY
                 ) {
-                    console.log(
-                        `ERROR: spawn creep with not enough energy and spawnCost greater the able to accumulate automatically. Memory: ${JSON.stringify(memory)}`,
+                    Logger.error(
+                        `spawn creep with not enough energy and spawnCost greater the able to accumulate automatically. Memory: ${JSON.stringify(memory)}`,
                     );
                     spawnQueue.splice(0, 1);
                 }
                 break;
             default:
-                console.log(
-                    `ERROR: spawn creep returning status ${status}, body: ${JSON.stringify(body)}, memory: ${JSON.stringify(memory)}`,
+                Logger.error(
+                    `spawn creep returning status ${status}, body: ${JSON.stringify(body)}, memory: ${JSON.stringify(memory)}`,
                 );
-                console.log(`Removing spawn that is erroring out.`);
+                Logger.error(`Removing spawn that is erroring out.`);
                 spawnQueue.splice(0, 1);
                 break;
         }

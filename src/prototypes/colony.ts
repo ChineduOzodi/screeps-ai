@@ -9,6 +9,7 @@ import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
+import { Logger } from "utils/logger";
 
 function getSystems(colony: ColonyManager): Systems {
     return {
@@ -39,7 +40,7 @@ export class ColonyManagerImpl implements ColonyManager {
     public run(): void {
         const mainRoom = this.getMainRoom();
         if (!mainRoom) {
-            console.log(`No vision of colony room ${this.colonyInfo.id}, removing from memory...`);
+            Logger.warning(`No vision of colony room ${this.colonyInfo.id}, removing from memory...`);
             delete Memory.colonies[this.colonyInfo.id];
             return;
         }
@@ -63,7 +64,7 @@ export class ColonyManagerImpl implements ColonyManager {
         ) {
             const spawns = mainRoom.find(FIND_MY_SPAWNS);
             if (spawns.length > 0) {
-                console.log(
+                Logger.info(
                     `[Colony] ${this.colonyInfo.id} | Detected restart (new spawn found, no creeps). Resetting setupComplete.`,
                 );
                 this.colonyInfo.setupComplete = false;
@@ -74,7 +75,7 @@ export class ColonyManagerImpl implements ColonyManager {
         const spawnManager = new Spawning(this);
 
         if (!this.colonyInfo.setupComplete) {
-            console.log(`[Colony] initialSetup`);
+            Logger.info(`[Colony] initialSetup`);
             this.colonyInfo.setupComplete = this.initialSetup();
             systems.forEach(x => x.onStart());
         }
@@ -509,13 +510,13 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     private initialSetup() {
-        console.log(`[Colony] Performing initial setup for ${this.colonyInfo.id}`);
+        Logger.info(`[Colony] Performing initial setup for ${this.colonyInfo.id}`);
         // setup main room
         const room = this.getMainRoom();
 
         // Clear stale room memory if it exists
         if (Memory.rooms && Memory.rooms[room.name]) {
-            console.log(`[Colony] Clearing stale room memory for ${room.name}`);
+            Logger.info(`[Colony] Clearing stale room memory for ${room.name}`);
             delete Memory.rooms[room.name];
         }
 
@@ -538,13 +539,13 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     private scanForCreeps(): void {
-        console.log(`Scanning for orphaned creeps in colony ${this.colonyInfo.id}...`);
+        Logger.info(`Scanning for orphaned creeps in colony ${this.colonyInfo.id}...`);
         const colonyCreeps = this.getColonyCreeps();
         for (const name in Game.creeps) {
             const creep = Game.creeps[name];
             if (creep.memory.colonyId === this.colonyInfo.id) {
                 if (!colonyCreeps[name]) {
-                    console.log(`Adopting orphaned creep: ${name}`);
+                    Logger.info(`Adopting orphaned creep: ${name}`);
                     colonyCreeps[name] = {
                         name,
                         id: creep.id,
@@ -566,7 +567,7 @@ export class ColonyManagerImpl implements ColonyManager {
     public getMainSpawn(): StructureSpawn {
         let spawn = Game.getObjectById(this.colonyInfo.mainSpawnId);
         if (!spawn) {
-            console.log(`Colony ${this.colonyInfo.id} does not have a main spawn set, resetting spawn.`);
+            Logger.warning(`Colony ${this.colonyInfo.id} does not have a main spawn set, resetting spawn.`);
             const mainRoom = this.getMainRoom();
             if (mainRoom && typeof mainRoom.find === "function") {
                 spawn = mainRoom.find(FIND_MY_SPAWNS)[0];

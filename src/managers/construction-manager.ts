@@ -2,6 +2,7 @@ import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "../constants/repair-constants";
 import { RepairUtils } from "../utils/repair-utils";
+import { Logger } from "../utils/logger";
 
 declare global {
     interface Game {
@@ -231,7 +232,7 @@ export class ConstructionManager {
 
                 const result = room.createConstructionSite(ruin.pos, ruin.structure.structureType);
                 if (result === OK) {
-                    console.log(
+                    Logger.info(
                         `ConstructionManager: Rebuilding ${ruin.structure.structureType} from ruin at ${ruin.pos}`,
                     );
                 }

@@ -2,7 +2,7 @@
 import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
-import { EnergyCalculator } from "utils/energy-calculator";
+import { Logger } from "utils/logger";
 
 const BASE_BUILDER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
 const BASE_BUILDER_COST: number = CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_BUILDER_BODY);
@@ -42,7 +42,7 @@ export class BuilderCreep extends CreepRunner {
             } else {
                 const colony = this.getColony();
                 if (!colony) {
-                    console.log(`builder-system | creep: ${creep.name}, missing colony`);
+                    Logger.warning(`builder-system | creep: ${creep.name}, missing colony`);
                 } else {
                     const buildQueue = colony.builderManagement?.buildQueue || [];
                     if (buildQueue.length === 0) {

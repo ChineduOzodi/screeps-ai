@@ -12,6 +12,7 @@ import { Action, Goal, WorldState } from "goap/types";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { ProjectStructure } from "managers/construction-manager";
 import { RoomUtils } from "utils/room-utils";
+import { Logger } from "utils/logger";
 
 /**
  * Ensures that we are producing as much energy as we can from the selected rooms for a given colony.
@@ -249,7 +250,7 @@ export class EnergySystem extends BaseSystemImpl {
             for (let i = spawnQueue.length - 1; i >= 0; i--) {
                 const role = spawnQueue[i].memory.role;
                 if (role === CreepRole.MINER || role === CreepRole.CARRIER) {
-                    // console.log(`Removing ${role} from queue as we are not using miners.`);
+                    Logger.info(`Removing ${role} from queue as we are not using miners.`);
                     spawnQueue.splice(i, 1);
                 }
             }

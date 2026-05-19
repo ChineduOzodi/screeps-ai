@@ -13,6 +13,7 @@ import { RepairerCreep } from "./../creep-roles/repairer-creep";
 import { UpgraderCreep } from "creep-roles/upgrader-creep";
 import { ScoutCreep } from "creep-roles/scout-creep";
 import { ReserverCreep } from "creep-roles/reserver-creep";
+import { Logger } from "utils/logger";
 
 export class CreepManagement {
     public static run(creep: Creep): void {
@@ -71,7 +72,7 @@ export class CreepManagement {
             case CreepRole.RESERVER:
                 return new ReserverCreep(creep);
             default:
-                console.log(`ERROR: creep (${creep.name}) role "${creep.memory.role}" not setup`);
+                Logger.error(`creep (${creep.name}) role "${creep.memory.role}" not setup`);
                 return;
         }
     }

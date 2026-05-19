@@ -4,6 +4,7 @@ import { CreepSpawner } from "prototypes/CreepSpawner";
 import { BaseSystemImpl } from "./base-system";
 import { RepairerCreepSpawner } from "creep-roles/repairer-creep";
 import { RepairUtils } from "utils/repair-utils";
+import { Logger } from "utils/logger";
 
 import { Action, Goal, WorldState } from "goap/types";
 
@@ -57,7 +58,7 @@ export class InfrastructureSystem extends BaseSystemImpl {
         const timeSinceLastPlan = Game.time - info.lastPlannedTick;
 
         if (rcl > info.lastRclPlanned || timeSinceLastPlan > 2000) {
-            console.log(
+            Logger.info(
                 `[Infrastructure] Triggering road planning for colony ${this.colony.colonyInfo.id} (RCL: ${rcl}, Ticks since last: ${timeSinceLastPlan})`,
             );
             this.colony.roadManager.planColonyRoads();

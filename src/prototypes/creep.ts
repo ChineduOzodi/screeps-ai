@@ -296,7 +296,7 @@ export abstract class CreepRunner {
     protected findNextTargetInBuildQueue() {
         const colony = this.getColony();
         if (!colony) {
-            console.log(`${this.creep.name}: missing colony`);
+            Logger.warning(`${this.creep.name}: missing colony`);
             return null;
         }
 
