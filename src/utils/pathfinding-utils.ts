@@ -12,8 +12,17 @@ export class PathfindingUtils {
         startTime: number;
         endTime: number;
     } {
+        const targetPos = (target as any).pos || (target as RoomPosition);
+        let effectiveRange = range;
+
+        // If target is in a different room, force range 0 to ensure we enter the room.
+        // Screeps actions like build() fail across room boundaries even if in range.
+        if (creep.pos.roomName !== targetPos.roomName) {
+            effectiveRange = 0;
+        }
+
         const moveTimePath = PathfindingCache.findPath(creep.pos, target, {
-            range,
+            range: effectiveRange,
         });
         const moveTime = moveTimePath.length;
 
@@ -26,7 +35,7 @@ export class PathfindingUtils {
         const endTime = Game.time + moveTime + workDuration;
 
         const path = PathfindingCache.findPath(creep.pos, target, {
-            range,
+            range: effectiveRange,
             roomCallback(roomName: string) {
                 const roomMemory = Memory.rooms[roomName];
                 const costs = PathfindingCache.getStandardCostMatrix(roomName);

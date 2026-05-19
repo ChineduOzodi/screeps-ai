@@ -78,7 +78,10 @@ export class Movement {
             }
 
             if (targetPos) {
-                if (creep.pos.getRangeTo(targetPos) <= creep.memory.targetRange) {
+                if (
+                    creep.pos.getRangeTo(targetPos) <= creep.memory.targetRange &&
+                    creep.pos.roomName === targetPos.roomName
+                ) {
                     PathfindingUtils.unreserveAll(creep);
                     delete creep.memory.movementSystem.path;
                     delete creep.memory.targetId;
