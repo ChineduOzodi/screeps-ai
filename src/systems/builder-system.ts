@@ -38,7 +38,8 @@ export class BuilderSystem extends BaseSystemImpl {
         const rcl = room.controller?.level || 0;
 
         // 1. Tower Construction
-        if (rcl >= 3 && !this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1)) {
+        const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl] || 0;
+        if (rcl >= 3 && !this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, maxTowers)) {
             new BuildTowerAction(this.colony).execute();
         }
 
@@ -79,7 +80,8 @@ export class BuilderSystem extends BaseSystemImpl {
         const room = this.colony.getMainRoom();
         const rcl = room.controller?.level || 0;
 
-        if (rcl >= 3 && !this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1)) {
+        const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl] || 0;
+        if (rcl >= 3 && !this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, maxTowers)) {
             return "Building Tower";
         }
 
