@@ -31,16 +31,15 @@ export class BuildTowerAction implements Action {
         this.colony.systems.builder.setEnergyBudgetWeight(1.0);
         const room = this.colony.getMainRoom();
         const spawn = this.colony.getMainSpawn();
-        if (!room || !spawn) return true;
+        if (!room || !spawn || !room.controller) return true;
 
-        if (this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, 1)) {
+        const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][room.controller.level] || 0;
+
+        if (this.colony.constructionManager.hasPlannedStructures(STRUCTURE_TOWER, maxTowers)) {
             return true;
         }
 
-        const structures = ConstructionUtils.getFirstTowerStructures(spawn);
-        if (structures.length > 0) {
-            this.colony.constructionManager.placeConstructionSites(structures);
-        }
+        this.colony.constructionManager.planTowers();
 
         return true;
     }

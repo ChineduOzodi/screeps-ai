@@ -82,7 +82,7 @@ export class RepairerCreep extends CreepRunner {
                 const repairStatus = this.repair(target);
                 const transferStatus = this.transfer(target, RESOURCE_ENERGY);
                 const buildStatus = this.build(target as any as ConstructionSite);
-                let upgradeStatus: ScreepsReturnCode = ERR_INVALID_TARGET;
+                let upgradeStatus: ScreepsReturnCode | -16 = ERR_INVALID_TARGET;
                 if (t.structureType === STRUCTURE_CONTROLLER) {
                     upgradeStatus = this.upgradeController(target);
                 }

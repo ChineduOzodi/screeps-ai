@@ -163,19 +163,121 @@ export class ConstructionUtils {
         ];
     }
 
-    public static getFirstTowerStructures(spawn: StructureSpawn): ProjectStructure[] {
-        const towerPosition = new RoomPosition(spawn.pos.x + 2, spawn.pos.y + 2, spawn.pos.roomName);
-        if (ConstructionUtils.isTileClearForStructure(towerPosition, spawn.room, true)) {
-            const structures: ProjectStructure[] = [];
+    public static getLinkStructures(room: Room, spawn: StructureSpawn, numLinks: number, sources: Source[]): ProjectStructure[] {
+        const structures: ProjectStructure[] = [];
+        if (numLinks <= 0) return structures;
+
+        let placedLinks = 0;
+
+        // 1. Storage/Spawn Link (Core Link)
+        const coreLinkPos = new RoomPosition(spawn.pos.x + 1, spawn.pos.y + 1, room.name);
+        const storage = room.storage;
+
+        // Ensure there isn't already a link near storage/spawn
+        const hasCoreLink = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_LINK && s.pos.inRangeTo(coreLinkPos, 2)
+        }).length > 0 || room.find(FIND_MY_CONSTRUCTION_SITES, {
+            filter: s => s.structureType === STRUCTURE_LINK && s.pos.inRangeTo(coreLinkPos, 2)
+        }).length > 0;
+
+        if (!hasCoreLink && ConstructionUtils.isTileClearForStructure(coreLinkPos, room, true)) {
             structures.push({
-                x: towerPosition.x,
-                y: towerPosition.y,
-                roomName: spawn.pos.roomName,
-                type: STRUCTURE_TOWER,
+                x: coreLinkPos.x,
+                y: coreLinkPos.y,
+                roomName: room.name,
+                type: STRUCTURE_LINK
             });
-            return structures.concat(ConstructionUtils.getRoadsAroundPosition(towerPosition));
+            placedLinks++;
         }
-        return [];
+
+        if (placedLinks >= numLinks) return structures;
+
+        // 2. Controller Link
+        if (room.controller) {
+            const hasControllerLink = room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_LINK && s.pos.inRangeTo(room.controller!.pos, 2)
+            }).length > 0 || room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_LINK && s.pos.inRangeTo(room.controller!.pos, 2)
+            }).length > 0;
+
+            if (!hasControllerLink) {
+                // Find a spot near controller
+                for (let dx = -2; dx <= 2; dx++) {
+                    for (let dy = -2; dy <= 2; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const pos = new RoomPosition(room.controller.pos.x + dx, room.controller.pos.y + dy, room.name);
+                        if (ConstructionUtils.isTileClearForStructure(pos, room, true)) {
+                            structures.push({ x: pos.x, y: pos.y, roomName: room.name, type: STRUCTURE_LINK });
+                            placedLinks++;
+                            break;
+                        }
+                    }
+                    if (placedLinks >= numLinks || !hasControllerLink) break; // found a spot
+                }
+            }
+        }
+
+        if (placedLinks >= numLinks) return structures;
+
+        // 3. Source Links
+        for (const source of sources) {
+            if (placedLinks >= numLinks) break;
+
+            const hasSourceLink = room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_LINK && s.pos.inRangeTo(source.pos, 2)
+            }).length > 0 || room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_LINK && s.pos.inRangeTo(source.pos, 2)
+            }).length > 0;
+
+            if (!hasSourceLink) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    for (let dy = -2; dy <= 2; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const pos = new RoomPosition(source.pos.x + dx, source.pos.y + dy, room.name);
+                        if (ConstructionUtils.isTileClearForStructure(pos, room, true)) {
+                            structures.push({ x: pos.x, y: pos.y, roomName: room.name, type: STRUCTURE_LINK });
+                            placedLinks++;
+                            break;
+                        }
+                    }
+                    if (placedLinks >= numLinks || !hasSourceLink) break; // found a spot
+                }
+            }
+        }
+
+        return structures;
+    }
+
+    public static getTowerStructures(spawn: StructureSpawn, numTowers: number): ProjectStructure[] {
+        const structures: ProjectStructure[] = [];
+        const candidates = [
+            { x: 2, y: 2 },
+            { x: -2, y: -2 },
+            { x: -2, y: 2 },
+            { x: 2, y: -2 },
+            { x: 0, y: 3 },
+            { x: 0, y: -3 },
+        ];
+
+        for (const candidate of candidates) {
+            // Count already planned or placed towers to avoid overbuilding
+            const towerPosition = new RoomPosition(spawn.pos.x + candidate.x, spawn.pos.y + candidate.y, spawn.pos.roomName);
+            if (ConstructionUtils.isTileClearForStructure(towerPosition, spawn.room, true)) {
+                structures.push({
+                    x: towerPosition.x,
+                    y: towerPosition.y,
+                    roomName: spawn.pos.roomName,
+                    type: STRUCTURE_TOWER,
+                });
+                structures.push(...ConstructionUtils.getRoadsAroundPosition(towerPosition));
+
+                // If we've found enough spots to place the required missing towers, break
+                if (structures.filter(s => s.type === STRUCTURE_TOWER).length >= numTowers) {
+                    break;
+                }
+            }
+        }
+        return structures;
     }
 
     public static calculateRoads(
