@@ -77,7 +77,7 @@ describe("CarrierCreep", () => {
                 x: 20,
                 y: 20,
                 roomName: "W1N1",
-                findClosestByPath: stub().returns(null),
+                findClosestByRange: stub().returns(null),
                 inRangeTo: stub().returns(false),
             },
         } as any;
@@ -184,7 +184,7 @@ describe("CarrierCreep", () => {
                     structureType: STRUCTURE_SPAWN,
                     store: { getFreeCapacity: (res: ResourceConstant) => (res === RESOURCE_ENERGY ? 100 : 0) },
                 };
-                (creep.pos.findClosestByPath as sinon.SinonStub).returns(spawn);
+                (creep.pos.findClosestByRange as sinon.SinonStub).returns(spawn);
 
                 (carrier as any).deliverEnergy();
 
@@ -206,7 +206,7 @@ describe("CarrierCreep", () => {
                 };
 
                 // Carrier likely searches for structures in the room
-                (creep.pos.findClosestByPath as sinon.SinonStub).returns(spawn);
+                (creep.pos.findClosestByRange as sinon.SinonStub).returns(spawn);
 
                 // Call deliverEnergy private method
                 (carrier as any).deliverEnergy();
@@ -219,7 +219,7 @@ describe("CarrierCreep", () => {
 
             it("should fallback to Colony's Primary Storage when local Spawns/Extensions are full", () => {
                 // No spawns/extensions with capacity
-                (creep.pos.findClosestByPath as sinon.SinonStub).onCall(0).returns(null);
+                (creep.pos.findClosestByRange as sinon.SinonStub).onCall(0).returns(null);
 
                 const container = {
                     id: "container-1",
@@ -241,7 +241,7 @@ describe("CarrierCreep", () => {
 
             it("should check getFreeCapacity(RESOURCE_ENERGY) > 0 on Primary Storage before targeting it", () => {
                 // Spawns/Extensions are full
-                (creep.pos.findClosestByPath as sinon.SinonStub).onCall(0).returns(null);
+                (creep.pos.findClosestByRange as sinon.SinonStub).onCall(0).returns(null);
 
                 const fullContainer = {
                     id: "container-full",
@@ -259,7 +259,7 @@ describe("CarrierCreep", () => {
                 colony.getPrimaryStorage.returns(fullContainer);
 
                 // Towers are found in the room next
-                (creep.pos.findClosestByPath as sinon.SinonStub).onCall(1).returns(tower);
+                (creep.pos.findClosestByRange as sinon.SinonStub).onCall(1).returns(tower);
 
                 (carrier as any).deliverEnergy();
 
@@ -276,7 +276,7 @@ describe("CarrierCreep", () => {
 
             it("should fallback to Towers if Primary Storage is full or missing", () => {
                 // No spawns/extensions
-                (creep.pos.findClosestByPath as sinon.SinonStub).onCall(0).returns(null);
+                (creep.pos.findClosestByRange as sinon.SinonStub).onCall(0).returns(null);
 
                 const colony = carrier.getColony() as any;
                 colony.getPrimaryStorage.returns(undefined);
@@ -286,7 +286,7 @@ describe("CarrierCreep", () => {
                     structureType: STRUCTURE_TOWER,
                     store: { getFreeCapacity: (res: ResourceConstant) => (res === RESOURCE_ENERGY ? 100 : 0) },
                 };
-                (creep.pos.findClosestByPath as sinon.SinonStub).onCall(1).returns(tower);
+                (creep.pos.findClosestByRange as sinon.SinonStub).onCall(1).returns(tower);
 
                 (carrier as any).deliverEnergy();
 
@@ -299,7 +299,7 @@ describe("CarrierCreep", () => {
 
             it("should fallback to the Controller as a last resort", () => {
                 // Nothing else available or has capacity
-                (creep.pos.findClosestByPath as sinon.SinonStub).returns(null);
+                (creep.pos.findClosestByRange as sinon.SinonStub).returns(null);
                 const colony = carrier.getColony() as any;
                 colony.getPrimaryStorage.returns(undefined);
 

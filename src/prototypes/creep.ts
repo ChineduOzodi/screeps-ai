@@ -146,7 +146,7 @@ export abstract class CreepRunner {
             },
         });
         if (emergency.length > 0) {
-            const target = this.creep.pos.findClosestByPath(emergency);
+            const target = this.creep.pos.findClosestByRange(emergency);
             if (target) return target;
         }
 
@@ -160,7 +160,7 @@ export abstract class CreepRunner {
         });
         if (decayPrevention.length > 0) {
             Logger.debug(`[Creep] ${this.creep.name} found ${decayPrevention.length} structures for decay prevention`);
-            const target = this.creep.pos.findClosestByPath(decayPrevention);
+            const target = this.creep.pos.findClosestByRange(decayPrevention);
             if (target) return target as AnyStructure;
         }
 
@@ -177,7 +177,7 @@ export abstract class CreepRunner {
             },
         });
         if (maintenance.length > 0) {
-            const target = this.creep.pos.findClosestByPath(maintenance);
+            const target = this.creep.pos.findClosestByRange(maintenance);
             if (target) return target;
         }
 
@@ -195,7 +195,7 @@ export abstract class CreepRunner {
             // But we still need to check reachability.
             // Efficient way: find closest by path among the weakest?
             // For now, let's just find closest by path to ensure it's reachable.
-            const target = this.creep.pos.findClosestByPath(fortification);
+            const target = this.creep.pos.findClosestByRange(fortification);
             if (target) return target;
         }
 
@@ -216,7 +216,7 @@ export abstract class CreepRunner {
     }
 
     protected findClosestTombstone(minEnergy: number) {
-        return this.creep.pos.findClosestByPath(FIND_TOMBSTONES, {
+        return this.creep.pos.findClosestByRange(FIND_TOMBSTONES, {
             filter: stone => {
                 return stone.store[RESOURCE_ENERGY] >= minEnergy;
             },
@@ -224,7 +224,7 @@ export abstract class CreepRunner {
     }
 
     protected findClosestDroppedEnergy(minEnergy: number) {
-        return this.creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+        return this.creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
             filter: resource => {
                 return resource.amount >= minEnergy && resource.resourceType === RESOURCE_ENERGY;
             },
@@ -233,7 +233,7 @@ export abstract class CreepRunner {
 
     /** Find closest energy stored in container or storage. This includes if you are using containers with a miner creep. */
     protected findClosestStoredEnergy(minEnergy: number) {
-        return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
+        return this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: structure => {
                 return (
                     (structure.structureType === STRUCTURE_CONTAINER ||
@@ -246,7 +246,7 @@ export abstract class CreepRunner {
 
     /** Finds closest spawn that has full energy. This can be used in an emergency for energy draw. */
     protected findClosestFullSpawn() {
-        return this.creep.pos.findClosestByPath<StructureSpawn>(FIND_STRUCTURES, {
+        return this.creep.pos.findClosestByRange<StructureSpawn>(FIND_STRUCTURES, {
             filter: structure => {
                 return (
                     structure.structureType === STRUCTURE_SPAWN &&
@@ -257,7 +257,7 @@ export abstract class CreepRunner {
     }
 
     protected findClosestSource(minEnergy: number) {
-        return this.creep.pos.findClosestByPath(FIND_SOURCES, {
+        return this.creep.pos.findClosestByRange(FIND_SOURCES, {
             filter: s => {
                 return s.energy >= minEnergy;
             },
@@ -265,7 +265,7 @@ export abstract class CreepRunner {
     }
 
     protected findClosestStructureExtension(minFreeSpace: number) {
-        return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
+        return this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: structure => {
                 return (
                     structure.structureType === STRUCTURE_EXTENSION &&
@@ -318,7 +318,7 @@ export abstract class CreepRunner {
     }
 
     protected findClosestHostile() {
-        return this.creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
+        return this.creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
     }
 
     public getEnergy(): void {
@@ -427,7 +427,7 @@ export abstract class CreepRunner {
         return actionStatus;
     }
 
-    protected upgradeController(target: TargetType): ScreepsReturnCode {
+    protected upgradeController(target: TargetType): ScreepsReturnCode | -16 {
         const actionStatus = this.creep.upgradeController(target as any);
         if (actionStatus === OK) {
             Logger.debug(`[Creep] ${this.creep.name} (${this.memory.role}) upgrading controller`);

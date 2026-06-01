@@ -163,7 +163,7 @@ export class EnergySystem extends BaseSystemImpl {
             // logic to find dropoff
             let target: Structure | null = null;
             const pos = source.pos;
-            target = pos.findClosestByPath<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
+            target = pos.findClosestByRange<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
                 filter: (structure: Structure) => {
                     return (
                         structure.structureType === STRUCTURE_EXTENSION || structure.structureType === STRUCTURE_SPAWN

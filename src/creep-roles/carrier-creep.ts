@@ -230,7 +230,7 @@ export class CarrierCreep extends CreepRunner {
                 ? colony.getCreeps().filter(c => c.memory.role === CreepRole.EXTENSION_FILLER).length
                 : 1;
             if (aliveFillerCount === 0) {
-                const spawnExtension = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+                const spawnExtension = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: s =>
                         (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
                         s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
@@ -264,7 +264,7 @@ export class CarrierCreep extends CreepRunner {
 
         // NO Storage: Fallback to current logic (Spawns/Extensions -> PrimaryStorage (Containers) -> Towers -> Upgrade)
         // Priority 1: Spawns/Extensions (Local Room)
-        let target: Structure | null = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+        let target: Structure | null = creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: s =>
                 (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
@@ -280,7 +280,7 @@ export class CarrierCreep extends CreepRunner {
 
         // Priority 3: Towers (Local Room)
         if (!target) {
-            target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+            target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
             });
         }

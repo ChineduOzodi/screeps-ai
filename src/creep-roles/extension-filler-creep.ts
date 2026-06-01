@@ -53,7 +53,7 @@ export class ExtensionFillerCreep extends CreepRunner {
         const { creep } = this;
 
         // Target: Spawns and Extensions
-        const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+        const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: s =>
                 (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
@@ -65,7 +65,7 @@ export class ExtensionFillerCreep extends CreepRunner {
             }
         } else {
             // Priority 2: Towers
-            const tower = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+            const tower = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
             });
             if (tower) {
