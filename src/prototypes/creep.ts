@@ -427,7 +427,7 @@ export abstract class CreepRunner {
         return actionStatus;
     }
 
-    protected upgradeController(target: TargetType): ScreepsReturnCode {
+    protected upgradeController(target: TargetType): ScreepsReturnCode | -16 {
         const actionStatus = this.creep.upgradeController(target as any);
         if (actionStatus === OK) {
             Logger.debug(`[Creep] ${this.creep.name} (${this.memory.role}) upgrading controller`);

@@ -54,7 +54,70 @@ export class ConstructionManager {
             this.rebuildRuins();
             this.planExtensions();
             this.planStorage();
+            this.planTowers();
+            this.planLinks();
         }
+    }
+
+    public planLinks(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller) return;
+
+        const rcl = room.controller.level;
+        if (rcl < 5) return;
+
+        const maxLinks = CONTROLLER_STRUCTURES[STRUCTURE_LINK][rcl] || 0;
+
+        // Count existing links and construction sites
+        const currentCount =
+            room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_LINK,
+            }).length +
+            room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_LINK,
+            }).length;
+
+        if (currentCount >= maxLinks) return;
+
+        const needed = maxLinks - currentCount;
+
+        // Global limit check
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const sources = room.find(FIND_SOURCES);
+        const structures = ConstructionUtils.getLinkStructures(room, spawn, needed, sources);
+        this.placeConstructionSites(structures);
+    }
+
+    public planTowers(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller) return;
+
+        const rcl = room.controller.level;
+        if (rcl < 3) return;
+
+        const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl] || 0;
+
+        // Count existing towers and construction sites
+        const currentCount =
+            room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_TOWER,
+            }).length +
+            room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_TOWER,
+            }).length;
+
+        if (currentCount >= maxTowers) return;
+
+        const needed = maxTowers - currentCount;
+
+        // Global limit check
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const structures = ConstructionUtils.getTowerStructures(spawn, needed);
+        this.placeConstructionSites(structures);
     }
 
     private planStorage(): void {
