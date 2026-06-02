@@ -39,7 +39,9 @@ export class ScoutCreep extends CreepRunner {
             return;
         }
 
-        // We are in the target room. updateRoomVisibility in CreepRunner already handles data update.
+        // We are in the target room. Force an immediate update of the room data to detect threats right away.
+        RoomUtils.updateRoomData(colony, creep.room);
+
         // Scout specific: Sign controller
         const room = creep.room;
         if (room.controller) {
