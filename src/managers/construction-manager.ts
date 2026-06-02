@@ -56,7 +56,43 @@ export class ConstructionManager {
             this.planStorage();
             this.planTowers();
             this.planLinks();
+            this.planExtractor();
+            this.planTerminal();
         }
+    }
+
+    private planTerminal(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || room.controller.level < 6) return;
+
+        // Only 1 terminal per room
+        if (this.hasPlannedStructures(STRUCTURE_TERMINAL, 1)) return;
+
+        // Global limit check
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const structures = ConstructionUtils.getFirstTerminalStructures(spawn);
+        this.placeConstructionSites(structures);
+    }
+
+    private planExtractor(): void {
+        const room = this.colony.getMainRoom();
+        if (!room || !room.controller || room.controller.level < 6) return;
+
+        // Only 1 extractor per room typically, but place one on each mineral
+        if (this.hasPlannedStructures(STRUCTURE_EXTRACTOR, 1)) return;
+
+        // Global limit check
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const minerals = room.find(FIND_MINERALS);
+        const structures: ProjectStructure[] = [];
+        for (const mineral of minerals) {
+            structures.push({ x: mineral.pos.x, y: mineral.pos.y, roomName: room.name, type: STRUCTURE_EXTRACTOR });
+        }
+
+        this.placeConstructionSites(structures);
     }
 
     public planLinks(): void {
