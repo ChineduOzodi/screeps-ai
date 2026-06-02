@@ -1,3 +1,4 @@
+global.Room = class {}; global.Game = {}; global.Structure = class {}; global.Spawn = class {}; global.Creep = class {}; global.RoomPosition = class {}; global.Source = class {}; global.Flag = class {};
 // inject mocha globally to allow custom interface refer without direct import - bypass bundle issue
 global._ = require("lodash");
 global.mocha = require("mocha");

@@ -163,6 +163,17 @@ export class ConstructionUtils {
         ];
     }
 
+    public static getFirstTerminalStructures(spawn: StructureSpawn): ProjectStructure[] {
+        return [
+            {
+                x: spawn.pos.x - 2,
+                y: spawn.pos.y,
+                roomName: spawn.pos.roomName,
+                type: STRUCTURE_TERMINAL,
+            },
+        ];
+    }
+
     public static getLinkStructures(room: Room, spawn: StructureSpawn, numLinks: number, sources: Source[]): ProjectStructure[] {
         const structures: ProjectStructure[] = [];
         if (numLinks <= 0) return structures;
