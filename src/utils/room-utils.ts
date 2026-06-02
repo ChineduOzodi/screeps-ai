@@ -52,7 +52,9 @@ export class RoomUtils {
         const mainRoom = colony.getMainRoom();
         if (!mainRoom) return [];
 
-        const adjacentRooms = Game.map.describeExits(mainRoom.name) ? Object.values(Game.map.describeExits(mainRoom.name) as Record<string, string>) : [];
+        const adjacentRooms = Game.map.describeExits(mainRoom.name)
+            ? Object.values(Game.map.describeExits(mainRoom.name) as Record<string, string>)
+            : [];
         const knownRooms = Object.keys(colony.colonyInfo.rooms);
         const allPotentialRooms = Array.from(new Set([...adjacentRooms, ...knownRooms]));
 

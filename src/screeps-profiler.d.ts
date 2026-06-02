@@ -1,1 +1,1 @@
-declare module 'screeps-profiler';
+declare module "screeps-profiler";
