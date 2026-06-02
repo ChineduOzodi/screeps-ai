@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -25,3 +25,32 @@ jobs:
         run: npm run build
       - name: Test
         run: TS_NODE_PROJECT=tsconfig.test.json npx mocha --require ts-node/register --require tsconfig-paths/register --require test/setup-mocha.js "src/**/*.test.ts"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Create screeps.json
+        run: |
+          cat <<'INNER_EOF' > screeps.json
+          {
+            "main": {
+              "token": "${{ secrets.SCREEPS_TOKEN }}",
+              "protocol": "https",
+              "hostname": "screeps.com",
+              "port": 443,
+              "path": "/",
+              "branch": "main"
+            }
+          }
+          INNER_EOF
+      - name: Deploy to Screeps
+        run: npm run push-main
