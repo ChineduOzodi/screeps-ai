@@ -17,7 +17,7 @@ describe("RepairerCreep", () => {
         const creep = {
             name: "repairer",
             room: { name: "E1S1", find: () => [] },
-            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByPath: () => null },
+            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByRange: () => null },
             store: {
                 getCapacity: () => 100,
                 getFreeCapacity: () => 0,
@@ -44,7 +44,7 @@ describe("RepairerCreep", () => {
                 find: () => [], // No structures needing repair
                 controller: { level: 1 },
             },
-            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByPath: () => null },
+            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByRange: () => null },
             store: {
                 getCapacity: () => 100,
                 getFreeCapacity: () => 50,
@@ -82,7 +82,7 @@ describe("RepairerCreep", () => {
                 },
                 controller: { level: 1 },
             },
-            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByPath: () => null },
+            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByRange: () => null },
             store: {
                 getCapacity: () => 100,
                 getFreeCapacity: () => 50,
@@ -131,7 +131,7 @@ describe("RepairerCreep", () => {
                 },
                 controller: { level: 1 },
             },
-            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByPath: (arr: any[]) => arr[0] },
+            pos: { x: 10, y: 10, roomName: "E1S1", getRangeTo: () => 1, findClosestByRange: (arr: any[]) => arr[0] },
             store: {
                 getCapacity: () => 100,
                 getFreeCapacity: () => 0,

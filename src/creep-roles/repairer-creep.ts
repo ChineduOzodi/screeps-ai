@@ -87,12 +87,7 @@ export class RepairerCreep extends CreepRunner {
                     upgradeStatus = this.upgradeController(target);
                 }
 
-                if (
-                    repairStatus !== OK &&
-                    transferStatus !== OK &&
-                    buildStatus !== OK &&
-                    upgradeStatus !== OK
-                ) {
+                if (repairStatus !== OK && transferStatus !== OK && buildStatus !== OK && upgradeStatus !== OK) {
                     if (
                         repairStatus === ERR_NOT_IN_RANGE ||
                         transferStatus === ERR_NOT_IN_RANGE ||

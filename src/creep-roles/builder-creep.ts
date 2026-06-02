@@ -1,5 +1,6 @@
 import { EnergyCalculator } from "utils/energy-calculator";
 /* eslint-disable max-classes-per-file */
+
 import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";

@@ -67,7 +67,7 @@ describe("ExtensionFillerCreep", () => {
                     [RESOURCE_ENERGY]: 0,
                 },
                 pos: {
-                    findClosestByPath: stub(),
+                    findClosestByRange: stub(),
                     inRangeTo: stub(),
                 },
                 withdraw: stub(),
@@ -122,13 +122,13 @@ describe("ExtensionFillerCreep", () => {
                 structureType: STRUCTURE_SPAWN,
                 store: { getFreeCapacity: stub().returns(100) },
             };
-            creep.pos.findClosestByPath.onFirstCall().returns(mockSpawn);
+            creep.pos.findClosestByRange.onFirstCall().returns(mockSpawn);
             creep.transfer.returns(OK);
 
             runner.onRun();
 
             assert.isTrue(creep.transfer.calledWith(mockSpawn, RESOURCE_ENERGY));
-            assert.isTrue(creep.pos.findClosestByPath.calledWith(FIND_STRUCTURES, match.any));
+            assert.isTrue(creep.pos.findClosestByRange.calledWith(FIND_STRUCTURES, match.any));
         });
 
         it("should deliver energy to Towers if Spawns/Extensions are full", () => {
@@ -136,14 +136,14 @@ describe("ExtensionFillerCreep", () => {
             creep.store[RESOURCE_ENERGY] = 50;
 
             // First call for Spawns/Extensions returns null
-            creep.pos.findClosestByPath.onFirstCall().returns(null);
+            creep.pos.findClosestByRange.onFirstCall().returns(null);
 
             const mockTower = {
                 structureType: STRUCTURE_TOWER,
                 store: { getFreeCapacity: stub().returns(100) },
             };
             // Second call for Towers returns mockTower
-            creep.pos.findClosestByPath.onSecondCall().returns(mockTower);
+            creep.pos.findClosestByRange.onSecondCall().returns(mockTower);
             creep.transfer.returns(OK);
 
             runner.onRun();

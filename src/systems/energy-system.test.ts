@@ -92,7 +92,7 @@ describe("Energy System", () => {
                 y: 10,
                 roomName: "W1N1",
                 findPathTo: () => ({ length: 10 }),
-                findClosestByPath: () => null,
+                findClosestByRange: () => null,
             },
             room: {
                 getTerrain: () => ({ get: () => 0 }),
@@ -130,7 +130,7 @@ describe("Energy System", () => {
 
         // Mock distances for production calculation
         // getTheoreticalGrossProduction uses EnergyCalculator.calculateTravelTime(target.pos, source.pos)
-        // target is either extension/spawn found by findClosestByPath or mainSpawn
+        // target is either extension/spawn found by findClosestByRange or mainSpawn
         const mockSpawn = {
             pos: {
                 x: 5,
@@ -141,8 +141,8 @@ describe("Energy System", () => {
         } as any;
         mockColony.getMainSpawn = () => mockSpawn;
 
-        // Mock findClosestByPath to return the spawn
-        mockSource.pos.findClosestByPath = () => mockSpawn;
+        // Mock findClosestByRange to return the spawn
+        mockSource.pos.findClosestByRange = () => mockSpawn;
 
         const production = energySystem.getTheoreticalGrossProduction();
 

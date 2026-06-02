@@ -38,7 +38,7 @@ export class HarvesterCreep extends CreepRunner {
         } else {
             // finds closest storage / spawn to store energy
             let target: Structure | null = null;
-            target = creep.pos.findClosestByPath<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
+            target = creep.pos.findClosestByRange<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
                 filter: structure => {
                     return (
                         (structure.structureType === STRUCTURE_EXTENSION ||
@@ -51,7 +51,7 @@ export class HarvesterCreep extends CreepRunner {
             // StructureTower has lower priority than extensions and spawn so as not to
             // accidentally starve creep generation.
             if (!target) {
-                target = creep.pos.findClosestByPath<StructureTower>(FIND_STRUCTURES, {
+                target = creep.pos.findClosestByRange<StructureTower>(FIND_STRUCTURES, {
                     filter: structure => {
                         return (
                             structure.structureType === STRUCTURE_TOWER &&
@@ -62,7 +62,7 @@ export class HarvesterCreep extends CreepRunner {
             }
 
             if (!target) {
-                target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: structure => {
                         return (
                             (structure.structureType === STRUCTURE_CONTAINER ||
@@ -76,7 +76,7 @@ export class HarvesterCreep extends CreepRunner {
                 this.moveToWithReservation(target, 2);
             } else {
                 // If no storage target, try to build first
-                const constructionSite = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
+                const constructionSite = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
                 if (constructionSite) {
                     if (this.build(constructionSite) === ERR_NOT_IN_RANGE) {
                         this.moveToWithReservation(constructionSite, creep.memory.workDuration, 3);
