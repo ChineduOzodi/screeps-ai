@@ -23,6 +23,8 @@ export class RepairerCreep extends CreepRunner {
                     isValid = target.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 } else if (target instanceof ConstructionSite) {
                     isValid = true;
+                } else if (target instanceof StructureController) {
+                    isValid = true;
                 } else {
                     isValid = this.targetNeedsRepair(target);
                 }
@@ -35,9 +37,14 @@ export class RepairerCreep extends CreepRunner {
             }
 
             if (!target) {
+                Logger.debug(`[Repairer] ${creep.name} looking for new target...`);
                 // 1. Current room repairs
                 target = this.findTieredRepairTarget();
-                if (target) Logger.info(`[Repairer] ${creep.name} found tiered repair target: ${target.id}`);
+                if (target) {
+                    Logger.info(`[Repairer] ${creep.name} found tiered repair target: ${target.id} at ${target.pos}`);
+                } else {
+                    Logger.debug(`[Repairer] ${creep.name} no tiered repair targets found in ${creep.room.name}`);
+                }
 
                 // 2. Current room extensions
                 if (!target) {
@@ -49,12 +56,22 @@ export class RepairerCreep extends CreepRunner {
                     const colony = this.getColony();
                     if (colony) {
                         const roomNames = Object.keys(colony.colonyInfo.rooms);
+                        Logger.debug(
+                            `[Repairer] ${creep.name} checking other rooms in colony: ${roomNames.join(", ")}`,
+                        );
                         for (const roomName of roomNames) {
                             if (roomName === creep.room.name) continue;
                             const room = Game.rooms[roomName];
                             if (room) {
                                 target = this.findTieredRepairTarget(room);
-                                if (target) break;
+                                if (target) {
+                                    Logger.info(
+                                        `[Repairer] ${creep.name} found remote repair target in ${roomName}: ${target.id}`,
+                                    );
+                                    break;
+                                }
+                            } else {
+                                Logger.debug(`[Repairer] ${creep.name} no vision of room ${roomName}`);
                             }
                         }
                     }
@@ -63,14 +80,16 @@ export class RepairerCreep extends CreepRunner {
                 // 4. Last resort: Upgrade controller
                 if (!target && creep.room.controller && creep.room.controller.my) {
                     target = creep.room.controller as any;
-                    Logger.info(`[Repairer] ${creep.name} falling back to upgrading controller`);
+                    Logger.info(`[Repairer] ${creep.name} falling back to upgrading controller in ${creep.room.name}`);
                 }
 
                 if (target) {
                     creep.memory.targetId = target.id;
-                    delete creep.memory.targetId; // Clear it for next tick if it's a fallback? No, keep it.
-                    creep.memory.targetId = target.id;
                     delete creep.memory.movementSystem?.path;
+                } else {
+                    Logger.warning(
+                        `[Repairer] ${creep.name} could not find ANY target (repairs, extensions, or controller)`,
+                    );
                 }
             }
 
