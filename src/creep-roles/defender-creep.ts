@@ -16,13 +16,32 @@ export class DefenderCreep extends CreepRunner {
 
     public runDefenderCreep(): void {
         const creep = this.creep;
+        const targetRoomName = creep.memory.homeRoomName;
+
+        // If we are not in our target room, move there
+        if (targetRoomName && creep.room.name !== targetRoomName) {
+            this.moveToWithReservation({ pos: new RoomPosition(25, 25, targetRoomName) }, 0, 20);
+            return;
+        }
+
         const threat = ThreatAssessment.assess(this.creep.room);
 
-        const target = threat.weakestHostile;
+        let target: AnyCreep | Structure | null = threat.weakestHostile;
+
+        if (!target) {
+            target = this.creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
+                filter: s => s.structureType !== STRUCTURE_CONTROLLER
+            });
+        }
 
         if (target) {
             if (this.attack(target) === ERR_NOT_IN_RANGE) {
                 this.moveToWithReservation(target, creep.memory.workDuration);
+            }
+        } else {
+            // No targets found in the target room. Reset alert level
+            if (targetRoomName && this.colony && this.colony.colonyInfo.rooms[targetRoomName]) {
+                this.colony.colonyInfo.rooms[targetRoomName].alertLevel = 0;
             }
         }
     }
@@ -34,29 +53,30 @@ export class DefenderCreepSpawner extends CreepSpawnerImpl {
         const profiles: CreepProfiles = {};
         for (const roomName in rooms) {
             const roomInfo = rooms[roomName];
-            const room = Game.rooms[roomInfo.name];
-            if (!room) continue;
 
             const profileName = `${CreepRole.DEFENDER}-${roomInfo.name}`;
-            const hostiles = room.find(FIND_HOSTILE_CREEPS);
-            roomInfo.alertLevel = hostiles.length;
 
             if (roomInfo.alertLevel > 0) {
-                const towers = room.find<StructureTower>(FIND_MY_STRUCTURES, {
-                    filter: { structureType: STRUCTURE_TOWER },
-                });
+                const room = Game.rooms[roomInfo.name];
+                let towersCount = 0;
+                if (room) {
+                    const towers = room.find<StructureTower>(FIND_MY_STRUCTURES, {
+                        filter: { structureType: STRUCTURE_TOWER },
+                    });
+                    towersCount = towers.length;
+                }
 
                 // Determine desired amount based on threat and towers
-                const desiredAmount = Math.max(1, roomInfo.alertLevel - Math.floor(towers.length / 2));
+                const desiredAmount = Math.max(1, roomInfo.alertLevel - Math.floor(towersCount / 2));
 
-                profiles[profileName] = this.createDefenderProfile(roomInfo.name, colony, hostiles);
+                profiles[profileName] = this.createDefenderProfile(roomInfo.name, colony);
                 profiles[profileName].desiredAmount = desiredAmount;
             }
         }
         return profiles;
     }
 
-    private createDefenderProfile(roomName: string, colony: ColonyManager, hostiles: Creep[]): CreepSpawnerProfileInfo {
+    private createDefenderProfile(roomName: string, colony: ColonyManager): CreepSpawnerProfileInfo {
         const room = colony.getMainRoom();
         let energy = room.energyCapacityAvailable;
         if (colony.systems.energy.noEnergyCollectors()) {

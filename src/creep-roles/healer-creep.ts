@@ -9,6 +9,8 @@ const BASE_HEALER = [HEAL, MOVE];
 export class HealerCreep extends CreepRunner {
     public override onRun(): void {
         const creep = this.creep;
+        const targetRoomName = creep.memory.homeRoomName;
+
         const target = this.findDefenderToHeal();
 
         if (target) {
@@ -17,6 +19,9 @@ export class HealerCreep extends CreepRunner {
             }
         } else if (creep.hits < creep.hitsMax) {
             creep.heal(creep);
+        } else if (targetRoomName && creep.room.name !== targetRoomName) {
+            // Move to target room if no one to heal here
+            this.moveToWithReservation({ pos: new RoomPosition(25, 25, targetRoomName) }, 0, 20);
         }
     }
 
@@ -34,16 +39,13 @@ export class HealerCreepSpawner extends CreepSpawnerImpl {
         const profiles: CreepProfiles = {};
         for (const roomName in rooms) {
             const roomInfo = rooms[roomName];
-            const room = Game.rooms[roomInfo.name];
-            if (!room) continue;
 
             const profileName = `${CreepRole.HEALER}-${roomInfo.name}`;
             const defendersCount = colony.getCreepCount(CreepRole.DEFENDER);
             const healersCount = colony.getCreepCount(CreepRole.HEALER);
-            const hostiles = room.find(FIND_HOSTILE_CREEPS);
 
             let desiredAmount = 0;
-            if (hostiles.length > 0 && defendersCount >= 2) {
+            if (roomInfo.alertLevel > 0 && defendersCount >= 2) {
                 desiredAmount = Math.floor(defendersCount / 2);
             }
 
