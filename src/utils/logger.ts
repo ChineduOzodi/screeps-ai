@@ -17,16 +17,22 @@ export interface LogOptions {
  * Logger.error always bypasses isolation.
  */
 const ISOLATION_MODE = false;
+const LOG_LEVEL = LogLevel.DEBUG;
+
+const USE_MASTER_LOG_FILTER = false;
+const MASTER_LOG_FILTER = (msg: string) => {
+    return msg.includes("repairer");
+};
 
 export class Logger {
     private static getLogLevel(): LogLevel {
-        if (typeof Memory !== "undefined" && Memory.debug) {
-            return LogLevel.DEBUG;
-        }
-        return LogLevel.WARNING;
+        return typeof Memory !== "undefined" && Memory.debug ? LogLevel.DEBUG : LOG_LEVEL;
     }
 
-    private static shouldPrint(options?: LogOptions): boolean {
+    private static shouldPrint(options?: LogOptions, msg?: string): boolean {
+        if (USE_MASTER_LOG_FILTER && msg) {
+            return MASTER_LOG_FILTER(msg);
+        }
         if (!ISOLATION_MODE) {
             return true;
         }
@@ -43,7 +49,7 @@ export class Logger {
         const opts = options && (options.isolate !== undefined || typeof options === "function") ? options : undefined;
         const extraArgs = opts ? args : [options, ...args];
 
-        if (this.getLogLevel() <= LogLevel.DEBUG && this.shouldPrint(opts)) {
+        if (this.getLogLevel() <= LogLevel.DEBUG && this.shouldPrint(opts, message)) {
             console.log(`[DEBUG] ${message}`, ...extraArgs.filter(a => a !== undefined));
         }
     }
@@ -52,7 +58,7 @@ export class Logger {
         const opts = options && (options.isolate !== undefined || typeof options === "function") ? options : undefined;
         const extraArgs = opts ? args : [options, ...args];
 
-        if (this.getLogLevel() <= LogLevel.INFO && this.shouldPrint(opts)) {
+        if (this.getLogLevel() <= LogLevel.INFO && this.shouldPrint(opts, message)) {
             console.log(`[INFO] ${message}`, ...extraArgs.filter(a => a !== undefined));
         }
     }
@@ -61,7 +67,7 @@ export class Logger {
         const opts = options && (options.isolate !== undefined || typeof options === "function") ? options : undefined;
         const extraArgs = opts ? args : [options, ...args];
 
-        if (this.getLogLevel() <= LogLevel.WARNING && this.shouldPrint(opts)) {
+        if (this.getLogLevel() <= LogLevel.WARNING && this.shouldPrint(opts, message)) {
             console.log(`[WARNING] ${message}`, ...extraArgs.filter(a => a !== undefined));
         }
     }

@@ -3,6 +3,7 @@ import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { DefenderCreepSpawner } from "creep-roles/defender-creep";
 import { HealerCreepSpawner } from "creep-roles/healer-creep";
+import { RoomUtils } from "utils/room-utils";
 
 export class DefenseSystem extends BaseSystemImpl {
     public override get systemInfo(): BaseSystemInfo {
@@ -34,9 +35,21 @@ export class DefenseSystem extends BaseSystemImpl {
 
     public override run(): void {
         super.run();
-        const room = this.colony.getMainRoom();
-        const hostiles = room.find(FIND_HOSTILE_CREEPS);
-        if (hostiles.length > 0) {
+        let threatLevel = 0;
+        const rooms = this.colony.colonyInfo.rooms;
+        for (const roomName in rooms) {
+            // Actively update room data if we have vision of the room
+            if (Game.rooms[roomName]) {
+                RoomUtils.updateRoomData(this.colony, Game.rooms[roomName]);
+            }
+
+            const roomInfo = rooms[roomName];
+            if (roomInfo.alertLevel > 0) {
+                threatLevel += roomInfo.alertLevel;
+            }
+        }
+
+        if (threatLevel > 0) {
             this.energyUsageTracking.requestedEnergyUsageWeight = 10;
         } else {
             this.energyUsageTracking.requestedEnergyUsageWeight = 0;
@@ -52,8 +65,12 @@ export class DefenseSystem extends BaseSystemImpl {
     }
 
     public override getStatus(): string | null {
-        const room = this.colony.getMainRoom();
-        const hostiles = room.find(FIND_HOSTILE_CREEPS);
-        return hostiles.length > 0 ? "Defending Room" : null;
+        const rooms = this.colony.colonyInfo.rooms;
+        for (const roomName in rooms) {
+            if (rooms[roomName].alertLevel > 0) {
+                return "Defending Colony Area";
+            }
+        }
+        return null;
     }
 }

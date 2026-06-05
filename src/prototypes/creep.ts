@@ -141,13 +141,24 @@ export abstract class CreepRunner {
         // Tier 1: Emergency (Non-wall/rampart < 20% or roads/containers < 1000)
         const emergency = room.find(FIND_STRUCTURES, {
             filter: s => {
-                if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) return false;
+                if (
+                    s.structureType === STRUCTURE_WALL ||
+                    s.structureType === STRUCTURE_RAMPART ||
+                    s.structureType === STRUCTURE_CONTROLLER
+                )
+                    return false;
                 return s.hits < s.hitsMax * REPAIR_THRESHOLD_EMERGENCY || s.hits < REPAIR_THRESHOLD_DECAY_PREVENTION;
             },
         });
         if (emergency.length > 0) {
             const target = this.creep.pos.findClosestByRange(emergency);
-            if (target) return target;
+            if (target) {
+                Logger.debug(`[Creep] ${this.creep.name} found Tier 1 emergency target: ${target.id}`);
+                return target;
+            }
+            Logger.debug(
+                `[Creep] ${this.creep.name} found ${emergency.length} Tier 1 emergency structures, but none are reachable.`,
+            );
         }
 
         // Tier 2: Decay Prevention (Walls/Ramparts < 1000)
@@ -161,7 +172,13 @@ export abstract class CreepRunner {
         if (decayPrevention.length > 0) {
             Logger.debug(`[Creep] ${this.creep.name} found ${decayPrevention.length} structures for decay prevention`);
             const target = this.creep.pos.findClosestByRange(decayPrevention);
-            if (target) return target as AnyStructure;
+            if (target) {
+                Logger.debug(`[Creep] ${this.creep.name} found Tier 2 decay prevention target: ${target.id}`);
+                return target as AnyStructure;
+            }
+            Logger.debug(
+                `[Creep] ${this.creep.name} found ${decayPrevention.length} Tier 2 decay structures, but none are reachable.`,
+            );
         }
 
         // Tier 3: Maintenance (General Infrastructure < 100%)
@@ -178,7 +195,13 @@ export abstract class CreepRunner {
         });
         if (maintenance.length > 0) {
             const target = this.creep.pos.findClosestByRange(maintenance);
-            if (target) return target;
+            if (target) {
+                Logger.debug(`[Creep] ${this.creep.name} found Tier 3 maintenance target: ${target.id}`);
+                return target;
+            }
+            Logger.debug(
+                `[Creep] ${this.creep.name} found ${maintenance.length} Tier 3 maintenance structures, but none are reachable.`,
+            );
         }
 
         // Tier 4: Fortification (Walls/Ramparts < Target HP)
@@ -191,12 +214,14 @@ export abstract class CreepRunner {
             },
         });
         if (fortification.length > 0) {
-            // Sort by absolute hits to ensure the weakest parts are reinforced first (uniformity)
-            // But we still need to check reachability.
-            // Efficient way: find closest by path among the weakest?
-            // For now, let's just find closest by path to ensure it's reachable.
             const target = this.creep.pos.findClosestByRange(fortification);
-            if (target) return target;
+            if (target) {
+                Logger.debug(`[Creep] ${this.creep.name} found Tier 4 fortification target: ${target.id}`);
+                return target;
+            }
+            Logger.debug(
+                `[Creep] ${this.creep.name} found ${fortification.length} Tier 4 fortification structures, but none are reachable.`,
+            );
         }
 
         return null;
