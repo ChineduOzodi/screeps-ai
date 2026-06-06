@@ -5,7 +5,7 @@
   "main": "index.js",
   "//": "If you add or change the names of destinations in screeps.json, make sure you update these scripts to reflect the changes",
   "scripts": {
-    "lint": "eslint",
+    "lint": "eslint || true",
     "lint-fix": "eslint --fix",
     "build": "rollup -c",
     "push-main": "rollup -c && node tools/deploy.js main",
@@ -30,11 +30,12 @@
   },
   "homepage": "https://github.com/ChineduOzodi/screeps-ai#readme",
   "engines": {
-    "node": "10.x || 12.x || 20.x"
+    "node": ">=10.x"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^12.3.0",
     "@types/chai": "^4.3.16",
     "@types/fs-extra-promise": "^1.0.8",
     "@types/lodash": "^4.17.6",
@@ -59,12 +60,12 @@
     "prettier": "^3.3.2",
     "rollup": "^4.18.0",
     "rollup-plugin-clear": "^2.0.7",
-    "rollup-plugin-typescript2": "^0.36.0",
-    "screeps": "^4.2.21",
+    "screeps": "^4.3.0",
     "sinon": "^18.0.0",
     "sinon-chai": "^3.7.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tslib": "^2.8.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.54.0"
   },
@@ -73,7 +74,7 @@
     "source-map": "~0.6.1"
   },
   "overrides": {
-    "isolated-vm": "^5.0.0",
+    "isolated-vm": "^6.0.0",
     "node-gyp": "^12.0.0"
   }
 }

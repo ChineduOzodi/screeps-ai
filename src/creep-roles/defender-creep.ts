@@ -30,7 +30,7 @@ export class DefenderCreep extends CreepRunner {
 
         if (!target) {
             target = this.creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
-                filter: s => s.structureType !== STRUCTURE_CONTROLLER
+                filter: s => s.structureType !== STRUCTURE_CONTROLLER,
             });
         }
 

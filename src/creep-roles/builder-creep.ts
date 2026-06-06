@@ -1,11 +1,9 @@
 import { EnergyCalculator } from "utils/energy-calculator";
-/* eslint-disable max-classes-per-file */
 
 import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { Logger } from "utils/logger";
-import { EnergyCalculator } from "utils/energy-calculator";
 
 const BASE_BUILDER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
 const BASE_BUILDER_COST: number = CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_BUILDER_BODY);
