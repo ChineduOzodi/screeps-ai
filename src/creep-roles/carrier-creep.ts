@@ -34,9 +34,13 @@ export class CarrierCreep extends CreepRunner {
             : undefined;
 
         // Check Miner
-        const miner = creep.room
-            .find(FIND_MY_CREEPS)
-            .find(c => c.memory.role === CreepRole.MINER && c.memory.workTargetId === memory.workTargetId);
+        const miner = colony
+            ? colony
+                  .getCreeps()
+                  .find(c => c.memory.role === CreepRole.MINER && c.memory.workTargetId === memory.workTargetId)
+            : creep.room
+                  .find(FIND_MY_CREEPS)
+                  .find(c => c.memory.role === CreepRole.MINER && c.memory.workTargetId === memory.workTargetId);
 
         // Tow Miner if needed
         if (miner) {
