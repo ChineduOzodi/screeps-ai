@@ -31,10 +31,6 @@ export abstract class BaseSystemImpl implements BaseSystem {
         return scaledBody;
     }
 
-    public updateProfiles(): void {
-        // Deprecated: Profiles are now generated dynamically in getSpawnerProfilesList
-    }
-
     public getSpawnerProfilesList(): CreepSpawnerProfileInfo[] {
         const creepSpawners = this.getCreepSpawners();
         const profiles: CreepSpawnerProfileInfo[] = [];

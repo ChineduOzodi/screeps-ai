@@ -62,9 +62,6 @@ export interface BaseSystem {
 
     run(): void;
 
-    /** Functionality to update profiles of creeps to be spawned by the spawning system. Primarily invoked by colony manager. */
-    updateProfiles(): void;
-
     /** Get Roles to track energy */
     getRolesToTrackEnergy(): CreepRole[];
 
