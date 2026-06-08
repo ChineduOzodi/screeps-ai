@@ -86,10 +86,6 @@ export class ColonyManagerImpl implements ColonyManager {
 
         this.manageEnergyProductionConsumption();
 
-        if (this.shouldUpdate()) {
-            systems.forEach(x => x.updateProfiles());
-        }
-
         spawnManager.run();
         systems.forEach(x => x.run());
         this.constructionManager.run();
@@ -105,14 +101,6 @@ export class ColonyManagerImpl implements ColonyManager {
             systems.push(s[key]);
         }
         return systems;
-    }
-
-    private shouldUpdate(): boolean {
-        if (!this.colonyInfo.nextUpdate || this.colonyInfo.nextUpdate < Game.time) {
-            this.colonyInfo.nextUpdate = Game.time + 10;
-            return true;
-        }
-        return false;
     }
 
     public visualizeStats(): void {
