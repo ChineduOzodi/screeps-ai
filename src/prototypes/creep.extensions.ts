@@ -5,7 +5,7 @@ declare global {
         name: string;
         colonyId: string;
         movementSystem?: CreepMovementSystem;
-        targetId?: Id<_HasId>;
+        targetId?: Id<Tombstone | StructureExtension | AnyStructure | Resource<ResourceConstant> | Source | ConstructionSite<BuildableStructureConstant> | _HasId>;
         targetPos?: RoomPosition;
         working: boolean;
         workDuration: number;
