@@ -170,7 +170,7 @@ export class Movement {
 
     public static moveToTargetByPath(
         creep: Creep,
-        targetId: string | undefined,
+        targetId: Id<_HasId> | undefined,
         targetPos: RoomPosition | undefined,
         targetRange: number,
         path: RoomPosition[],
@@ -188,7 +188,7 @@ export class Movement {
 
     public static moveToTargetByPathWithReservation(
         creep: Creep,
-        targetId: string | undefined,
+        targetId: Id<_HasId> | undefined,
         targetPos: RoomPosition | undefined,
         targetRange: number,
         path: RoomPosition[],
