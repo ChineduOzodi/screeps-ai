@@ -76,4 +76,18 @@ export class RoomUtils {
             return (dataA?.lastScouted || 0) - (dataB?.lastScouted || 0);
         })[0];
     }
+
+    public static getRoomType(roomName: string): "normal" | "center" | "source_keeper" | "highway" {
+        const match = roomName.match(/^([WE])([0-9]+)([NS])([0-9]+)$/);
+        if (!match) return "normal";
+
+        const x = parseInt(match[2], 10);
+        const y = parseInt(match[4], 10);
+
+        if (x % 10 === 0 || y % 10 === 0) return "highway";
+        if (x % 5 === 0 && y % 5 === 0) return "center";
+        if (x % 10 >= 4 && x % 10 <= 6 && y % 10 >= 4 && y % 10 <= 6) return "source_keeper";
+
+        return "normal";
+    }
 }
