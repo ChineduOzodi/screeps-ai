@@ -104,6 +104,8 @@ export class PathfindingCache {
         room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
             if (site.structureType !== STRUCTURE_ROAD) {
                 costs.set(site.pos.x, site.pos.y, 0xff);
+            } else {
+                costs.set(site.pos.x, site.pos.y, 1);
             }
         });
 
