@@ -319,37 +319,15 @@ export class ConstructionUtils {
                 plainCost: 3,
                 swampCost: 15,
                 roomCallback: (roomName: string) => {
-                    const room = Game.rooms[roomName];
-                    const costs = new PathFinder.CostMatrix();
+                    const standardCosts = PathfindingCache.getStandardCostMatrix(roomName);
 
-                    if (room) {
-                        // Favor existing roads
-                        const roads = room.find(FIND_STRUCTURES, {
-                            filter: s => s.structureType === STRUCTURE_ROAD,
-                        });
-                        for (const road of roads) {
-                            costs.set(road.pos.x, road.pos.y, 1);
-                        }
-
-                        // Favor road construction sites
-                        const sites = room.find(FIND_CONSTRUCTION_SITES, {
-                            filter: s => s.structureType === STRUCTURE_ROAD,
-                        });
-                        for (const site of sites) {
-                            costs.set(site.pos.x, site.pos.y, 1);
-                        }
-
-                        // Avoid obstacles
-                        room.find(FIND_STRUCTURES).forEach(s => {
-                            if (
-                                s.structureType !== STRUCTURE_ROAD &&
-                                s.structureType !== STRUCTURE_CONTAINER &&
-                                (s.structureType !== STRUCTURE_RAMPART || !(s as StructureRampart).my)
-                            ) {
-                                costs.set(s.pos.x, s.pos.y, 0xff);
-                            }
-                        });
+                    // If there are no planned roads, we can return the standard costs directly
+                    if (plannedRoads.length === 0) {
+                        return standardCosts;
                     }
+
+                    // Clone to avoid mutating the standard matrix
+                    const costs = standardCosts.clone();
 
                     // Apply planned roads costs (even if room is not visible!)
                     for (const plannedRoad of plannedRoads) {
