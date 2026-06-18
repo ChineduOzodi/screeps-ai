@@ -222,9 +222,11 @@ export class EnergySystem extends BaseSystemImpl {
                     carrierTransportRate += (carryParts * 50) / cycleTime;
                 }
 
-                // A source has 3000 energy every 300 ticks = 10 energy/tick.
-                // TODO: Check if it's a center room or neutral room for different rates.
-                const sourceRate = 10;
+                const roomType = RoomUtils.getRoomType(sourceInfo.position.roomName);
+                let sourceRate = SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME;
+                if (roomType === "center" || roomType === "source_keeper") {
+                    sourceRate = SOURCE_ENERGY_KEEPER_CAPACITY / ENERGY_REGEN_TIME;
+                }
 
                 totalProduction += Math.min(minerMiningRate, carrierTransportRate, sourceRate);
             }

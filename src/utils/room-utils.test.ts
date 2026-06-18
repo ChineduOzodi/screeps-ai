@@ -85,4 +85,37 @@ describe("RoomUtils", () => {
             expect(best).to.equal("W2N1");
         });
     });
+
+    describe("getRoomType", () => {
+        it("should return 'normal' for regular rooms", () => {
+            expect(RoomUtils.getRoomType("W1N1")).to.equal("normal");
+            expect(RoomUtils.getRoomType("E9S9")).to.equal("normal");
+            expect(RoomUtils.getRoomType("W2N3")).to.equal("normal");
+        });
+
+        it("should return 'highway' for highway rooms", () => {
+            expect(RoomUtils.getRoomType("W10N10")).to.equal("highway");
+            expect(RoomUtils.getRoomType("W0N0")).to.equal("highway");
+            expect(RoomUtils.getRoomType("E10S5")).to.equal("highway");
+            expect(RoomUtils.getRoomType("W5N10")).to.equal("highway");
+        });
+
+        it("should return 'center' for center rooms", () => {
+            expect(RoomUtils.getRoomType("W5N5")).to.equal("center");
+            expect(RoomUtils.getRoomType("E5S5")).to.equal("center");
+            expect(RoomUtils.getRoomType("W15N15")).to.equal("center");
+        });
+
+        it("should return 'source_keeper' for source keeper rooms", () => {
+            expect(RoomUtils.getRoomType("W4N4")).to.equal("source_keeper");
+            expect(RoomUtils.getRoomType("W6N6")).to.equal("source_keeper");
+            expect(RoomUtils.getRoomType("E5S4")).to.equal("source_keeper");
+            expect(RoomUtils.getRoomType("W5N6")).to.equal("source_keeper");
+            expect(RoomUtils.getRoomType("E4S6")).to.equal("source_keeper");
+        });
+
+        it("should return 'normal' for invalid room names", () => {
+            expect(RoomUtils.getRoomType("INVALID")).to.equal("normal");
+        });
+    });
 });
