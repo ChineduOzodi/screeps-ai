@@ -323,13 +323,14 @@ export class ConstructionUtils {
                     const costs = new PathFinder.CostMatrix();
 
                     if (room) {
+                        const structures = room.find(FIND_STRUCTURES);
+
                         // Favor existing roads
-                        const roads = room.find(FIND_STRUCTURES, {
-                            filter: s => s.structureType === STRUCTURE_ROAD,
+                        structures.forEach(s => {
+                            if (s.structureType === STRUCTURE_ROAD) {
+                                costs.set(s.pos.x, s.pos.y, 1);
+                            }
                         });
-                        for (const road of roads) {
-                            costs.set(road.pos.x, road.pos.y, 1);
-                        }
 
                         // Favor road construction sites
                         const sites = room.find(FIND_CONSTRUCTION_SITES, {
@@ -339,8 +340,8 @@ export class ConstructionUtils {
                             costs.set(site.pos.x, site.pos.y, 1);
                         }
 
-                        // Avoid obstacles
-                        room.find(FIND_STRUCTURES).forEach(s => {
+                        // Avoid obstacles (should be applied last to overwrite road costs if needed)
+                        structures.forEach(s => {
                             if (
                                 s.structureType !== STRUCTURE_ROAD &&
                                 s.structureType !== STRUCTURE_CONTAINER &&
