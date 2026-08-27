@@ -16,6 +16,8 @@ import { ReserverCreep } from "creep-roles/reserver-creep";
 import { MineralMinerCreep } from "creep-roles/mineral-miner-creep";
 import { ClaimerCreep } from "creep-roles/claimer-creep";
 import { PioneerCreep } from "creep-roles/pioneer-creep";
+import { RangedDefenderCreep } from "creep-roles/ranged-defender-creep";
+import { LabHaulerCreep } from "creep-roles/lab-hauler-creep";
 import { Logger } from "utils/logger";
 
 export class CreepManagement {
@@ -80,6 +82,10 @@ export class CreepManagement {
                 return new ClaimerCreep(creep);
             case CreepRole.PIONEER:
                 return new PioneerCreep(creep);
+            case CreepRole.RANGED_DEFENDER:
+                return new RangedDefenderCreep(creep);
+            case CreepRole.LAB_HAULER:
+                return new LabHaulerCreep(creep);
             default:
                 Logger.error(`creep (${creep.name}) role "${creep.memory.role}" not setup`);
                 return;

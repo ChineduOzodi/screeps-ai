@@ -2,6 +2,7 @@ import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 
 import { BaseSystemImpl } from "./base-system";
+import { LabHaulerCreepSpawner } from "creep-roles/lab-hauler-creep";
 import { RepairerCreepSpawner } from "creep-roles/repairer-creep";
 import { RepairUtils } from "utils/repair-utils";
 import { Logger } from "utils/logger";
@@ -121,6 +122,6 @@ export class InfrastructureSystem extends BaseSystemImpl {
     }
 
     public override getCreepSpawners(): CreepSpawner[] {
-        return [new RepairerCreepSpawner()];
+        return [new RepairerCreepSpawner(), new LabHaulerCreepSpawner()];
     }
 }

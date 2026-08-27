@@ -3,6 +3,7 @@ import { CreepRole } from "prototypes/types";
 import { CreepSpawner } from "prototypes/CreepSpawner";
 import { DefenderCreepSpawner } from "creep-roles/defender-creep";
 import { HealerCreepSpawner } from "creep-roles/healer-creep";
+import { RangedDefenderCreepSpawner } from "creep-roles/ranged-defender-creep";
 import { RoomUtils } from "utils/room-utils";
 
 export class DefenseSystem extends BaseSystemImpl {
@@ -57,11 +58,11 @@ export class DefenseSystem extends BaseSystemImpl {
     }
 
     public override getCreepSpawners(): CreepSpawner[] {
-        return [new DefenderCreepSpawner(), new HealerCreepSpawner()];
+        return [new DefenderCreepSpawner(), new RangedDefenderCreepSpawner(), new HealerCreepSpawner()];
     }
 
     public override getRolesToTrackEnergy(): CreepRole[] {
-        return [CreepRole.DEFENDER, CreepRole.HEALER];
+        return [CreepRole.DEFENDER, CreepRole.RANGED_DEFENDER, CreepRole.HEALER];
     }
 
     public override getStatus(): string | null {

@@ -24,6 +24,9 @@ export class DefenderCreep extends CreepRunner {
             return;
         }
 
+        // Grab an attack boost first if a lab has one ready
+        if (this.tryBoost(ATTACK)) return;
+
         const threat = ThreatAssessment.assess(this.creep.room);
 
         // Kill healers first — they keep everything else alive. Then fall back to the weakest hostile.

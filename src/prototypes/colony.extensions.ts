@@ -16,6 +16,7 @@ interface Colony {
     infrastructureManagement?: ColonyInfrastructureManagement;
     goapManagement?: ColonyGoapManagement;
     expansionManagement?: ColonyExpansionManagement;
+    labManagement?: ColonyLabManagement;
 }
 
 interface BaseSystemInfo {
@@ -23,7 +24,12 @@ interface BaseSystemInfo {
     energyUsageTracking?: EnergyUsageTracking;
 }
 
-interface ColonyDefenseManagement extends BaseSystemInfo {}
+interface ColonyDefenseManagement extends BaseSystemInfo {
+    /** Min-cut rampart perimeter positions for the main room. */
+    perimeter?: { x: number; y: number }[];
+    /** RCL at which the perimeter was last computed (recompute as the base grows). */
+    lastPerimeterRcl?: number;
+}
 
 interface ColonyBuilderManagement extends BaseSystemInfo {
     buildQueue: Id<ConstructionSite>[];
@@ -57,6 +63,15 @@ interface ColonyExpansionManagement extends BaseSystemInfo {
     expansionTarget?: string;
     /** Tick the current expansion attempt started (for stall detection). */
     expansionStartTime?: number;
+}
+
+interface ColonyLabManagement extends BaseSystemInfo {
+    /** The two labs that hold reagents for the active reaction. */
+    inputLabIds?: Id<StructureLab>[];
+    /** The reagents loaded into the input labs (same order as inputLabIds). */
+    reagents?: ResourceConstant[];
+    /** The compound currently being produced. */
+    product?: ResourceConstant;
 }
 
 interface EnergyUsageTracking {

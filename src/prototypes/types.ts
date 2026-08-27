@@ -43,6 +43,8 @@ export enum CreepRole {
     MINERAL_MINER = "mineral_miner",
     CLAIMER = "claimer",
     PIONEER = "pioneer",
+    RANGED_DEFENDER = "ranged_defender",
+    LAB_HAULER = "lab_hauler",
 }
 
 export interface CreepProfiles {

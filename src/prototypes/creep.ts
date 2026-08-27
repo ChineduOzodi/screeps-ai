@@ -1,5 +1,6 @@
 import { Movement } from "infrastructure/movement";
 import { ColonyManager, CreepProfiles, CreepRole, CreepStatus } from "./types";
+import { LabManager } from "managers/lab-manager";
 import { RepairUtils } from "utils/repair-utils";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "constants/repair-constants";
 import { RoomUtils } from "utils/room-utils";
@@ -349,6 +350,37 @@ export abstract class CreepRunner {
 
     protected findClosestHostile() {
         return this.creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    }
+
+    /**
+     * One-shot boost attempt for combat creeps: if a lab holds a suitable compound,
+     * walk there and boost. Returns true while the creep is busy boosting (the
+     * caller should skip its normal behavior for the tick).
+     */
+    protected tryBoost(part: BodyPartConstant): boolean {
+        const { creep, memory } = this;
+        if (memory.boostAttempted) return false;
+
+        const unboostedParts = creep.body.filter(p => p.type === part && !p.boost).length;
+        if (unboostedParts === 0) {
+            memory.boostAttempted = true;
+            return false;
+        }
+
+        const lab = LabManager.findBoostLab(creep.room, part, unboostedParts);
+        if (!lab) {
+            memory.boostAttempted = true;
+            return false;
+        }
+
+        const result = lab.boostCreep(creep);
+        if (result === ERR_NOT_IN_RANGE) {
+            this.moveToWithReservation(lab, 5, 1);
+            return true;
+        }
+
+        memory.boostAttempted = true;
+        return false;
     }
 
     public getEnergy(): void {

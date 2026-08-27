@@ -1,4 +1,5 @@
 import { ConstructionManager } from "../managers/construction-manager";
+import { LabManager } from "../managers/lab-manager";
 import { LinkManager } from "../managers/link-manager";
 import { RoadManager } from "../managers/road-manager";
 import { TerminalManager } from "../managers/terminal-manager";
@@ -32,6 +33,7 @@ export class ColonyManagerImpl implements ColonyManager {
     public roadManager: RoadManager;
     public linkManager: LinkManager;
     public terminalManager: TerminalManager;
+    public labManager: LabManager;
 
     public constructor(colony: Colony) {
         this.colonyInfo = colony;
@@ -39,6 +41,7 @@ export class ColonyManagerImpl implements ColonyManager {
         this.roadManager = new RoadManager(this);
         this.linkManager = new LinkManager(this);
         this.terminalManager = new TerminalManager(this);
+        this.labManager = new LabManager(this);
     }
 
     public get energyManagement(): ColonyEnergyManagement | undefined {
@@ -99,6 +102,7 @@ export class ColonyManagerImpl implements ColonyManager {
         this.constructionManager.run();
         this.linkManager.run();
         this.terminalManager.run();
+        this.labManager.run();
 
         this.creepManager();
         this.visualizeStats();
