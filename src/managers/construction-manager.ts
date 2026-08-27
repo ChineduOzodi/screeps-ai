@@ -58,7 +58,91 @@ export class ConstructionManager {
             this.planLinks();
             this.planExtractor();
             this.planTerminal();
+            this.planLabs();
+            this.planFactory();
+            this.planObserver();
+            this.planRamparts();
         }
+    }
+
+    /** Places ramparts over critical structures so they survive sieges. */
+    private planRamparts(): void {
+        const room = this.colony.getMainRoom();
+        if (!room || !room.controller || (room.controller.level || 0) < 3) return;
+
+        const protectedTypes: StructureConstant[] = [
+            STRUCTURE_SPAWN,
+            STRUCTURE_TOWER,
+            STRUCTURE_STORAGE,
+            STRUCTURE_TERMINAL,
+            STRUCTURE_LAB,
+            STRUCTURE_FACTORY,
+            STRUCTURE_POWER_SPAWN,
+            STRUCTURE_NUKER,
+        ];
+
+        const criticalStructures = room.find(FIND_MY_STRUCTURES, {
+            filter: s => protectedTypes.includes(s.structureType),
+        });
+
+        for (const structure of criticalStructures) {
+            if (Object.keys(Game.constructionSites).length >= 100) break;
+
+            const pos = structure.pos;
+            const hasRampart = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_RAMPART);
+            const hasRampartSite = pos
+                .lookFor(LOOK_CONSTRUCTION_SITES)
+                .some(s => s.structureType === STRUCTURE_RAMPART);
+
+            if (!hasRampart && !hasRampartSite) {
+                room.createConstructionSite(pos, STRUCTURE_RAMPART);
+            }
+        }
+    }
+
+    private planLabs(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || (room.controller.level || 0) < 6) return;
+
+        const rcl = room.controller.level;
+        const maxLabs = (CONTROLLER_STRUCTURES[STRUCTURE_LAB] || {})[rcl] || 0;
+        if (maxLabs === 0 || this.hasPlannedStructures(STRUCTURE_LAB, maxLabs)) return;
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const currentCount =
+            room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_LAB }).length +
+            room.find(FIND_MY_CONSTRUCTION_SITES, { filter: s => s.structureType === STRUCTURE_LAB }).length;
+
+        const needed = maxLabs - currentCount;
+        if (needed <= 0) return;
+
+        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_LAB, needed);
+        this.placeConstructionSites(structures);
+    }
+
+    private planFactory(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || (room.controller.level || 0) < 7) return;
+
+        if (this.hasPlannedStructures(STRUCTURE_FACTORY, 1)) return;
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_FACTORY, 1);
+        this.placeConstructionSites(structures);
+    }
+
+    private planObserver(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || (room.controller.level || 0) < 8) return;
+
+        if (this.hasPlannedStructures(STRUCTURE_OBSERVER, 1)) return;
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_OBSERVER, 1);
+        this.placeConstructionSites(structures);
     }
 
     private planTerminal(): void {

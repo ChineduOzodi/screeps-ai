@@ -40,6 +40,9 @@ export enum CreepRole {
     SCOUT = "scout",
     RESERVER = "reserver",
     EXTENSION_FILLER = "extension_filler",
+    MINERAL_MINER = "mineral_miner",
+    CLAIMER = "claimer",
+    PIONEER = "pioneer",
 }
 
 export interface CreepProfiles {
@@ -85,6 +88,7 @@ export interface Systems {
     infrastructure: any;
     upgrade: any;
     builder: any;
+    expansion: any;
 }
 
 export interface ColonyManager {

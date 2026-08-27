@@ -18,14 +18,22 @@ export class RoomExtras {
 
         // 1. Emergency Safe Mode
         if (threat.isSpawnUnderAttack && this.room.controller && this.room.controller.my) {
+            const spawn = this.room.find(FIND_MY_SPAWNS)[0];
             const defenders = this.room.find(FIND_MY_CREEPS, { filter: c => c.memory.role === CreepRole.DEFENDER });
-            if (defenders.length === 0) {
+            const towersWithEnergy = towers.filter(t => t.store[RESOURCE_ENERGY] >= TOWER_ENERGY_COST);
+            const spawnCritical = spawn && spawn.hits < spawn.hitsMax * 0.5;
+
+            // Activate when the spawn is badly damaged, or when we have no way to fight back at all.
+            if (spawnCritical || (defenders.length === 0 && towersWithEnergy.length === 0)) {
                 this.room.controller.activateSafeMode();
             }
         }
 
         // 2. Tower Logic
         if (threat.totalHostiles > 0) {
+            // Focus fire: all towers shoot the same target so damage can outpace healing.
+            const focusTarget = ThreatAssessment.selectTowerTarget(towers, threat);
+
             for (const tower of towers) {
                 // Priority 1: Repair Rampart under attack with a creep inside
                 const rampartUnderAttack = this.findRampartUnderAttack(tower);
@@ -34,15 +42,23 @@ export class RoomExtras {
                     continue;
                 }
 
-                // Priority 2: Heal a creep taking damage OR Attack weakest enemy
-                const creepToHeal = this.findCreepToHeal();
-                if (creepToHeal) {
-                    tower.heal(creepToHeal);
+                if (focusTarget) {
+                    tower.attack(focusTarget);
                     continue;
                 }
 
-                if (threat.weakestHostile) {
-                    tower.attack(threat.weakestHostile);
+                // No killable target (heal-tanks out-heal us). Only waste energy on hostiles
+                // that are actively threatening structures at close range.
+                const closeHostile = tower.pos.findInRange(FIND_HOSTILE_CREEPS, TOWER_OPTIMAL_RANGE)[0];
+                if (closeHostile) {
+                    tower.attack(closeHostile);
+                    continue;
+                }
+
+                // Priority 2: Heal a creep taking damage
+                const creepToHeal = this.findCreepToHeal();
+                if (creepToHeal) {
+                    tower.heal(creepToHeal);
                     continue;
                 }
 

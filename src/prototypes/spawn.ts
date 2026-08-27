@@ -15,6 +15,18 @@ export class SpawnExtras {
 
     /** Creates a colony for the room. */
     private initialRoomSetup(): void {
+        const existing = Memory.colonies[this.spawn.room.name];
+        if (existing) {
+            // A colony already exists for this room (e.g. this is a second spawn,
+            // or the main spawn was rebuilt). Attach instead of wiping its memory.
+            this.spawn.memory.colonyId = existing.id;
+            if (!Game.getObjectById(existing.mainSpawnId)) {
+                Logger.info(`Colony ${existing.id}: adopting spawn ${this.spawn.name} as new main spawn`);
+                existing.mainSpawnId = this.spawn.id;
+            }
+            return;
+        }
+
         Logger.info(`Creating initial colony in room: ${this.spawn.room.name}`);
         const colony: Colony = {
             id: this.spawn.room.name,

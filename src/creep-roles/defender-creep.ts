@@ -26,7 +26,10 @@ export class DefenderCreep extends CreepRunner {
 
         const threat = ThreatAssessment.assess(this.creep.room);
 
-        let target: AnyCreep | Structure | null = threat.weakestHostile;
+        // Kill healers first — they keep everything else alive. Then fall back to the weakest hostile.
+        const healers = threat.hostiles.filter(h => h.getActiveBodyparts(HEAL) > 0);
+        let target: AnyCreep | Structure | null =
+            healers.length > 0 ? this.creep.pos.findClosestByRange(healers) : threat.weakestHostile;
 
         if (!target) {
             target = this.creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {

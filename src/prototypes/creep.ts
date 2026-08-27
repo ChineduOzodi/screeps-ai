@@ -256,15 +256,20 @@ export abstract class CreepRunner {
         });
     }
 
-    /** Find closest energy stored in container or storage. This includes if you are using containers with a miner creep. */
+    /** Find closest energy stored in container, storage, or a receiving link (links near sources are excluded — they feed the network). */
     protected findClosestStoredEnergy(minEnergy: number) {
         return this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: structure => {
-                return (
-                    (structure.structureType === STRUCTURE_CONTAINER ||
-                        structure.structureType === STRUCTURE_STORAGE) &&
-                    structure.store[RESOURCE_ENERGY] >= minEnergy
-                );
+                if (structure.structureType === STRUCTURE_CONTAINER || structure.structureType === STRUCTURE_STORAGE) {
+                    return structure.store[RESOURCE_ENERGY] >= minEnergy;
+                }
+                if (structure.structureType === STRUCTURE_LINK && (structure as StructureLink).my) {
+                    return (
+                        structure.store[RESOURCE_ENERGY] >= minEnergy &&
+                        structure.pos.findInRange(FIND_SOURCES, 2).length === 0
+                    );
+                }
+                return false;
             },
         });
     }

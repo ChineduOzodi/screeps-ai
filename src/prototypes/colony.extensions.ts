@@ -15,6 +15,7 @@ interface Colony {
     defenseManagement?: ColonyDefenseManagement;
     infrastructureManagement?: ColonyInfrastructureManagement;
     goapManagement?: ColonyGoapManagement;
+    expansionManagement?: ColonyExpansionManagement;
 }
 
 interface BaseSystemInfo {
@@ -49,6 +50,13 @@ interface ColonyInfrastructureManagement extends BaseSystemInfo {
 interface ColonyGoapManagement extends BaseSystemInfo {
     activeGoalName?: string;
     planActionNames?: string[];
+}
+
+interface ColonyExpansionManagement extends BaseSystemInfo {
+    /** Room name this colony is currently expanding into. */
+    expansionTarget?: string;
+    /** Tick the current expansion attempt started (for stall detection). */
+    expansionStartTime?: number;
 }
 
 interface EnergyUsageTracking {
