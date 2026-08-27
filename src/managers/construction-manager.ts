@@ -1,8 +1,12 @@
 import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
+import { CorePlan, CorePlanner } from "../utils/core-planner";
+import { ExtensionPlan, ExtensionPlanner } from "../utils/extension-planner";
 import { MinCut } from "../utils/min-cut";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "../constants/repair-constants";
 import { RepairUtils } from "../utils/repair-utils";
+import { RoomSurvey, surveyRoom } from "../utils/room-survey";
+import { Tile } from "../utils/room-grid";
 import { Logger } from "../utils/logger";
 
 declare global {
@@ -12,6 +16,13 @@ declare global {
         };
     }
 }
+
+/** Ticks to wait before re-running a planner on a room it could not fully lay out. */
+const REPLAN_INTERVAL = 500;
+/** Road sites laid through the extension field per planning pass. */
+const EXTENSION_ROADS_PER_PASS = 5;
+/** Extensions that must border a walkway before it is worth paving. */
+const EXTENSION_ROAD_ADJACENCY = 2;
 
 export interface ProjectStructure {
     x: number;
@@ -30,6 +41,8 @@ export interface RepairStats {
 
 export class ConstructionManager {
     private colony: ColonyManager;
+    /** Room survey memo: several planners want it in the same tick. */
+    private survey?: { tick: number; roomName: string; data: RoomSurvey };
 
     constructor(colony: ColonyManager) {
         this.colony = colony;
@@ -180,14 +193,9 @@ export class ConstructionManager {
         if (maxLabs === 0 || this.hasPlannedStructures(STRUCTURE_LAB, maxLabs)) return;
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
-        const currentCount =
-            room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_LAB }).length +
-            room.find(FIND_MY_CONSTRUCTION_SITES, { filter: s => s.structureType === STRUCTURE_LAB }).length;
-
-        const needed = maxLabs - currentCount;
-        if (needed <= 0) return;
-
-        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_LAB, needed);
+        const structures = this.getCorePlan(room, spawn)
+            .labs.slice(0, maxLabs)
+            .map(tile => ({ x: tile.x, y: tile.y, roomName: room.name, type: STRUCTURE_LAB }));
         this.placeConstructionSites(structures);
     }
 
@@ -199,8 +207,9 @@ export class ConstructionManager {
         if (this.hasPlannedStructures(STRUCTURE_FACTORY, 1)) return;
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
-        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_FACTORY, 1);
-        this.placeConstructionSites(structures);
+        const factory = this.getCorePlan(room, spawn).factory;
+        if (!factory) return;
+        this.placeConstructionSites([{ x: factory.x, y: factory.y, roomName: room.name, type: STRUCTURE_FACTORY }]);
     }
 
     private planObserver(): void {
@@ -211,8 +220,9 @@ export class ConstructionManager {
         if (this.hasPlannedStructures(STRUCTURE_OBSERVER, 1)) return;
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
-        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_OBSERVER, 1);
-        this.placeConstructionSites(structures);
+        const observer = this.getCorePlan(room, spawn).observer;
+        if (!observer) return;
+        this.placeConstructionSites([{ x: observer.x, y: observer.y, roomName: room.name, type: STRUCTURE_OBSERVER }]);
     }
 
     private planTerminal(): void {
@@ -226,8 +236,9 @@ export class ConstructionManager {
         // Global limit check
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
-        const structures = ConstructionUtils.getFirstTerminalStructures(spawn);
-        this.placeConstructionSites(structures);
+        const terminal = this.getCorePlan(room, spawn).terminal;
+        if (!terminal) return;
+        this.placeConstructionSites([{ x: terminal.x, y: terminal.y, roomName: room.name, type: STRUCTURE_TERMINAL }]);
     }
 
     private planExtractor(): void {
@@ -276,7 +287,8 @@ export class ConstructionManager {
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
         const sources = room.find(FIND_SOURCES);
-        const structures = ConstructionUtils.getLinkStructures(room, spawn, needed, sources);
+        const hubLink = this.getCorePlan(room, spawn).link;
+        const structures = ConstructionUtils.getLinkStructures(room, spawn, needed, sources, hubLink);
         this.placeConstructionSites(structures);
     }
 
@@ -301,13 +313,30 @@ export class ConstructionManager {
 
         if (currentCount >= maxTowers) return;
 
-        const needed = maxTowers - currentCount;
-
         // Global limit check
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
-        const structures = ConstructionUtils.getTowerStructures(spawn, needed);
+        const core = this.getCorePlan(room, spawn);
+        const structures = core.towers
+            .slice(0, maxTowers)
+            .map(tile => ({ x: tile.x, y: tile.y, roomName: room.name, type: STRUCTURE_TOWER }));
         this.placeConstructionSites(structures);
+
+        // Towers are traffic magnets for repairers and fillers; keep a road beside each,
+        // but never on a tile another plan has already claimed.
+        const claimed = this.claimedTiles(room, core);
+        for (const tower of structures) {
+            const roads = ConstructionUtils.getRoadsAroundPosition(
+                new RoomPosition(tower.x, tower.y, room.name),
+            ).filter(road => !claimed.has(`${road.x},${road.y}`));
+            this.placeConstructionSites(roads);
+        }
+    }
+
+    /** Tiles the core and extension plans have spoken for, as "x,y" keys. */
+    private claimedTiles(room: Room, core: CorePlan): Set<string> {
+        const tiles = [...CorePlanner.planTiles(core), ...(room.memory?.extensionPlan?.extensions ?? [])];
+        return new Set(tiles.map(tile => `${tile.x},${tile.y}`));
     }
 
     private planStorage(): void {
@@ -321,8 +350,9 @@ export class ConstructionManager {
         // Global limit check
         if (Object.keys(Game.constructionSites).length >= 100) return;
 
-        const structures = ConstructionUtils.getFirstStorageStructures(spawn);
-        this.placeConstructionSites(structures);
+        const storage = this.getCorePlan(room, spawn).storage;
+        if (!storage) return;
+        this.placeConstructionSites([{ x: storage.x, y: storage.y, roomName: room.name, type: STRUCTURE_STORAGE }]);
     }
 
     private planExtensions(): void {
@@ -345,108 +375,160 @@ export class ConstructionManager {
         if (currentCount >= maxExtensions) return;
 
         let needed = maxExtensions - currentCount;
-        const candidates = ConstructionUtils.getExtensionClusterCandidates();
-        const extOffsets = ConstructionUtils.getExtensionClusterOffsets();
-        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
+        const plan = this.getExtensionPlan(room, spawn, maxExtensions);
 
-        for (const delta of candidates) {
+        for (const tile of plan.extensions) {
+            if (needed <= 0) break;
             if (Object.keys(Game.constructionSites).length >= 100) break;
 
-            const centerX = spawn.pos.x + delta.dx;
-            const centerY = spawn.pos.y + delta.dy;
-            if (centerX < 2 || centerX > 47 || centerY < 2 || centerY > 47) continue;
+            const pos = new RoomPosition(tile.x, tile.y, room.name);
+            const structures = pos.lookFor(LOOK_STRUCTURES);
+            const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
 
-            if (!this.isClusterPatternPossible(room, centerX, centerY)) continue;
-
-            let placedInCluster = 0;
-            // Count already placed extensions in this cluster to avoid road-only clusters
-            let existingInCluster = 0;
-
-            // Try to place extensions in this cluster
-            for (const offset of extOffsets) {
-                if (Object.keys(Game.constructionSites).length >= 100) break;
-
-                const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
-
-                // Check if an extension already exists or is planned here
-                const existingExt = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_EXTENSION);
-                const existingSite = pos
-                    .lookFor(LOOK_CONSTRUCTION_SITES)
-                    .find(s => s.structureType === STRUCTURE_EXTENSION);
-
-                if (existingExt || existingSite) {
-                    existingInCluster++;
-                    continue;
-                }
-
-                if (needed > 0 && ConstructionUtils.isTileClearForStructure(pos, room, true)) {
-                    // Destroy road or remove road site if blocking
-                    const road = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
-                    if (road) {
-                        road.destroy();
-                    }
-                    const roadSite = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_ROAD);
-                    if (roadSite) {
-                        roadSite.remove();
-                    }
-
-                    const result = room.createConstructionSite(pos, STRUCTURE_EXTENSION);
-                    if (result === OK) {
-                        needed--;
-                        placedInCluster++;
-                    }
-                }
+            // Already built or queued here; it is part of currentCount.
+            if (
+                structures.some(s => s.structureType === STRUCTURE_EXTENSION) ||
+                sites.some(s => s.structureType === STRUCTURE_EXTENSION)
+            ) {
+                continue;
             }
 
-            // Also place roads for this cluster if we just placed a NEW extension
-            if (placedInCluster > 0) {
-                for (const offset of roadOffsets) {
-                    if (Object.keys(Game.constructionSites).length >= 100) break;
+            if (!ConstructionUtils.isTileClearForStructure(pos, room, true)) continue;
 
-                    const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
-                    if (ConstructionUtils.isTileClearForStructure(pos, room, true)) {
-                        room.createConstructionSite(pos, STRUCTURE_ROAD);
-                    }
-                }
+            // A road laid earlier may sit on the tile; extensions win.
+            structures.find(s => s.structureType === STRUCTURE_ROAD)?.destroy();
+            sites.find(s => s.structureType === STRUCTURE_ROAD)?.remove();
+
+            if (room.createConstructionSite(pos, STRUCTURE_EXTENSION) === OK) {
+                needed--;
             }
+        }
 
-            if (needed <= 0) break;
+        this.planExtensionRoads(room, plan);
+    }
+
+    /**
+     * The extension field is planned once and cached in room memory. It is replanned when
+     * the cached tiles can no longer hold the extensions this RCL allows - but no more
+     * often than REPLAN_INTERVAL, since a cramped room may simply have fewer
+     * usable tiles than the RCL cap and would otherwise replan on every pass.
+     */
+    private getExtensionPlan(room: Room, spawn: StructureSpawn, needed: number): ExtensionPlan {
+        const cached = room.memory?.extensionPlan;
+        if (cached && cached.spawnId === spawn.id) {
+            if (this.countUsablePlanTiles(room, cached.extensions) >= needed) return cached;
+            if (Game.time - cached.plannedAt < REPLAN_INTERVAL) return cached;
+        }
+
+        const capacity = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][8] || 60;
+        const core = this.getCorePlan(room, spawn);
+        const plan = ExtensionPlanner.forRoom(room, spawn, capacity, this.getSurvey(room), CorePlanner.planTiles(core));
+        if (room.memory) {
+            room.memory.extensionPlan = {
+                spawnId: spawn.id,
+                plannedAt: Game.time,
+                extensions: plan.extensions,
+                roads: plan.roads,
+            };
+        }
+        Logger.info(`[Extensions] ${room.name}: planned ${plan.extensions.length} extension tiles`);
+        return plan;
+    }
+
+    /**
+     * The base core - storage, terminal, hub link and towers - is laid out once and cached
+     * in room memory, so the extension field can reserve its tiles and every pass places
+     * the same structures in the same spots. Replanned on the same terms as the extension
+     * field: only when the plan no longer covers what the room needs.
+     */
+    private getCorePlan(room: Room, spawn: StructureSpawn): CorePlan {
+        const caps = {
+            towers: CONTROLLER_STRUCTURES[STRUCTURE_TOWER][8] || 6,
+            labs: CONTROLLER_STRUCTURES[STRUCTURE_LAB][8] || 10,
+        };
+
+        const cached = room.memory?.corePlan;
+        if (cached && cached.spawnId === spawn.id) {
+            const complete =
+                cached.plan.storage !== undefined &&
+                cached.plan.terminal !== undefined &&
+                cached.plan.link !== undefined &&
+                cached.plan.factory !== undefined &&
+                cached.plan.observer !== undefined &&
+                cached.plan.towers.length >= caps.towers &&
+                cached.plan.labs.length >= caps.labs;
+            if (complete || Game.time - cached.plannedAt < REPLAN_INTERVAL) return cached.plan;
+        }
+
+        const plan = CorePlanner.forRoom(room, spawn, caps, this.getSurvey(room));
+        if (room.memory) {
+            room.memory.corePlan = { spawnId: spawn.id, plannedAt: Game.time, plan };
+        }
+        Logger.info(
+            `[Core] ${room.name}: storage ${describeTile(plan.storage)}, terminal ${describeTile(plan.terminal)}, ` +
+                `link ${describeTile(plan.link)}, factory ${describeTile(plan.factory)}, ` +
+                `observer ${describeTile(plan.observer)}, ${plan.towers.length} towers, ${plan.labs.length} labs`,
+        );
+        return plan;
+    }
+
+    private getSurvey(room: Room): RoomSurvey {
+        if (this.survey && this.survey.tick === Game.time && this.survey.roomName === room.name) {
+            return this.survey.data;
+        }
+        const data = surveyRoom(room);
+        this.survey = { tick: Game.time, roomName: room.name, data };
+        return data;
+    }
+
+    /** Planned tiles that either already hold an extension or could still take one. */
+    private countUsablePlanTiles(room: Room, tiles: { x: number; y: number }[]): number {
+        let usable = 0;
+        for (const tile of tiles) {
+            const pos = new RoomPosition(tile.x, tile.y, room.name);
+            const hasExtension =
+                pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTENSION) ||
+                pos.lookFor(LOOK_CONSTRUCTION_SITES).some(s => s.structureType === STRUCTURE_EXTENSION);
+            if (hasExtension || ConstructionUtils.isTileClearForStructure(pos, room, true)) usable++;
+        }
+        return usable;
+    }
+
+    /**
+     * Paves the walkways through the extension field, but only once the extensions around
+     * them actually exist - roads cost upkeep and the field fills in gradually.
+     */
+    private planExtensionRoads(room: Room, plan: ExtensionPlan): void {
+        let placed = 0;
+        for (const tile of plan.roads) {
+            if (placed >= EXTENSION_ROADS_PER_PASS) break;
+            if (Object.keys(Game.constructionSites).length >= 100) break;
+
+            const pos = new RoomPosition(tile.x, tile.y, room.name);
+            if (!ConstructionUtils.isTileClearForStructure(pos, room)) continue;
+            if (this.countAdjacentExtensions(room, tile) < EXTENSION_ROAD_ADJACENCY) continue;
+
+            if (room.createConstructionSite(pos, STRUCTURE_ROAD) === OK) placed++;
         }
     }
 
-    private isClusterPatternPossible(room: Room, centerX: number, centerY: number): boolean {
-        const extOffsets = ConstructionUtils.getExtensionClusterOffsets();
-        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
+    private countAdjacentExtensions(room: Room, tile: { x: number; y: number }): number {
+        const offsets = [
+            { x: 0, y: -1 },
+            { x: 1, y: 0 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+        ];
 
-        for (const offset of extOffsets) {
-            const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
-            const structures = pos.lookFor(LOOK_STRUCTURES);
-            const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-
-            const hasExtension = structures.some(s => s.structureType === STRUCTURE_EXTENSION);
-            const hasExtensionSite = sites.some(s => s.structureType === STRUCTURE_EXTENSION);
-
-            if (!hasExtension && !hasExtensionSite) {
-                // If no extension, it MUST be clear for a new one (ignoring roads)
-                if (!ConstructionUtils.isTileClearForStructure(pos, room, true)) return false;
-            }
+        let count = 0;
+        for (const offset of offsets) {
+            const pos = new RoomPosition(tile.x + offset.x, tile.y + offset.y, room.name);
+            const hasExtension =
+                pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTENSION) ||
+                pos.lookFor(LOOK_CONSTRUCTION_SITES).some(s => s.structureType === STRUCTURE_EXTENSION);
+            if (hasExtension) count++;
         }
-
-        for (const offset of roadOffsets) {
-            const pos = new RoomPosition(centerX + offset.x, centerY + offset.y, room.name);
-            const structures = pos.lookFor(LOOK_STRUCTURES);
-            const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-
-            const hasRoad = structures.some(s => s.structureType === STRUCTURE_ROAD);
-            const hasRoadSite = sites.some(s => s.structureType === STRUCTURE_ROAD);
-
-            if (!hasRoad && !hasRoadSite) {
-                // If no road, it MUST be clear for a new one
-                if (!ConstructionUtils.isTileClearForStructure(pos, room, true)) return false;
-            }
-        }
-
-        return true;
+        return count;
     }
 
     private rebuildRuins(): void {
@@ -590,4 +672,8 @@ export class ConstructionManager {
 
         return stats;
     }
+}
+
+function describeTile(tile: Tile | undefined): string {
+    return tile ? `${tile.x},${tile.y}` : "none";
 }

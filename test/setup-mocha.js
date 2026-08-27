@@ -176,3 +176,22 @@ global.CONTROLLER_STRUCTURES = {
     [global.STRUCTURE_NUKER]: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1 },
     [global.STRUCTURE_FACTORY]: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1 }
 };
+
+global.LOOK_CREEPS = "creep";
+global.LOOK_ENERGY = "energy";
+global.LOOK_RESOURCES = "resource";
+global.LOOK_SOURCES = "source";
+global.LOOK_MINERALS = "mineral";
+global.LOOK_DEPOSITS = "deposit";
+global.LOOK_STRUCTURES = "structure";
+global.LOOK_FLAGS = "flag";
+global.LOOK_CONSTRUCTION_SITES = "constructionSite";
+global.LOOK_NUKES = "nuke";
+global.LOOK_TERRAIN = "terrain";
+global.LOOK_TOMBSTONES = "tombstone";
+global.LOOK_POWER_CREEPS = "powerCreep";
+global.LOOK_RUINS = "ruin";
+
+global.TERRAIN_MASK_WALL = 1;
+global.TERRAIN_MASK_SWAMP = 2;
+global.TERRAIN_MASK_LAVA = 4;

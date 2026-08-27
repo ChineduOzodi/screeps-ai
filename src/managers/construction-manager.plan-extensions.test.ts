@@ -1,209 +1,303 @@
 import { assert } from "chai";
 import sinon from "sinon";
 import { ConstructionManager } from "./construction-manager";
-import { ConstructionUtils } from "../utils/construction-utils";
+
+const ROOM_NAME = "W1N1";
+const SPAWN_POS = { x: 25, y: 25 };
+
+interface TileContents {
+    structures: any[];
+    sites: any[];
+}
+
+/**
+ * Minimal world the extension planner and the manager can both read: terrain walls plus a
+ * per-tile record of what stands on it.
+ */
+interface World {
+    walls: Set<string>;
+    tiles: Map<string, TileContents>;
+    sources: any[];
+    minerals: any[];
+}
+
+function createWorld(): World {
+    return { walls: new Set<string>(), tiles: new Map<string, TileContents>(), sources: [], minerals: [] };
+}
+
+function tileAt(x: number, y: number): TileContents {
+    const key = `${x},${y}`;
+    let tile = world.tiles.get(key);
+    if (!tile) {
+        tile = { structures: [], sites: [] };
+        world.tiles.set(key, tile);
+    }
+    return tile;
+}
+
+function addStructure(x: number, y: number, structureType: string, extra: any = {}): any {
+    const structure = { structureType, pos: new MockRoomPosition(x, y, ROOM_NAME), my: true, ...extra };
+    tileAt(x, y).structures.push(structure);
+    return structure;
+}
+
+function addSite(x: number, y: number, structureType: string, extra: any = {}): any {
+    const site = { structureType, pos: new MockRoomPosition(x, y, ROOM_NAME), my: true, ...extra };
+    tileAt(x, y).sites.push(site);
+    return site;
+}
+
+function allStructures(): any[] {
+    return [...world.tiles.values()].flatMap(t => t.structures);
+}
+
+function allSites(): any[] {
+    return [...world.tiles.values()].flatMap(t => t.sites);
+}
+
+/** Walls off everything except a vertical corridor `width` tiles wide through x=25. */
+function carveCorridor(width: number): void {
+    const half = Math.floor(width / 2);
+    for (let y = 0; y < 50; y++) {
+        for (let x = 0; x < 50; x++) {
+            const inCorridor = x >= 25 - half && x <= 25 - half + width - 1 && y >= 5 && y <= 44;
+            if (!inCorridor) world.walls.add(`${x},${y}`);
+        }
+    }
+}
+
+let world: World = createWorld();
 
 class MockRoomPosition {
     public x: number;
     public y: number;
     public roomName: string;
-    constructor(x: number, y: number, roomName: string) {
+
+    public constructor(x: number, y: number, roomName: string) {
         this.x = x;
         this.y = y;
         this.roomName = roomName;
     }
+
     public lookFor(type: string): any[] {
-        return [];
+        const tile = world.tiles.get(`${this.x},${this.y}`);
+        if (!tile) return [];
+        return type === LOOK_STRUCTURES ? tile.structures : tile.sites;
+    }
+
+    public inRangeTo(other: { x: number; y: number }, range: number): boolean {
+        return Math.max(Math.abs(this.x - other.x), Math.abs(this.y - other.y)) <= range;
     }
 }
 
+function applyFilter(results: any[], opts?: any): any[] {
+    return opts?.filter ? results.filter(opts.filter) : results;
+}
+
+function buildRoom(level: number): any {
+    const room: any = {
+        name: ROOM_NAME,
+        memory: {},
+        controller: { level, my: true, pos: new MockRoomPosition(10, 40, ROOM_NAME) },
+        getTerrain: () => ({ get: (x: number, y: number) => (world.walls.has(`${x},${y}`) ? 1 : 0) }),
+        lookForAt: (type: string, pos: MockRoomPosition) => pos.lookFor(type),
+    };
+
+    room.find = (type: number, opts?: any): any[] => {
+        switch (type) {
+            case FIND_STRUCTURES:
+            case FIND_MY_STRUCTURES:
+                return applyFilter(allStructures(), opts);
+            case FIND_CONSTRUCTION_SITES:
+            case FIND_MY_CONSTRUCTION_SITES:
+                return applyFilter(allSites(), opts);
+            case FIND_SOURCES:
+                return applyFilter(world.sources, opts);
+            case FIND_MINERALS:
+                return applyFilter(world.minerals, opts);
+            default:
+                return [];
+        }
+    };
+
+    room.createConstructionSite = sinon.stub().callsFake((pos: MockRoomPosition, type: string) => {
+        addSite(pos.x, pos.y, type);
+        return OK;
+    });
+
+    return room;
+}
+
 describe("ConstructionManager.planExtensions", () => {
-    let colonyMock: any;
-    let roomMock: any;
-    let spawnMock: any;
-    let constructionManager: ConstructionManager;
+    let room: any;
+    let spawn: any;
+    let manager: ConstructionManager;
+    let originalRoomPosition: any;
+
+    const setup = (level: number): void => {
+        room = buildRoom(level);
+        spawn = { id: "spawn-1", pos: new MockRoomPosition(SPAWN_POS.x, SPAWN_POS.y, ROOM_NAME), room };
+        addStructure(SPAWN_POS.x, SPAWN_POS.y, STRUCTURE_SPAWN);
+        manager = new ConstructionManager({ getMainRoom: () => room, getMainSpawn: () => spawn } as any);
+    };
+
+    const extensionSiteCalls = (): any[] =>
+        room.createConstructionSite.getCalls().filter((c: any) => c.args[1] === STRUCTURE_EXTENSION);
+
+    const roadSiteCalls = (): any[] =>
+        room.createConstructionSite.getCalls().filter((c: any) => c.args[1] === STRUCTURE_ROAD);
 
     beforeEach(() => {
-        // @ts-ignore
-        global.Game = {
-            time: 10,
-            rooms: {},
-            constructionSites: {},
-        };
-        // @ts-ignore
-        global.Memory = {};
+        world = createWorld();
+        // @ts-ignore - the manager builds positions through the global constructor
+        originalRoomPosition = global.RoomPosition;
         // @ts-ignore
         global.RoomPosition = MockRoomPosition;
         // @ts-ignore
-        global.STRUCTURE_EXTENSION = "extension";
+        global.Game = { time: 1000, rooms: {}, constructionSites: {} };
         // @ts-ignore
-        global.STRUCTURE_ROAD = "road";
-        // @ts-ignore
-        global.FIND_MY_STRUCTURES = 1;
-        // @ts-ignore
-        global.FIND_MY_CONSTRUCTION_SITES = 2;
-        // @ts-ignore
-        global.LOOK_STRUCTURES = "structures";
-        // @ts-ignore
-        global.LOOK_CONSTRUCTION_SITES = "constructionSites";
-        // @ts-ignore
-        global.OK = 0;
-        // @ts-ignore
-        global.CONTROLLER_STRUCTURES = {
-            ["extension"]: {
-                0: 0,
-                1: 0,
-                2: 5,
-                3: 10,
-                4: 20,
-                5: 30,
-                6: 40,
-                7: 50,
-                8: 60,
-            },
-        };
-
-        spawnMock = {
-            pos: new MockRoomPosition(25, 25, "W1N1"),
-        };
-
-        roomMock = {
-            name: "W1N1",
-            controller: { level: 2 },
-            createConstructionSite: sinon.stub().returns(0),
-            find: sinon.stub().returns([]),
-        };
-
-        colonyMock = {
-            getMainRoom: () => roomMock,
-            getMainSpawn: () => spawnMock,
-        };
-
-        constructionManager = new ConstructionManager(colonyMock);
-
-        // Mock ConstructionUtils.isTileClearForStructure to always return true by default
-        sinon.stub(ConstructionUtils, "isTileClearForStructure").returns(true);
+        global.Memory = {};
     });
 
     afterEach(() => {
+        // @ts-ignore
+        global.RoomPosition = originalRoomPosition;
         sinon.restore();
     });
 
-    it("should do nothing if we already have max extensions", () => {
-        // RCL 2 allows 5 extensions
-        roomMock.find.withArgs(1).returns(new Array(5)); // FIND_MY_STRUCTURES
-        roomMock.find.withArgs(2).returns([]); // FIND_MY_CONSTRUCTION_SITES
+    it("places every extension the RCL allows in an open room", () => {
+        setup(3); // RCL 3 allows 10 extensions
 
-        // Call private method using any cast
-        (constructionManager as any).planExtensions();
+        (manager as any).planExtensions();
 
-        assert.isFalse(roomMock.createConstructionSite.called);
+        assert.equal(extensionSiteCalls().length, 10);
     });
 
-    it("should place missing extensions up to the limit", () => {
-        // RCL 2 allows 5 extensions. We have 2. Need 3.
-        roomMock.find.withArgs(1).returns(new Array(2));
-        roomMock.find.withArgs(2).returns([]);
+    it("places extensions in a cramped room where no 5-tile cluster fits", () => {
+        carveCorridor(3);
+        setup(3);
 
-        (constructionManager as any).planExtensions();
+        (manager as any).planExtensions();
 
-        // Should call createConstructionSite for 3 extensions
-        const extensionCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "extension");
-        assert.equal(extensionCalls.length, 3);
-    });
-
-    it("should place roads for clusters that have extensions", () => {
-        // RCL 2 allows 5 extensions. We have 0.
-        roomMock.find.withArgs(1).returns([]);
-        roomMock.find.withArgs(2).returns([]);
-
-        (constructionManager as any).planExtensions();
-
-        // 5 extensions should be placed.
-        // Cluster candidates are tried. The first cluster has 5 extension spots.
-        // If 5 extensions are placed in the first cluster, roads for that cluster should also be placed.
-        const roadCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "road");
-        assert.isAbove(roadCalls.length, 0);
-    });
-
-    it("should skip positions that already have extensions or sites", () => {
-        // RCL 2 allows 5. We have 0.
-        roomMock.find.withArgs(1).returns([]);
-        roomMock.find.withArgs(2).returns([]);
-
-        // Mock lookFor to return something for the first position
-        const lookForStub = sinon.stub(MockRoomPosition.prototype, "lookFor");
-        // For the very first extension position in the first cluster (delta 0, -4, offset 0,0)
-        // Pos: 25, 21
-        lookForStub.callsFake(function (this: MockRoomPosition, type: string) {
-            if (this.x === 25 && this.y === 21 && type === "structures") {
-                return [{ structureType: "extension" }];
-            }
-            return [];
-        });
-
-        (constructionManager as any).planExtensions();
-
-        // It should skip 25,21 and place 5 others (if available in candidates)
-        // Note: our logic skips 25,21 but it increments placedInCluster, so roads are still placed.
-        // And it needs 5.
-        const extensionCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "extension");
-        assert.equal(extensionCalls.length, 5);
-
-        // Ensure 25,21 was NOT called
-        extensionCalls.forEach((call: any) => {
+        assert.equal(extensionSiteCalls().length, 10, "a 3-wide corridor still has room for RCL 3 extensions");
+        for (const call of extensionSiteCalls()) {
             const pos = call.args[0];
-            assert.isFalse(pos.x === 25 && pos.y === 21);
-        });
+            assert.isFalse(world.walls.has(`${pos.x},${pos.y}`), "must not build into a wall");
+        }
     });
 
-    it("should skip invalid positions (out of bounds)", () => {
-        // Move spawn to edge
-        spawnMock.pos = new MockRoomPosition(2, 2, "W1N1");
+    it("does nothing once the RCL cap is reached", () => {
+        setup(2); // RCL 2 allows 5 extensions
+        for (let i = 0; i < 5; i++) addStructure(20 + i, 20, STRUCTURE_EXTENSION);
 
-        roomMock.find.withArgs(1).returns([]);
-        roomMock.find.withArgs(2).returns([]);
+        (manager as any).planExtensions();
 
-        (constructionManager as any).planExtensions();
-
-        // Many cluster candidates will be < 2 or > 47 and should be skipped.
-        // We just ensure it doesn't crash and places some extensions if possible.
-        const extensionCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "extension");
-        assert.isAtLeast(extensionCalls.length, 1);
+        assert.isFalse(room.createConstructionSite.called);
     });
 
-    it("should stop placing once needed count reaches 0", () => {
-        // RCL 3 allows 10. We have 0.
-        roomMock.controller.level = 3;
-        roomMock.find.withArgs(1).returns([]);
-        roomMock.find.withArgs(2).returns([]);
+    it("caches the plan in room memory and reuses it", () => {
+        setup(2);
 
-        (constructionManager as any).planExtensions();
+        (manager as any).planExtensions();
+        const plan = room.memory.extensionPlan;
+        assert.isDefined(plan);
+        assert.equal(plan.spawnId, "spawn-1");
+        assert.equal(plan.plannedAt, 1000);
+        assert.isAbove(plan.extensions.length, 5);
 
-        const extensionCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "extension");
-        assert.equal(extensionCalls.length, 10);
+        Game.time = 1010;
+        (manager as any).planExtensions();
+
+        assert.equal(room.memory.extensionPlan.plannedAt, 1000, "should not replan while the plan still fits");
+        assert.deepEqual(room.memory.extensionPlan.extensions, plan.extensions);
     });
 
-    it("should NOT place roads for clusters if no new extensions were placed", () => {
-        // RCL 2 allows 5 extensions. We already have 5.
-        roomMock.find.withArgs(1).returns(new Array(5));
-        roomMock.find.withArgs(2).returns([]);
+    it("skips tiles that already hold an extension", () => {
+        setup(2);
+        (manager as any).planExtensions();
+        const planned = room.memory.extensionPlan.extensions;
 
-        // Mock lookFor to return extensions for the first cluster positions
-        const lookForStub = sinon.stub(MockRoomPosition.prototype, "lookFor");
-        lookForStub.callsFake(function (this: MockRoomPosition, type: string) {
-            // Check if this position is in the first cluster (center 25, 21)
-            const dx = Math.abs(this.x - 25);
-            const dy = Math.abs(this.y - 21);
-            if (dx <= 1 && dy <= 1 && dx + dy <= 1 && type === "structures") {
-                return [{ structureType: "extension" }];
+        // Start over with the first two planned tiles already built.
+        const builtTiles = planned.slice(0, 2);
+        world = createWorld();
+        setup(2);
+        room.memory.extensionPlan = { spawnId: "spawn-1", plannedAt: 1000, extensions: planned, roads: [] };
+        for (const tile of builtTiles) addStructure(tile.x, tile.y, STRUCTURE_EXTENSION);
+
+        (manager as any).planExtensions();
+
+        assert.equal(extensionSiteCalls().length, 3, "5 allowed minus the 2 already standing");
+        for (const call of extensionSiteCalls()) {
+            const pos = call.args[0];
+            assert.isFalse(
+                builtTiles.some((t: any) => t.x === pos.x && t.y === pos.y),
+                "must not re-place an existing extension",
+            );
+        }
+    });
+
+    it("clears a road sitting on a planned extension tile", () => {
+        setup(2);
+        (manager as any).planExtensions();
+        const first = room.memory.extensionPlan.extensions[0];
+
+        world = createWorld();
+        setup(2);
+        room.memory.extensionPlan = {
+            spawnId: "spawn-1",
+            plannedAt: 1000,
+            extensions: [first],
+            roads: [],
+        };
+        const road = addStructure(first.x, first.y, STRUCTURE_ROAD, { destroy: sinon.stub() });
+
+        (manager as any).planExtensions();
+
+        assert.isTrue(road.destroy.calledOnce, "the road should make way for the extension");
+        assert.equal(extensionSiteCalls().length, 1);
+    });
+
+    it("only paves walkways that several extensions border", () => {
+        setup(4); // RCL 4 allows 20 extensions, enough to form a field
+
+        (manager as any).planExtensions();
+
+        assert.isNotEmpty(extensionSiteCalls());
+        for (const call of roadSiteCalls()) {
+            const pos = call.args[0];
+            const neighbours = [
+                { x: pos.x, y: pos.y - 1 },
+                { x: pos.x + 1, y: pos.y },
+                { x: pos.x, y: pos.y + 1 },
+                { x: pos.x - 1, y: pos.y },
+            ].filter(t => {
+                const tile = world.tiles.get(`${t.x},${t.y}`);
+                if (!tile) return false;
+                return [...tile.structures, ...tile.sites].some(s => s.structureType === STRUCTURE_EXTENSION);
+            }).length;
+            assert.isAtLeast(neighbours, 2, `walkway at ${pos.x},${pos.y} does not serve enough extensions`);
+        }
+    });
+
+    it("keeps the tiles around sources and the controller clear", () => {
+        setup(4);
+        world.sources = [{ pos: new MockRoomPosition(30, 30, ROOM_NAME) }];
+
+        (manager as any).planExtensions();
+
+        const forbidden = new Set<string>();
+        for (const [cx, cy] of [
+            [30, 30],
+            [room.controller.pos.x, room.controller.pos.y],
+        ]) {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) forbidden.add(`${cx + dx},${cy + dy}`);
             }
-            return [];
-        });
+        }
 
-        (constructionManager as any).planExtensions();
-
-        const roadCalls = roomMock.createConstructionSite.getCalls().filter((c: any) => c.args[1] === "road");
-        assert.equal(roadCalls.length, 0, "Should not have placed roads because no new extensions were placed");
+        for (const call of room.createConstructionSite.getCalls()) {
+            const pos = call.args[0];
+            assert.isFalse(forbidden.has(`${pos.x},${pos.y}`), `built on reserved tile ${pos.x},${pos.y}`);
+        }
     });
 });

@@ -1,6 +1,3 @@
-import { PathfindingCache } from "./pathfinding-cache";
-import { Logger } from "./logger";
-
 export class ConstructionUtils {
     public static isTileClearForStructure(pos: RoomPosition, room: Room, ignoreRoads: boolean = false): boolean {
         if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) {
@@ -28,111 +25,6 @@ export class ConstructionUtils {
         return true;
     }
 
-    public static getExtensionClusterCandidates(): { dx: number; dy: number }[] {
-        return [
-            { dx: 0, dy: -4 },
-            { dx: -2, dy: -6 },
-            { dx: 2, dy: -6 },
-            { dx: 0, dy: -8 },
-            { dx: -4, dy: 0 },
-            { dx: -6, dy: -2 },
-            { dx: -6, dy: 2 },
-            { dx: -8, dy: 0 },
-            { dx: 0, dy: 4 },
-            { dx: -2, dy: 6 },
-            { dx: 2, dy: 6 },
-            { dx: 0, dy: 8 },
-        ];
-    }
-
-    public static getExtensionClusterOffsets(): { x: number; y: number }[] {
-        return [
-            { x: 0, y: 0 },
-            { x: 0, y: -1 },
-            { x: 0, y: 1 },
-            { x: -1, y: 0 },
-            { x: 1, y: 0 },
-        ];
-    }
-
-    public static getExtensionRoadOffsets(): { x: number; y: number }[] {
-        return [
-            { x: -1, y: -1 },
-            { x: 1, y: -1 },
-            { x: -1, y: 1 },
-            { x: 1, y: 1 },
-            { x: 0, y: -2 },
-            { x: 0, y: 2 },
-            { x: -2, y: 0 },
-            { x: 2, y: 0 },
-        ];
-    }
-
-    public static findSuitableExtensionClusterPosition(spawn: StructureSpawn, room: Room): RoomPosition | null {
-        const spawnPos = spawn.pos;
-        const roomName = room.name;
-
-        const extensionOffsets = ConstructionUtils.getExtensionClusterOffsets();
-        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
-
-        const isClusterValidAtCenter = (center: RoomPosition): boolean => {
-            for (const offset of extensionOffsets) {
-                const extPos = new RoomPosition(center.x + offset.x, center.y + offset.y, roomName);
-                if (!ConstructionUtils.isTileClearForStructure(extPos, room)) return false;
-            }
-            for (const offset of roadOffsets) {
-                const roadPos = new RoomPosition(center.x + offset.x, center.y + offset.y, roomName);
-                if (!ConstructionUtils.isTileClearForStructure(roadPos, room, true)) return false;
-            }
-            return true;
-        };
-
-        const spotCandidates = ConstructionUtils.getExtensionClusterCandidates();
-
-        // Check primary spots
-        for (const pDelta of spotCandidates) {
-            const x = spawnPos.x + pDelta.dx;
-            const y = spawnPos.y + pDelta.dy;
-            if (x < 0 || x > 49 || y < 0 || y > 49) continue;
-            try {
-                const candidateCenter = new RoomPosition(x, y, roomName);
-                if (isClusterValidAtCenter(candidateCenter)) {
-                    return candidateCenter;
-                }
-            } catch (e) {
-                Logger.error(`Failed to create candidate for extension: ${x},${y} in ${roomName}`);
-            }
-        }
-
-        return null; // No suitable position found
-    }
-
-    public static getExtensionClusterStructures(centerPos: RoomPosition, room: Room): ProjectStructure[] {
-        const roomName = room.name;
-        const structures: ProjectStructure[] = [];
-        const extensionOffsets = ConstructionUtils.getExtensionClusterOffsets();
-        const roadOffsets = ConstructionUtils.getExtensionRoadOffsets();
-
-        for (const offset of extensionOffsets) {
-            structures.push({
-                x: centerPos.x + offset.x,
-                y: centerPos.y + offset.y,
-                roomName,
-                type: STRUCTURE_EXTENSION,
-            });
-        }
-
-        for (const offset of roadOffsets) {
-            structures.push({
-                x: centerPos.x + offset.x,
-                y: centerPos.y + offset.y,
-                roomName,
-                type: STRUCTURE_ROAD,
-            });
-        }
-        return structures;
-    }
-
     public static getRoadsAroundPosition(pos: RoomPosition): ProjectStructure[] {
         const roadPositions = [
             { x: pos.x + 1, y: pos.y },
@@ -152,42 +44,23 @@ export class ConstructionUtils {
         }));
     }
 
-    public static getFirstStorageStructures(spawn: StructureSpawn): ProjectStructure[] {
-        return [
-            {
-                x: spawn.pos.x + 2,
-                y: spawn.pos.y,
-                roomName: spawn.pos.roomName,
-                type: STRUCTURE_STORAGE,
-            },
-        ];
-    }
-
-    public static getFirstTerminalStructures(spawn: StructureSpawn): ProjectStructure[] {
-        return [
-            {
-                x: spawn.pos.x - 2,
-                y: spawn.pos.y,
-                roomName: spawn.pos.roomName,
-                type: STRUCTURE_TERMINAL,
-            },
-        ];
-    }
-
     public static getLinkStructures(
         room: Room,
         spawn: StructureSpawn,
         numLinks: number,
         sources: Source[],
+        hubLink?: { x: number; y: number },
     ): ProjectStructure[] {
         const structures: ProjectStructure[] = [];
         if (numLinks <= 0) return structures;
 
         let placedLinks = 0;
 
-        // 1. Storage/Spawn Link (Core Link)
-        const coreLinkPos = new RoomPosition(spawn.pos.x + 1, spawn.pos.y + 1, room.name);
-        const storage = room.storage;
+        // 1. Storage/Spawn Link (Core Link). The core planner picks the tile; fall back to
+        // the spawn's corner only when it has not run yet.
+        const coreLinkPos = hubLink
+            ? new RoomPosition(hubLink.x, hubLink.y, room.name)
+            : new RoomPosition(spawn.pos.x + 1, spawn.pos.y + 1, room.name);
 
         // Ensure there isn't already a link near storage/spawn
         const hasCoreLink =
@@ -267,98 +140,6 @@ export class ConstructionUtils {
             }
         }
 
-        return structures;
-    }
-
-    /**
-     * Finds clear tiles for late-game structures (labs, factory, observer) by spiraling
-     * outward from the spawn, keeping placements adjacent to each other where possible.
-     */
-    public static getClusteredStructures(
-        spawn: StructureSpawn,
-        room: Room,
-        type: BuildableStructureConstant,
-        count: number,
-    ): ProjectStructure[] {
-        const structures: ProjectStructure[] = [];
-        if (count <= 0) return structures;
-
-        // Prefer clustering near existing structures of the same type (labs need range 2 of each other).
-        const existing = room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === type });
-        const existingSites = room.find(FIND_MY_CONSTRUCTION_SITES, { filter: s => s.structureType === type });
-        const anchor = existing[0]?.pos || existingSites[0]?.pos || spawn.pos;
-
-        for (let radius = 2; radius <= 8 && structures.length < count; radius++) {
-            for (let dx = -radius; dx <= radius && structures.length < count; dx++) {
-                for (let dy = -radius; dy <= radius && structures.length < count; dy++) {
-                    // Only check ring perimeter
-                    if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
-
-                    const x = anchor.x + dx;
-                    const y = anchor.y + dy;
-                    if (x < 2 || x > 47 || y < 2 || y > 47) continue;
-
-                    const pos = new RoomPosition(x, y, room.name);
-                    if (!ConstructionUtils.isTileClearForStructure(pos, room)) continue;
-
-                    // Don't wall in the spawn: keep at least range 2 from spawn
-                    if (pos.inRangeTo(spawn.pos, 1)) continue;
-
-                    // Avoid tiles already promised to another structure in this batch
-                    if (structures.some(s => s.x === x && s.y === y)) continue;
-
-                    // Labs must be within range 2 of each other to run reactions
-                    if (type === STRUCTURE_LAB) {
-                        const nearOtherLab =
-                            existing.some(s => s.pos.inRangeTo(pos, 2)) ||
-                            existingSites.some(s => s.pos.inRangeTo(pos, 2)) ||
-                            structures.some(s => Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) <= 2);
-                        const isFirstLab =
-                            existing.length === 0 && existingSites.length === 0 && structures.length === 0;
-                        if (!isFirstLab && !nearOtherLab) continue;
-                    }
-
-                    structures.push({ x, y, roomName: room.name, type });
-                }
-            }
-        }
-
-        return structures;
-    }
-
-    public static getTowerStructures(spawn: StructureSpawn, numTowers: number): ProjectStructure[] {
-        const structures: ProjectStructure[] = [];
-        const candidates = [
-            { x: 2, y: 2 },
-            { x: -2, y: -2 },
-            { x: -2, y: 2 },
-            { x: 2, y: -2 },
-            { x: 0, y: 3 },
-            { x: 0, y: -3 },
-        ];
-
-        for (const candidate of candidates) {
-            // Count already planned or placed towers to avoid overbuilding
-            const towerPosition = new RoomPosition(
-                spawn.pos.x + candidate.x,
-                spawn.pos.y + candidate.y,
-                spawn.pos.roomName,
-            );
-            if (ConstructionUtils.isTileClearForStructure(towerPosition, spawn.room, true)) {
-                structures.push({
-                    x: towerPosition.x,
-                    y: towerPosition.y,
-                    roomName: spawn.pos.roomName,
-                    type: STRUCTURE_TOWER,
-                });
-                structures.push(...ConstructionUtils.getRoadsAroundPosition(towerPosition));
-
-                // If we've found enough spots to place the required missing towers, break
-                if (structures.filter(s => s.type === STRUCTURE_TOWER).length >= numTowers) {
-                    break;
-                }
-            }
-        }
         return structures;
     }
 

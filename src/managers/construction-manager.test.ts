@@ -50,7 +50,7 @@ describe("Construction Manager", () => {
 
         roomMock = {
             name: "W1N1",
-            controller: { my: true },
+            controller: { my: true, level: 1, pos: new MockRoomPosition(20, 20, "W1N1") },
             createConstructionSite: sinon.stub().returns(0),
             find: sinon.stub().callsFake((type, opts) => {
                 if (type === FIND_RUINS && opts && opts.filter) {
