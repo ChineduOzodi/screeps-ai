@@ -353,6 +353,45 @@ export abstract class CreepRunner {
     }
 
     /**
+     * Finds an own rampart the creep can stand on to fight the target from safety:
+     * walkable (no blocking structure), unoccupied (or occupied by this creep), and
+     * within `range` of the target. Melee wants range 1, ranged wants range 3.
+     */
+    protected findCombatRampart(target: _HasRoomPosition, range: number): StructureRampart | null {
+        const { creep } = this;
+        if (typeof creep.room.find !== "function") return null;
+
+        const ramparts = creep.room.find<StructureRampart>(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_RAMPART && s.pos.inRangeTo(target.pos, range),
+        });
+
+        const usable = ramparts.filter(rampart => {
+            const blocked = rampart.pos
+                .lookFor(LOOK_STRUCTURES)
+                .some(
+                    s =>
+                        s.structureType !== STRUCTURE_RAMPART &&
+                        s.structureType !== STRUCTURE_ROAD &&
+                        s.structureType !== STRUCTURE_CONTAINER,
+                );
+            if (blocked) return false;
+
+            const occupants = rampart.pos.lookFor(LOOK_CREEPS);
+            return occupants.length === 0 || occupants[0].id === creep.id;
+        });
+
+        if (usable.length === 0) return null;
+        return creep.pos.findClosestByRange(usable);
+    }
+
+    /** Whether the creep is currently standing on one of our ramparts. */
+    protected isOnOwnRampart(): boolean {
+        return this.creep.pos
+            .lookFor(LOOK_STRUCTURES)
+            .some(s => s.structureType === STRUCTURE_RAMPART && (s as StructureRampart).my);
+    }
+
+    /**
      * One-shot boost attempt for combat creeps: if a lab holds a suitable compound,
      * walk there and boost. Returns true while the creep is busy boosting (the
      * caller should skip its normal behavior for the tick).

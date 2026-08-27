@@ -17,6 +17,12 @@ interface Colony {
     goapManagement?: ColonyGoapManagement;
     expansionManagement?: ColonyExpansionManagement;
     labManagement?: ColonyLabManagement;
+    observerManagement?: ColonyObserverManagement;
+}
+
+interface ColonyObserverManagement {
+    /** Room requested via observeRoom last tick; vision arrives the tick after. */
+    pendingRoom?: string;
 }
 
 interface BaseSystemInfo {
@@ -72,6 +78,8 @@ interface ColonyLabManagement extends BaseSystemInfo {
     reagents?: ResourceConstant[];
     /** The compound currently being produced. */
     product?: ResourceConstant;
+    /** Raw minerals the terminal should buy to unblock the next wanted reaction. */
+    buyRequests?: ResourceConstant[];
 }
 
 interface EnergyUsageTracking {

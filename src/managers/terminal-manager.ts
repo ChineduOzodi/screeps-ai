@@ -15,6 +15,16 @@ const ENERGY_SUPPORT_AMOUNT = 10000;
 const ENERGY_SUPPORT_MIN_OWN_PERCENT = 0.7;
 /** Colonies below this stored-energy ratio receive support. */
 const ENERGY_SUPPORT_NEEDY_PERCENT = 0.3;
+/** Amount of a reagent bought per market deal. */
+const REAGENT_BUY_AMOUNT = 1000;
+/** Stop buying once we hold this much of the reagent. */
+const REAGENT_BUY_TARGET = 2000;
+/** Credits kept in reserve — never spend below this. */
+const CREDIT_RESERVE = 1000;
+/** Without price history, refuse to pay more than this per unit. */
+const FALLBACK_MAX_PRICE = 10;
+/** Pay at most this multiple of the recent average price. */
+const MAX_PRICE_MULTIPLIER = 1.5;
 
 /**
  * Turns surplus minerals into credits via the market. Runs infrequently —
@@ -34,10 +44,58 @@ export class TerminalManager {
         const terminal = room?.terminal;
         if (!terminal || !terminal.isActive() || terminal.cooldown > 0) return;
 
-        // Helping a sister colony beats selling — one action per cooldown window.
+        // One terminal action per cooldown window, in priority order:
+        // support a sister colony > unblock the lab pipeline > sell surplus.
         if (this.sendEnergySupport(terminal)) return;
+        if (this.buyMissingReagents(terminal)) return;
 
         this.sellSurplusMinerals(terminal);
+    }
+
+    /** Buys raw minerals the LabManager needs but the colony can't mine locally. */
+    private buyMissingReagents(terminal: StructureTerminal): boolean {
+        const requests = this.colony.colonyInfo.labManagement?.buyRequests;
+        if (!requests || requests.length === 0) return false;
+
+        for (const resource of requests) {
+            const room = terminal.room;
+            const onHand = (terminal.store[resource] || 0) + (room.storage?.store[resource] || 0);
+            if (onHand >= REAGENT_BUY_TARGET) continue;
+
+            const maxPrice = this.getMaxBuyPrice(resource);
+            const orders = Game.market
+                .getAllOrders({ type: ORDER_SELL, resourceType: resource })
+                .filter(o => o.amount > 0 && o.roomName && o.price <= maxPrice)
+                .sort((a, b) => a.price - b.price);
+
+            for (const order of orders) {
+                const amount = Math.min(REAGENT_BUY_AMOUNT, order.amount, REAGENT_BUY_TARGET - onHand);
+                const creditCost = amount * order.price;
+                if (Game.market.credits - creditCost < CREDIT_RESERVE) break;
+
+                const energyCost = Game.market.calcTransactionCost(amount, room.name, order.roomName as string);
+                if (energyCost > terminal.store[RESOURCE_ENERGY]) continue;
+
+                const result = Game.market.deal(order.id, amount, room.name);
+                if (result === OK) {
+                    Logger.info(
+                        `[Terminal] ${room.name} bought ${amount} ${resource} at ${order.price} cr for the labs`,
+                    );
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private getMaxBuyPrice(resource: ResourceConstant): number {
+        const history = Game.market.getHistory(resource);
+        if (!history || history.length === 0) return FALLBACK_MAX_PRICE;
+
+        const recent = history[history.length - 1];
+        if (!recent || !recent.avgPrice) return FALLBACK_MAX_PRICE;
+
+        return recent.avgPrice * MAX_PRICE_MULTIPLIER;
     }
 
     /** Ships energy to another of our colonies whose storage is running dry. */
@@ -70,10 +128,15 @@ export class TerminalManager {
     }
 
     private sellSurplusMinerals(terminal: StructureTerminal): void {
+        const labInfo = this.colony.colonyInfo.labManagement;
+        const labNeeds = new Set<string>([...(labInfo?.reagents || []), ...(labInfo?.buyRequests || [])]);
+
         for (const resourceType in terminal.store) {
             if (resourceType === RESOURCE_ENERGY) continue;
             // Only sell raw minerals (single-letter resources); compounds are kept for boosting.
             if (resourceType.length > 1) continue;
+            // Don't sell what the lab pipeline is consuming or trying to acquire.
+            if (labNeeds.has(resourceType)) continue;
 
             const amount = terminal.store[resourceType as ResourceConstant];
             if (amount <= MINERAL_SELL_THRESHOLD) continue;

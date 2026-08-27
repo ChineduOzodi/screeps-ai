@@ -41,6 +41,20 @@ export class DefenderCreep extends CreepRunner {
         }
 
         if (target) {
+            // Prefer fighting from a rampart: attackers can't hit us through it.
+            if ("body" in target) {
+                const rampart = this.findCombatRampart(target as Creep, 1);
+                if (rampart) {
+                    if (!creep.pos.isEqualTo(rampart.pos)) {
+                        this.moveToWithReservation(rampart, creep.memory.workDuration, 0);
+                    }
+                    if (creep.pos.isNearTo(target)) {
+                        this.attack(target);
+                    }
+                    return;
+                }
+            }
+
             if (this.attack(target) === ERR_NOT_IN_RANGE) {
                 this.moveToWithReservation(target, creep.memory.workDuration);
             }

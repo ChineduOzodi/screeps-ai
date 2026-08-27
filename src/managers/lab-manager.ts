@@ -96,6 +96,7 @@ export class LabManager {
     private selectReaction(): void {
         const info = this.systemInfo;
         const pairFor = LabManager.reagentsForProduct;
+        let buyRequests: ResourceConstant[] | undefined;
 
         for (const product of PRODUCT_PRIORITIES) {
             if (this.getAvailable(product) >= COMPOUND_TARGET_AMOUNT) continue;
@@ -104,18 +105,35 @@ export class LabManager {
             if (!pair) continue;
 
             const [a, b] = pair;
-            if (this.getAvailable(a) >= REAGENT_MIN_AMOUNT && this.getAvailable(b) >= REAGENT_MIN_AMOUNT) {
+            const missing = [a, b].filter(r => this.getAvailable(r) < REAGENT_MIN_AMOUNT);
+
+            if (missing.length === 0) {
                 if (info.product !== product) {
                     Logger.info(`[Labs] ${this.colony.colonyInfo.id}: producing ${product} from ${a} + ${b}`);
                 }
                 info.product = product;
                 info.reagents = [a, b];
+                delete info.buyRequests;
                 return;
+            }
+
+            // Remember what blocks the highest-priority product. Only raw
+            // minerals are worth buying — compounds we can make ourselves.
+            if (!buyRequests) {
+                const rawMissing = missing.filter(r => r.length === 1);
+                if (rawMissing.length > 0) {
+                    buyRequests = rawMissing;
+                }
             }
         }
 
         delete info.product;
         delete info.reagents;
+        if (buyRequests) {
+            info.buyRequests = buyRequests;
+        } else {
+            delete info.buyRequests;
+        }
     }
 
     /** Looks up which two reagents react into the given product. */

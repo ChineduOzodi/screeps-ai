@@ -56,7 +56,18 @@ export class RangedDefenderCreep extends CreepRunner {
             creep.rangedAttack(target);
         }
 
-        // Movement: kite away from anything that can melee us, else close to range 3
+        // Movement: a rampart in firing range beats kiting — nothing can hit us there.
+        const rampart = this.findCombatRampart(target, 3);
+        if (rampart) {
+            if (!creep.pos.isEqualTo(rampart.pos)) {
+                this.moveToWithReservation(rampart, creep.memory.workDuration, 0);
+            }
+            return;
+        }
+
+        // Otherwise kite away from anything that can melee us, else close to range 3
+        if (this.isOnOwnRampart()) return; // Safe where we stand
+
         const dangerClose = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 2, {
             filter: h => h.getActiveBodyparts(ATTACK) > 0,
         });
