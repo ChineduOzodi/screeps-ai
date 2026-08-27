@@ -1,10 +1,15 @@
 import { ConstructionManager } from "../managers/construction-manager";
+import { LabManager } from "../managers/lab-manager";
+import { LinkManager } from "../managers/link-manager";
+import { ObserverManager } from "../managers/observer-manager";
 import { RoadManager } from "../managers/road-manager";
+import { TerminalManager } from "../managers/terminal-manager";
 
 import { BaseSystem, ColonyCreeps, ColonyManager, CreepRole, CreepStatus, Systems } from "./types";
 import { BuilderSystem } from "./../systems/builder-system";
 import { DefenseSystem } from "./../systems/defense-system";
 import { EnergySystem } from "./../systems/energy-system";
+import { ExpansionSystem } from "../systems/expansion-system";
 import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
@@ -18,6 +23,7 @@ function getSystems(colony: ColonyManager): Systems {
         infrastructure: new InfrastructureSystem(colony),
         upgrade: new UpgradeSystem(colony),
         builder: new BuilderSystem(colony),
+        expansion: new ExpansionSystem(colony),
     };
 }
 
@@ -26,11 +32,19 @@ export class ColonyManagerImpl implements ColonyManager {
     public systems = getSystems(this);
     public constructionManager: ConstructionManager;
     public roadManager: RoadManager;
+    public linkManager: LinkManager;
+    public terminalManager: TerminalManager;
+    public labManager: LabManager;
+    public observerManager: ObserverManager;
 
     public constructor(colony: Colony) {
         this.colonyInfo = colony;
         this.constructionManager = new ConstructionManager(this);
         this.roadManager = new RoadManager(this);
+        this.linkManager = new LinkManager(this);
+        this.terminalManager = new TerminalManager(this);
+        this.labManager = new LabManager(this);
+        this.observerManager = new ObserverManager(this);
     }
 
     public get energyManagement(): ColonyEnergyManagement | undefined {
@@ -89,6 +103,10 @@ export class ColonyManagerImpl implements ColonyManager {
         spawnManager.run();
         systems.forEach(x => x.run());
         this.constructionManager.run();
+        this.linkManager.run();
+        this.terminalManager.run();
+        this.labManager.run();
+        this.observerManager.run();
 
         this.creepManager();
         this.visualizeStats();

@@ -2,6 +2,7 @@
 import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
+import { TERMINAL_ENERGY_RESERVE } from "managers/terminal-manager";
 
 export class ExtensionFillerCreep extends CreepRunner {
     public constructor(creep: Creep) {
@@ -72,13 +73,28 @@ export class ExtensionFillerCreep extends CreepRunner {
                 if (this.transfer(tower, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     this.moveToWithReservation(tower, 5);
                 }
-            } else {
-                // Idle near storage
-                const colony = this.getColony();
-                const storage = colony?.getPrimaryStorage();
-                if (storage && !creep.pos.inRangeTo(storage, 3)) {
-                    this.moveToWithReservation(storage, 5, 2);
+                return;
+            }
+
+            // Priority 3: Terminal fee energy (needed to pay market transaction costs)
+            const terminal = creep.room?.terminal;
+            if (
+                terminal &&
+                terminal.isActive() &&
+                terminal.store[RESOURCE_ENERGY] < TERMINAL_ENERGY_RESERVE &&
+                terminal.store.getFreeCapacity() > 0
+            ) {
+                if (this.transfer(terminal, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    this.moveToWithReservation(terminal, 5);
                 }
+                return;
+            }
+
+            // Idle near storage
+            const colony = this.getColony();
+            const storage = colony?.getPrimaryStorage();
+            if (storage && !creep.pos.inRangeTo(storage, 3)) {
+                this.moveToWithReservation(storage, 5, 2);
             }
         }
     }

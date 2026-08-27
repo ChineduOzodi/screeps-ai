@@ -270,6 +270,62 @@ export class ConstructionUtils {
         return structures;
     }
 
+    /**
+     * Finds clear tiles for late-game structures (labs, factory, observer) by spiraling
+     * outward from the spawn, keeping placements adjacent to each other where possible.
+     */
+    public static getClusteredStructures(
+        spawn: StructureSpawn,
+        room: Room,
+        type: BuildableStructureConstant,
+        count: number,
+    ): ProjectStructure[] {
+        const structures: ProjectStructure[] = [];
+        if (count <= 0) return structures;
+
+        // Prefer clustering near existing structures of the same type (labs need range 2 of each other).
+        const existing = room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === type });
+        const existingSites = room.find(FIND_MY_CONSTRUCTION_SITES, { filter: s => s.structureType === type });
+        const anchor = existing[0]?.pos || existingSites[0]?.pos || spawn.pos;
+
+        for (let radius = 2; radius <= 8 && structures.length < count; radius++) {
+            for (let dx = -radius; dx <= radius && structures.length < count; dx++) {
+                for (let dy = -radius; dy <= radius && structures.length < count; dy++) {
+                    // Only check ring perimeter
+                    if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+
+                    const x = anchor.x + dx;
+                    const y = anchor.y + dy;
+                    if (x < 2 || x > 47 || y < 2 || y > 47) continue;
+
+                    const pos = new RoomPosition(x, y, room.name);
+                    if (!ConstructionUtils.isTileClearForStructure(pos, room)) continue;
+
+                    // Don't wall in the spawn: keep at least range 2 from spawn
+                    if (pos.inRangeTo(spawn.pos, 1)) continue;
+
+                    // Avoid tiles already promised to another structure in this batch
+                    if (structures.some(s => s.x === x && s.y === y)) continue;
+
+                    // Labs must be within range 2 of each other to run reactions
+                    if (type === STRUCTURE_LAB) {
+                        const nearOtherLab =
+                            existing.some(s => s.pos.inRangeTo(pos, 2)) ||
+                            existingSites.some(s => s.pos.inRangeTo(pos, 2)) ||
+                            structures.some(s => Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) <= 2);
+                        const isFirstLab =
+                            existing.length === 0 && existingSites.length === 0 && structures.length === 0;
+                        if (!isFirstLab && !nearOtherLab) continue;
+                    }
+
+                    structures.push({ x, y, roomName: room.name, type });
+                }
+            }
+        }
+
+        return structures;
+    }
+
     public static getTowerStructures(spawn: StructureSpawn, numTowers: number): ProjectStructure[] {
         const structures: ProjectStructure[] = [];
         const candidates = [

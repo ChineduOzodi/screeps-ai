@@ -7,6 +7,7 @@ import { CarrierCreepSpawner } from "creep-roles/carrier-creep";
 import { ExtensionFillerCreepSpawner } from "creep-roles/extension-filler-creep";
 import { ReserverCreepSpawner } from "creep-roles/reserver-creep";
 import { ScoutCreepSpawner } from "creep-roles/scout-creep";
+import { MineralMinerCreepSpawner } from "creep-roles/mineral-miner-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
 import { EnergyCalculator } from "utils/energy-calculator";
@@ -265,6 +266,7 @@ export class EnergySystem extends BaseSystemImpl {
                 new CarrierCreepSpawner(),
                 new ExtensionFillerCreepSpawner(),
                 new ReserverCreepSpawner(),
+                new MineralMinerCreepSpawner(),
             );
         } else {
             spawners.push(new HarvesterCreepSpawner());

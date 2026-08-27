@@ -33,7 +33,9 @@ export class RoomUtils {
         let alertLevel = 0;
         if (threat.totalHostiles > 0) {
             if (threat.attackPower > 0 || threat.healPower > 0) {
-                alertLevel = 2;
+                // Scale alert with the size of the incursion so the defender
+                // response (which is derived from alertLevel) scales too.
+                alertLevel = 2 + Math.min(3, Math.floor((threat.attackPower + threat.healPower) / 200));
             } else {
                 alertLevel = 1;
             }
@@ -41,7 +43,7 @@ export class RoomUtils {
         // Also check for hostile structures (invader cores, etc.)
         const hostileStructures = room.find(FIND_HOSTILE_STRUCTURES);
         if (hostileStructures.length > 0) {
-            alertLevel = 2;
+            alertLevel = Math.max(alertLevel, 2);
         }
 
         roomData.alertLevel = alertLevel;

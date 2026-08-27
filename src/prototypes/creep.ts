@@ -1,5 +1,6 @@
 import { Movement } from "infrastructure/movement";
 import { ColonyManager, CreepProfiles, CreepRole, CreepStatus } from "./types";
+import { LabManager } from "managers/lab-manager";
 import { RepairUtils } from "utils/repair-utils";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "constants/repair-constants";
 import { RoomUtils } from "utils/room-utils";
@@ -256,15 +257,20 @@ export abstract class CreepRunner {
         });
     }
 
-    /** Find closest energy stored in container or storage. This includes if you are using containers with a miner creep. */
+    /** Find closest energy stored in container, storage, or a receiving link (links near sources are excluded — they feed the network). */
     protected findClosestStoredEnergy(minEnergy: number) {
         return this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: structure => {
-                return (
-                    (structure.structureType === STRUCTURE_CONTAINER ||
-                        structure.structureType === STRUCTURE_STORAGE) &&
-                    structure.store[RESOURCE_ENERGY] >= minEnergy
-                );
+                if (structure.structureType === STRUCTURE_CONTAINER || structure.structureType === STRUCTURE_STORAGE) {
+                    return structure.store[RESOURCE_ENERGY] >= minEnergy;
+                }
+                if (structure.structureType === STRUCTURE_LINK && (structure as StructureLink).my) {
+                    return (
+                        structure.store[RESOURCE_ENERGY] >= minEnergy &&
+                        structure.pos.findInRange(FIND_SOURCES, 2).length === 0
+                    );
+                }
+                return false;
             },
         });
     }
@@ -344,6 +350,76 @@ export abstract class CreepRunner {
 
     protected findClosestHostile() {
         return this.creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    }
+
+    /**
+     * Finds an own rampart the creep can stand on to fight the target from safety:
+     * walkable (no blocking structure), unoccupied (or occupied by this creep), and
+     * within `range` of the target. Melee wants range 1, ranged wants range 3.
+     */
+    protected findCombatRampart(target: _HasRoomPosition, range: number): StructureRampart | null {
+        const { creep } = this;
+        if (typeof creep.room.find !== "function") return null;
+
+        const ramparts = creep.room.find<StructureRampart>(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_RAMPART && s.pos.inRangeTo(target.pos, range),
+        });
+
+        const usable = ramparts.filter(rampart => {
+            const blocked = rampart.pos
+                .lookFor(LOOK_STRUCTURES)
+                .some(
+                    s =>
+                        s.structureType !== STRUCTURE_RAMPART &&
+                        s.structureType !== STRUCTURE_ROAD &&
+                        s.structureType !== STRUCTURE_CONTAINER,
+                );
+            if (blocked) return false;
+
+            const occupants = rampart.pos.lookFor(LOOK_CREEPS);
+            return occupants.length === 0 || occupants[0].id === creep.id;
+        });
+
+        if (usable.length === 0) return null;
+        return creep.pos.findClosestByRange(usable);
+    }
+
+    /** Whether the creep is currently standing on one of our ramparts. */
+    protected isOnOwnRampart(): boolean {
+        return this.creep.pos
+            .lookFor(LOOK_STRUCTURES)
+            .some(s => s.structureType === STRUCTURE_RAMPART && (s as StructureRampart).my);
+    }
+
+    /**
+     * One-shot boost attempt for combat creeps: if a lab holds a suitable compound,
+     * walk there and boost. Returns true while the creep is busy boosting (the
+     * caller should skip its normal behavior for the tick).
+     */
+    protected tryBoost(part: BodyPartConstant): boolean {
+        const { creep, memory } = this;
+        if (memory.boostAttempted) return false;
+
+        const unboostedParts = creep.body.filter(p => p.type === part && !p.boost).length;
+        if (unboostedParts === 0) {
+            memory.boostAttempted = true;
+            return false;
+        }
+
+        const lab = LabManager.findBoostLab(creep.room, part, unboostedParts);
+        if (!lab) {
+            memory.boostAttempted = true;
+            return false;
+        }
+
+        const result = lab.boostCreep(creep);
+        if (result === ERR_NOT_IN_RANGE) {
+            this.moveToWithReservation(lab, 5, 1);
+            return true;
+        }
+
+        memory.boostAttempted = true;
+        return false;
     }
 
     public getEnergy(): void {

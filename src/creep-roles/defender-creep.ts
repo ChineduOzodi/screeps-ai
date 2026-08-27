@@ -24,9 +24,15 @@ export class DefenderCreep extends CreepRunner {
             return;
         }
 
+        // Grab an attack boost first if a lab has one ready
+        if (this.tryBoost(ATTACK)) return;
+
         const threat = ThreatAssessment.assess(this.creep.room);
 
-        let target: AnyCreep | Structure | null = threat.weakestHostile;
+        // Kill healers first — they keep everything else alive. Then fall back to the weakest hostile.
+        const healers = threat.hostiles.filter(h => h.getActiveBodyparts(HEAL) > 0);
+        let target: AnyCreep | Structure | null =
+            healers.length > 0 ? this.creep.pos.findClosestByRange(healers) : threat.weakestHostile;
 
         if (!target) {
             target = this.creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
@@ -35,6 +41,20 @@ export class DefenderCreep extends CreepRunner {
         }
 
         if (target) {
+            // Prefer fighting from a rampart: attackers can't hit us through it.
+            if ("body" in target) {
+                const rampart = this.findCombatRampart(target as Creep, 1);
+                if (rampart) {
+                    if (!creep.pos.isEqualTo(rampart.pos)) {
+                        this.moveToWithReservation(rampart, creep.memory.workDuration, 0);
+                    }
+                    if (creep.pos.isNearTo(target)) {
+                        this.attack(target);
+                    }
+                    return;
+                }
+            }
+
             if (this.attack(target) === ERR_NOT_IN_RANGE) {
                 this.moveToWithReservation(target, creep.memory.workDuration);
             }

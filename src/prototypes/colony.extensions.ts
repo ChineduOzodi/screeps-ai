@@ -15,6 +15,14 @@ interface Colony {
     defenseManagement?: ColonyDefenseManagement;
     infrastructureManagement?: ColonyInfrastructureManagement;
     goapManagement?: ColonyGoapManagement;
+    expansionManagement?: ColonyExpansionManagement;
+    labManagement?: ColonyLabManagement;
+    observerManagement?: ColonyObserverManagement;
+}
+
+interface ColonyObserverManagement {
+    /** Room requested via observeRoom last tick; vision arrives the tick after. */
+    pendingRoom?: string;
 }
 
 interface BaseSystemInfo {
@@ -22,7 +30,12 @@ interface BaseSystemInfo {
     energyUsageTracking?: EnergyUsageTracking;
 }
 
-interface ColonyDefenseManagement extends BaseSystemInfo {}
+interface ColonyDefenseManagement extends BaseSystemInfo {
+    /** Min-cut rampart perimeter positions for the main room. */
+    perimeter?: { x: number; y: number }[];
+    /** RCL at which the perimeter was last computed (recompute as the base grows). */
+    lastPerimeterRcl?: number;
+}
 
 interface ColonyBuilderManagement extends BaseSystemInfo {
     buildQueue: Id<ConstructionSite>[];
@@ -49,6 +62,24 @@ interface ColonyInfrastructureManagement extends BaseSystemInfo {
 interface ColonyGoapManagement extends BaseSystemInfo {
     activeGoalName?: string;
     planActionNames?: string[];
+}
+
+interface ColonyExpansionManagement extends BaseSystemInfo {
+    /** Room name this colony is currently expanding into. */
+    expansionTarget?: string;
+    /** Tick the current expansion attempt started (for stall detection). */
+    expansionStartTime?: number;
+}
+
+interface ColonyLabManagement extends BaseSystemInfo {
+    /** The two labs that hold reagents for the active reaction. */
+    inputLabIds?: Id<StructureLab>[];
+    /** The reagents loaded into the input labs (same order as inputLabIds). */
+    reagents?: ResourceConstant[];
+    /** The compound currently being produced. */
+    product?: ResourceConstant;
+    /** Raw minerals the terminal should buy to unblock the next wanted reaction. */
+    buyRequests?: ResourceConstant[];
 }
 
 interface EnergyUsageTracking {

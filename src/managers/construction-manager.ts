@@ -1,5 +1,6 @@
 import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
+import { MinCut } from "../utils/min-cut";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "../constants/repair-constants";
 import { RepairUtils } from "../utils/repair-utils";
 import { Logger } from "../utils/logger";
@@ -58,7 +59,160 @@ export class ConstructionManager {
             this.planLinks();
             this.planExtractor();
             this.planTerminal();
+            this.planLabs();
+            this.planFactory();
+            this.planObserver();
+            this.planRamparts();
+            this.planPerimeter();
         }
+    }
+
+    /**
+     * Plans a min-cut rampart perimeter that seals the base off from all exits.
+     * Computed once per RCL (structures shift as the base grows) and built gradually.
+     */
+    private planPerimeter(): void {
+        const room = this.colony.getMainRoom();
+        if (!room || !room.controller || (room.controller.level || 0) < 4) return;
+        if (typeof room.getTerrain !== "function") return;
+
+        const defense = this.colony.colonyInfo.defenseManagement;
+        if (!defense) return;
+
+        const rcl = room.controller.level;
+        if (!defense.perimeter || defense.lastPerimeterRcl !== rcl) {
+            defense.perimeter = this.computePerimeter(room);
+            defense.lastPerimeterRcl = rcl;
+            if (defense.perimeter.length > 0) {
+                Logger.info(`[Perimeter] ${room.name}: planned ${defense.perimeter.length} rampart positions`);
+            }
+        }
+
+        // Build gradually: a few sites at a time so we don't flood the build queue.
+        let placed = 0;
+        for (const tile of defense.perimeter) {
+            if (placed >= 5) break;
+            if (Object.keys(Game.constructionSites).length >= 100) break;
+
+            const pos = new RoomPosition(tile.x, tile.y, room.name);
+            const hasRampart = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_RAMPART);
+            const hasSite = pos.lookFor(LOOK_CONSTRUCTION_SITES).some(s => s.structureType === STRUCTURE_RAMPART);
+            if (hasRampart || hasSite) continue;
+
+            if (room.createConstructionSite(pos, STRUCTURE_RAMPART) === OK) {
+                placed++;
+            }
+        }
+    }
+
+    private computePerimeter(room: Room): { x: number; y: number }[] {
+        const protectedTypes: StructureConstant[] = [
+            STRUCTURE_SPAWN,
+            STRUCTURE_EXTENSION,
+            STRUCTURE_TOWER,
+            STRUCTURE_STORAGE,
+            STRUCTURE_TERMINAL,
+            STRUCTURE_LAB,
+            STRUCTURE_FACTORY,
+        ];
+        const positions = room
+            .find(FIND_MY_STRUCTURES, { filter: s => protectedTypes.includes(s.structureType) })
+            .map(s => ({ x: s.pos.x, y: s.pos.y }));
+
+        if (positions.length === 0) return [];
+
+        // Try to protect the controller too; fall back to just the core if that
+        // pushes the protected area into an exit zone.
+        const withController = room.controller
+            ? [...positions, { x: room.controller.pos.x, y: room.controller.pos.y }]
+            : positions;
+
+        const terrain = room.getTerrain();
+        let cut = MinCut.computeCut(terrain, MinCut.getProtectedRects(withController, 3), TERRAIN_MASK_WALL);
+        if (cut.length === 0 && withController.length !== positions.length) {
+            cut = MinCut.computeCut(terrain, MinCut.getProtectedRects(positions, 3), TERRAIN_MASK_WALL);
+        }
+        return cut;
+    }
+
+    /** Places ramparts over critical structures so they survive sieges. */
+    private planRamparts(): void {
+        const room = this.colony.getMainRoom();
+        if (!room || !room.controller || (room.controller.level || 0) < 3) return;
+
+        const protectedTypes: StructureConstant[] = [
+            STRUCTURE_SPAWN,
+            STRUCTURE_TOWER,
+            STRUCTURE_STORAGE,
+            STRUCTURE_TERMINAL,
+            STRUCTURE_LAB,
+            STRUCTURE_FACTORY,
+            STRUCTURE_POWER_SPAWN,
+            STRUCTURE_NUKER,
+        ];
+
+        const criticalStructures = room.find(FIND_MY_STRUCTURES, {
+            filter: s => protectedTypes.includes(s.structureType),
+        });
+
+        for (const structure of criticalStructures) {
+            if (Object.keys(Game.constructionSites).length >= 100) break;
+
+            const pos = structure.pos;
+            const hasRampart = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_RAMPART);
+            const hasRampartSite = pos
+                .lookFor(LOOK_CONSTRUCTION_SITES)
+                .some(s => s.structureType === STRUCTURE_RAMPART);
+
+            if (!hasRampart && !hasRampartSite) {
+                room.createConstructionSite(pos, STRUCTURE_RAMPART);
+            }
+        }
+    }
+
+    private planLabs(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || (room.controller.level || 0) < 6) return;
+
+        const rcl = room.controller.level;
+        const maxLabs = (CONTROLLER_STRUCTURES[STRUCTURE_LAB] || {})[rcl] || 0;
+        if (maxLabs === 0 || this.hasPlannedStructures(STRUCTURE_LAB, maxLabs)) return;
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const currentCount =
+            room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_LAB }).length +
+            room.find(FIND_MY_CONSTRUCTION_SITES, { filter: s => s.structureType === STRUCTURE_LAB }).length;
+
+        const needed = maxLabs - currentCount;
+        if (needed <= 0) return;
+
+        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_LAB, needed);
+        this.placeConstructionSites(structures);
+    }
+
+    private planFactory(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || (room.controller.level || 0) < 7) return;
+
+        if (this.hasPlannedStructures(STRUCTURE_FACTORY, 1)) return;
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_FACTORY, 1);
+        this.placeConstructionSites(structures);
+    }
+
+    private planObserver(): void {
+        const room = this.colony.getMainRoom();
+        const spawn = this.colony.getMainSpawn();
+        if (!room || !spawn || !room.controller || (room.controller.level || 0) < 8) return;
+
+        if (this.hasPlannedStructures(STRUCTURE_OBSERVER, 1)) return;
+        if (Object.keys(Game.constructionSites).length >= 100) return;
+
+        const structures = ConstructionUtils.getClusteredStructures(spawn, room, STRUCTURE_OBSERVER, 1);
+        this.placeConstructionSites(structures);
     }
 
     private planTerminal(): void {

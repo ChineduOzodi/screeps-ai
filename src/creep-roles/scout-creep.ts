@@ -63,6 +63,13 @@ export class ScoutCreepSpawner extends CreepSpawnerImpl {
         const room = colony.getMainRoom();
         if (!room || !room.controller || room.controller.level < 2) return {};
 
+        // An observer scouts for free — no need for scout creeps.
+        if (typeof room.find === "function") {
+            const hasObserver =
+                room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_OBSERVER }).length > 0;
+            if (hasObserver) return {};
+        }
+
         const roomsNeedingScout = RoomUtils.getRoomsNeedingScout(colony);
         if (roomsNeedingScout.length === 0) return {};
 

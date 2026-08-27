@@ -5,10 +5,20 @@ declare global {
         name: string;
         colonyId: string;
         movementSystem?: CreepMovementSystem;
-        targetId?: Id<Tombstone | StructureExtension | AnyStructure | Resource<ResourceConstant> | Source | ConstructionSite<BuildableStructureConstant> | _HasId>;
+        targetId?: Id<
+            | Tombstone
+            | StructureExtension
+            | AnyStructure
+            | Resource<ResourceConstant>
+            | Source
+            | ConstructionSite<BuildableStructureConstant>
+            | _HasId
+        >;
         targetPos?: RoomPosition;
         working: boolean;
         workDuration: number;
+        /** Set once a combat creep has tried to boost (whether or not a lab was available). */
+        boostAttempted?: boolean;
     }
 
     type TargetType = (_HasId & _HasRoomPosition) | null;
