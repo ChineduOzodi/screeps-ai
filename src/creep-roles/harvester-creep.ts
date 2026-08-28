@@ -134,14 +134,25 @@ export class HarvesterCreep extends CreepRunner {
 }
 
 export class HarvesterCreepSpawner extends CreepSpawnerImpl {
+    /** Positions read back out of Memory are plain objects, so rebuild a real RoomPosition. */
+    private static toRoomPosition(pos: RoomPosition): RoomPosition {
+        return new RoomPosition(pos.x, pos.y, pos.roomName);
+    }
+
     public onCreateProfiles(_energyRateCap: number, colony: ColonyManager): CreepProfiles {
         const profiles: CreepProfiles = {};
         const spawn = colony.getMainSpawn();
 
         // Sort sources by distance to spawn
         const sortedSources = [...colony.systems.energy.systemInfo.sources].sort((a, b) => {
-            const distA = EnergyCalculator.calculateTravelTime(spawn.pos, a.position);
-            const distB = EnergyCalculator.calculateTravelTime(spawn.pos, b.position);
+            const distA = EnergyCalculator.calculateTravelTime(
+                spawn.pos,
+                HarvesterCreepSpawner.toRoomPosition(a.position),
+            );
+            const distB = EnergyCalculator.calculateTravelTime(
+                spawn.pos,
+                HarvesterCreepSpawner.toRoomPosition(b.position),
+            );
             return distA - distB;
         });
 
@@ -167,10 +178,15 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         priority: number,
     ): CreepSpawnerProfileInfo {
         const { sourceId, accessCount } = colonySource;
+        // Remote sources sit in rooms we rarely have vision of, so the live object is
+        // usually null. Fall back to the cached survey data instead of aborting the
+        // whole colony tick.
         const source = Game.getObjectById<Source>(sourceId);
-        if (!source) {
-            throw new Error(`Source not found with given id: ${sourceId}`);
-        }
+        const sourcePos = source ? source.pos : HarvesterCreepSpawner.toRoomPosition(colonySource.position);
+        const sourceEnergyCapacity =
+            source?.energyCapacity ??
+            colonySource.energyCapacity ??
+            (sourcePos.roomName === spawn.room.name ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY);
 
         // Determine Dropoff
         let dropoff: Structure | null = colony.getPrimaryStorage() || null;
@@ -178,7 +194,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         if (!dropoff) dropoff = spawn;
 
         // Pathing
-        const distToSource = EnergyCalculator.calculateTravelTime(dropoff.pos, source.pos);
+        const distToSource = EnergyCalculator.calculateTravelTime(dropoff.pos, sourcePos);
         const distToDropoff = distToSource; // Round trip assumption
 
         // Optimize Body
@@ -191,7 +207,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
 
         // Calculate Desired Amount
         // Limit 1: Source Regeneration (3000 energy / 300 ticks = 10 energy/tick, or 4000/300 if center room)
-        const sourceRegen = source.energyCapacity / ENERGY_REGEN_TIME;
+        const sourceRegen = sourceEnergyCapacity / ENERGY_REGEN_TIME;
         const requiredCreepsForRegen = productionPerTick > 0 ? Math.ceil(sourceRegen / productionPerTick) : 0;
 
         // Limit 2: Available Slots
@@ -203,7 +219,7 @@ export class HarvesterCreepSpawner extends CreepSpawnerImpl {
         const desiredAmount = Math.min(requiredCreepsForRegen, maxCreepsBySlots);
 
         const memory: AddCreepToQueueOptions = {
-            workTargetId: source.id,
+            workTargetId: sourceId,
             workAmount: bestBody.filter(p => p === WORK).length,
             averageEnergyConsumptionProductionPerTick: productionPerTick,
             // Estimated time: Fill up -> Travel -> Drop -> Travel back

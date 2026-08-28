@@ -125,6 +125,7 @@ export class EnergySystem extends BaseSystemImpl {
                     sourceId: source.id,
                     position: source.pos,
                     miningPosition,
+                    energyCapacity: source.energyCapacity,
                 });
             });
         });

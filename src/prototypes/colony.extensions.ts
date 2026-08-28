@@ -96,6 +96,8 @@ interface ColonySource {
     position: RoomPosition;
     accessCount: number;
     miningPosition?: RoomPosition;
+    /** Cached from the last time we had vision, so remotes can be sized without it. */
+    energyCapacity?: number;
 }
 
 interface CreepSpawnerProfileInfo {
