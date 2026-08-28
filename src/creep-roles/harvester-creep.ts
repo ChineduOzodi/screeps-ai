@@ -4,9 +4,35 @@ import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
 
+/** Roles that consume energy and may be waiting on a harvester-held mining seat. */
+const ENERGY_CONSUMER_ROLES: string[] = [CreepRole.BUILDER, CreepRole.UPGRADER, CreepRole.REPAIRER, CreepRole.CARRIER];
+
 export class HarvesterCreep extends CreepRunner {
     public constructor(creep: Creep) {
         super(creep);
+    }
+
+    /** Hand energy to an adjacent worker with free capacity. Returns true if a transfer happened. */
+    private transferToAdjacentWorker(): boolean {
+        const worker = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+            filter: c => ENERGY_CONSUMER_ROLES.includes(c.memory.role) && c.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+        })[0];
+        if (!worker) {
+            return false;
+        }
+        return this.transfer(worker, RESOURCE_ENERGY) === OK;
+    }
+
+    /** True if any worker in the room is out gathering energy and has room for more. */
+    private roomHasHungryWorker(): boolean {
+        return (
+            this.creep.room.find(FIND_MY_CREEPS, {
+                filter: c =>
+                    ENERGY_CONSUMER_ROLES.includes(c.memory.role) &&
+                    !c.memory.working &&
+                    c.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+            }).length > 0
+        );
     }
 
     public override onRun(): void {
@@ -72,20 +98,35 @@ export class HarvesterCreep extends CreepRunner {
                     },
                 });
             }
-            if (target && this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                this.moveToWithReservation(target, 2);
+            if (target) {
+                if (this.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    this.moveToWithReservation(target, 2);
+                }
             } else {
-                // If no storage target, try to build first
-                const constructionSite = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
-                if (constructionSite) {
-                    if (this.build(constructionSite) === ERR_NOT_IN_RANGE) {
-                        this.moveToWithReservation(constructionSite, creep.memory.workDuration, 3);
+                // Nothing can take energy (spawn/extensions/tower full, no storage).
+                // On a single-seat source the harvester is standing on the only mining
+                // tile, so feed waiting workers and keep the seat producing instead of
+                // camping it with fallback work: transfer to an adjacent worker, and
+                // keep harvesting so overflow drops to the ground for pickup
+                // (getEnergy prefers dropped energy over harvesting a seat).
+                const source = Game.getObjectById<Source>(memory.workTargetId);
+                const fedWorker = this.transferToAdjacentWorker();
+                if (source && creep.pos.inRangeTo(source, 1) && (fedWorker || this.roomHasHungryWorker())) {
+                    this.harvest(source);
+                } else {
+                    // No one needs energy, so the seat isn't contended; spend the
+                    // surplus on construction or the controller.
+                    const constructionSite = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
+                    if (constructionSite) {
+                        if (this.build(constructionSite) === ERR_NOT_IN_RANGE) {
+                            this.moveToWithReservation(constructionSite, creep.memory.workDuration, 3);
+                        }
+                    } else if (
+                        creep.room.controller &&
+                        this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE
+                    ) {
+                        this.moveToWithReservation(creep.room.controller, creep.memory.workDuration, 3);
                     }
-                } else if (
-                    creep.room.controller &&
-                    this.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE
-                ) {
-                    this.moveToWithReservation(creep.room.controller, creep.memory.workDuration, 3);
                 }
             }
         }

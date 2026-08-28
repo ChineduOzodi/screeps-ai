@@ -288,11 +288,40 @@ export abstract class CreepRunner {
     }
 
     protected findClosestSource(minEnergy: number) {
-        return this.creep.pos.findClosestByRange(FIND_SOURCES, {
+        const sources = this.creep.room.find(FIND_SOURCES, {
             filter: s => {
                 return s.energy >= minEnergy;
             },
         });
+        if (sources.length === 0) {
+            return null;
+        }
+
+        // Prefer sources with an open harvesting seat; a source whose walkable
+        // tiles are all occupied (e.g. a single-seat source held by a harvester
+        // or miner) stays a fallback only, so workers don't commit to a far
+        // occupied source when another has room.
+        const openSources = sources.filter(s => this.sourceHasFreeSeat(s));
+        return this.creep.pos.findClosestByRange(openSources.length > 0 ? openSources : sources);
+    }
+
+    /** True if at least one walkable tile adjacent to the source is not occupied by another creep. */
+    private sourceHasFreeSeat(source: Source): boolean {
+        const terrain = source.room.getTerrain();
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                const x = source.pos.x + dx;
+                const y = source.pos.y + dy;
+                if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+                if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+                const occupied = source.room.lookForAt(LOOK_CREEPS, x, y).some(c => c.id !== this.creep.id);
+                if (!occupied) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     protected findClosestStructureExtension(minFreeSpace: number) {
