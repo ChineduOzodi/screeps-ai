@@ -100,10 +100,16 @@ export class PathfindingCache {
             }
         });
 
-        // Avoid construction sites (except roads)
+        // Our own construction sites never block movement. Only sites for obstacle
+        // structures are worth avoiding, and only softly: standing on one stops it
+        // from completing, but marking it impassable can make the tile behind it
+        // unreachable entirely -- e.g. a container site on a source's only mining
+        // seat, which leaves the harvester pacing beside a source it can never reach.
         room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
-            if (site.structureType !== STRUCTURE_ROAD) {
+            if (!site.my) {
                 costs.set(site.pos.x, site.pos.y, 0xff);
+            } else if ((OBSTACLE_OBJECT_TYPES as string[]).includes(site.structureType)) {
+                costs.set(site.pos.x, site.pos.y, 20);
             }
         });
 

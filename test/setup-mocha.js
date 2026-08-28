@@ -1,4 +1,11 @@
-global.Room = class {}; global.Game = {}; global.Structure = class {}; global.Spawn = class {}; global.Creep = class {}; global.RoomPosition = class {}; global.Source = class {}; global.Flag = class {};
+global.Room = class {};
+global.Game = {};
+global.Structure = class {};
+global.Spawn = class {};
+global.Creep = class {};
+global.RoomPosition = class {};
+global.Source = class {};
+global.Flag = class {};
 // inject mocha globally to allow custom interface refer without direct import - bypass bundle issue
 global._ = require("lodash");
 global.mocha = require("mocha");
@@ -117,6 +124,29 @@ global.STRUCTURE_PORTAL = "portal";
 global.STRUCTURE_CONTROLLER = "controller";
 global.STRUCTURE_KEEPER_LAIR = "keeperLair";
 
+global.OBSTACLE_OBJECT_TYPES = [
+    "spawn",
+    "creep",
+    "powerCreep",
+    "source",
+    "mineral",
+    "deposit",
+    "controller",
+    "constructedWall",
+    "extension",
+    "link",
+    "storage",
+    "tower",
+    "observer",
+    "powerSpawn",
+    "powerBank",
+    "lab",
+    "terminal",
+    "nuker",
+    "factory",
+    "invaderCore",
+];
+
 global.RoomPosition = class {
     constructor(x, y, roomName) {
         this.x = x;
@@ -157,7 +187,6 @@ global.PathFinder = {
     },
 };
 
-
 global.CONTROLLER_STRUCTURES = {
     [global.STRUCTURE_SPAWN]: { 0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 8: 3 },
     [global.STRUCTURE_EXTENSION]: { 0: 0, 1: 0, 2: 5, 3: 10, 4: 20, 5: 30, 6: 40, 7: 50, 8: 60 },
@@ -174,7 +203,7 @@ global.CONTROLLER_STRUCTURES = {
     [global.STRUCTURE_LAB]: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 3, 7: 6, 8: 10 },
     [global.STRUCTURE_CONTAINER]: { 0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5 },
     [global.STRUCTURE_NUKER]: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1 },
-    [global.STRUCTURE_FACTORY]: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1 }
+    [global.STRUCTURE_FACTORY]: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1 },
 };
 
 global.LOOK_CREEPS = "creep";

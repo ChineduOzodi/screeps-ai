@@ -74,4 +74,44 @@ describe("PathfindingCache", () => {
         expect(reversed![1].x).to.equal(10);
         expect(reversed![1].y).to.equal(10);
     });
+    describe("getStandardCostMatrix", () => {
+        const site = (structureType: string, x: number, y: number, my = true) => ({
+            structureType,
+            my,
+            pos: new RoomPosition(x, y, "W1N1"),
+        });
+
+        const mockRoom = (sites: any[]) => {
+            // @ts-ignore
+            global.Game.rooms = {
+                W1N1: {
+                    find: (type: number) => (type === FIND_CONSTRUCTION_SITES ? sites : []),
+                } as any,
+            };
+        };
+
+        it("should keep our own container sites walkable so mining seats stay reachable", () => {
+            mockRoom([site(STRUCTURE_CONTAINER, 10, 10)]);
+
+            const costs = PathfindingCache.getStandardCostMatrix("W1N1");
+
+            expect(costs.get(10, 10)).to.equal(0);
+        });
+
+        it("should make our own obstacle sites expensive but still passable", () => {
+            mockRoom([site(STRUCTURE_EXTENSION, 11, 11)]);
+
+            const costs = PathfindingCache.getStandardCostMatrix("W1N1");
+
+            expect(costs.get(11, 11)).to.equal(20);
+        });
+
+        it("should treat hostile construction sites as impassable", () => {
+            mockRoom([site(STRUCTURE_EXTENSION, 12, 12, false)]);
+
+            const costs = PathfindingCache.getStandardCostMatrix("W1N1");
+
+            expect(costs.get(12, 12)).to.equal(0xff);
+        });
+    });
 });
