@@ -1,6 +1,6 @@
 import { PathfindingUtils } from "../utils/pathfinding-utils";
+import { SafeModeGuard } from "../utils/safe-mode";
 import { ThreatAssessment } from "../utils/threat-assessment";
-import { CreepRole } from "./types";
 
 export class RoomExtras {
     public room: Room;
@@ -16,17 +16,10 @@ export class RoomExtras {
             filter: { structureType: STRUCTURE_TOWER },
         });
 
-        // 1. Emergency Safe Mode
-        if (threat.isSpawnUnderAttack && this.room.controller && this.room.controller.my) {
-            const spawn = this.room.find(FIND_MY_SPAWNS)[0];
-            const defenders = this.room.find(FIND_MY_CREEPS, { filter: c => c.memory.role === CreepRole.DEFENDER });
-            const towersWithEnergy = towers.filter(t => t.store[RESOURCE_ENERGY] >= TOWER_ENERGY_COST);
-            const spawnCritical = spawn && spawn.hits < spawn.hitsMax * 0.5;
-
-            // Activate when the spawn is badly damaged, or when we have no way to fight back at all.
-            if (spawnCritical || (defenders.length === 0 && towersWithEnergy.length === 0)) {
-                this.room.controller.activateSafeMode();
-            }
+        // 1. Emergency Safe Mode. Fires while there is still a base to save: attackers
+        // inside the core that our towers and defenders cannot out-damage.
+        if (threat.totalHostiles > 0) {
+            SafeModeGuard.run(this.room, threat, towers);
         }
 
         // 2. Tower Logic

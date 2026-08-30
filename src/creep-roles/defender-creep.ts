@@ -1,68 +1,125 @@
 /* eslint-disable max-classes-per-file */
-import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 
+import { CombatBody } from "utils/combat-body";
+import { CombatCreep } from "./combat-creep";
+import { CombatIntel } from "utils/combat-intel";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
 
-import { ThreatAssessment } from "utils/threat-assessment";
-
-const BASE_DEFENDER = [TOUGH, MOVE, ATTACK];
-
-export class DefenderCreep extends CreepRunner {
+export class DefenderCreep extends CombatCreep {
     public override onRun(): void {
         this.runDefenderCreep();
     }
 
     public runDefenderCreep(): void {
-        const creep = this.creep;
-        const targetRoomName = creep.memory.homeRoomName;
+        const { creep } = this;
 
-        // If we are not in our target room, move there
-        if (targetRoomName && creep.room.name !== targetRoomName) {
-            this.moveToWithReservation({ pos: new RoomPosition(25, 25, targetRoomName) }, 0, 20);
-            return;
-        }
+        if (this.travelToHomeRoom()) return;
 
         // Grab an attack boost first if a lab has one ready
         if (this.tryBoost(ATTACK)) return;
 
-        const threat = ThreatAssessment.assess(this.creep.room);
+        const squad = this.getSquad();
 
-        // Kill healers first — they keep everything else alive. Then fall back to the weakest hostile.
-        const healers = threat.hostiles.filter(h => h.getActiveBodyparts(HEAL) > 0);
-        let target: AnyCreep | Structure | null =
-            healers.length > 0 ? this.creep.pos.findClosestByRange(healers) : threat.weakestHostile;
-
-        if (!target) {
-            target = this.creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
-                filter: s => s.structureType !== STRUCTURE_CONTROLLER,
-            });
+        if (squad.hostiles.length === 0) {
+            this.handleNoHostiles();
+            return;
         }
 
-        if (target) {
-            // Prefer fighting from a rampart: attackers can't hit us through it.
-            if ("body" in target) {
-                const rampart = this.findCombatRampart(target as Creep, 1);
-                if (rampart) {
-                    if (!creep.pos.isEqualTo(rampart.pos)) {
-                        this.moveToWithReservation(rampart, creep.memory.workDuration, 0);
-                    }
-                    if (creep.pos.isNearTo(target)) {
-                        this.attack(target);
-                    }
-                    return;
-                }
-            }
+        // HEAL parts sit at the tail of the body precisely so a wounded fighter can still
+        // use them; healing is a separate intent from attacking, so this costs us nothing.
+        this.applyHealSupport(squad.members);
 
-            if (this.attack(target) === ERR_NOT_IN_RANGE) {
-                this.moveToWithReservation(target, creep.memory.workDuration);
+        // Whatever is already on top of us gets hit. Walking away from an adjacent
+        // attacker to reach a "better" target just hands it free swings at our back.
+        const adjacent = CombatIntel.mostDangerousInRange(creep, squad.hostiles, 1);
+        if (adjacent) {
+            this.fightAdjacent(adjacent, squad.hostiles);
+            return;
+        }
+
+        // The squad holds together: if we are not strong enough to win the trade yet,
+        // or we are nearly dead and have healers behind us, fall back under tower cover.
+        const shouldHoldBack = !squad.engaged || (this.isBadlyWounded() && squad.healers.length > 0);
+        if (shouldHoldBack) {
+            creep.say(squad.engaged ? "patch" : "hold");
+            this.fallBackTo(squad.rally, 3, squad.hostiles);
+            return;
+        }
+
+        const target = squad.focus ?? creep.pos.findClosestByRange(squad.hostiles);
+        if (!target) return;
+
+        this.engage(target, squad.hostiles);
+    }
+
+    /** Fights something we are already touching, taking a rampart next to it when one is free. */
+    private fightAdjacent(target: Creep, hostiles: Creep[]): void {
+        const { creep } = this;
+        creep.attack(target);
+
+        if (this.isOnOwnRampart()) return;
+
+        const rampart = this.findCombatRampart(target, 1);
+        if (rampart && creep.pos.isNearTo(rampart.pos)) {
+            this.stepTo(rampart.pos);
+            return;
+        }
+
+        // No cover: at least stand where the rest of the enemy group can hit us least.
+        this.repositionSafely(hostiles, { anchor: target.pos, anchorRange: 1 });
+    }
+
+    /** Closes on the squad focus target, fighting from a rampart when one is in reach. */
+    private engage(target: Creep, hostiles: Creep[]): void {
+        const { creep } = this;
+
+        // Fighting from a rampart is always better: attackers cannot hit us through it.
+        const rampart = this.findCombatRampart(target, 1);
+        if (rampart) {
+            if (!creep.pos.isEqualTo(rampart.pos)) {
+                this.moveToWithReservation(rampart, creep.memory.workDuration, 0);
             }
-        } else {
-            // No targets found in the target room. Reset alert level
-            if (targetRoomName && this.colony && this.colony.colonyInfo.rooms[targetRoomName]) {
-                this.colony.colonyInfo.rooms[targetRoomName].alertLevel = 0;
+            if (creep.pos.isNearTo(target)) {
+                this.attack(target);
             }
+            return;
+        }
+
+        if (this.attack(target) === ERR_NOT_IN_RANGE) {
+            // Close range: pick the approach tile that eats the least crossfire from the
+            // hostiles standing around the target. Further out, just path toward it.
+            if (
+                creep.pos.getRangeTo(target.pos) <= 3 &&
+                this.repositionSafely(hostiles, {
+                    anchor: target.pos,
+                    anchorRange: 1,
+                })
+            ) {
+                return;
+            }
+            this.moveToWithReservation(target, creep.memory.workDuration);
+        }
+    }
+
+    /** No hostile creeps left: clean up invader cores and stand down. */
+    private handleNoHostiles(): void {
+        const { creep } = this;
+        const structure = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
+            filter: s => s.structureType !== STRUCTURE_CONTROLLER,
+        });
+
+        if (structure) {
+            if (this.attack(structure) === ERR_NOT_IN_RANGE) {
+                this.moveToWithReservation(structure, creep.memory.workDuration);
+            }
+            return;
+        }
+
+        this.clearAlert();
+        if (creep.hits < creep.hitsMax) {
+            this.applyHealSupport([]);
         }
     }
 }
@@ -112,15 +169,11 @@ export class DefenderCreepSpawner extends CreepSpawnerImpl {
         if (currentDefenders === 0) {
             targetEnergy = Math.min(energy, 600); // Quick response
         } else {
-            // Cap at 30 parts (approx 1500-2500 energy) to keep spawn times reasonable
+            // Cap the spend so spawn times stay reasonable; the 50 part limit caps it again.
             targetEnergy = Math.min(energy, 2500);
         }
 
-        const numberOfParts = Math.max(
-            1,
-            Math.floor(targetEnergy / CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_DEFENDER)),
-        );
-        const body = CreepSpawnerImpl.multiplyBody(BASE_DEFENDER, numberOfParts);
+        const body = CombatBody.build(ATTACK, targetEnergy, CombatBody.MELEE_RATIO);
 
         const cost = EnergyCalculator.calculateBodyCost(body);
         const consumption = cost / CREEP_LIFE_TIME;

@@ -9,6 +9,7 @@ import { CreepManagement } from "management/creep-management";
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomExtras } from "./prototypes/room";
 import { SpawnExtras } from "prototypes/spawn";
+import { SquadCoordinator } from "utils/squad-coordinator";
 import Profiler from "screeps-profiler";
 
 // -------------------------------------
@@ -88,6 +89,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
         // Periodic global reservation cleanup
         if (Game.time % 10 === 0) {
+            SquadCoordinator.cleanup();
             for (const roomName in Memory.rooms) {
                 const roomMemory = Memory.rooms[roomName];
                 if (roomMemory.positionReservations) {

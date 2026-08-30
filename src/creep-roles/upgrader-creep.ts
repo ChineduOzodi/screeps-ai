@@ -3,6 +3,7 @@ import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
+import { Logger } from "utils/logger";
 
 export class UpgraderCreep extends CreepRunner {
     public override onRun(): void {
@@ -67,7 +68,19 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
             }
         }
 
-        if (!sourcePos) throw new Error(`No source found for ${controller.id}`); // Should not happen if room works
+        if (!sourcePos) {
+            // Fall back to sources we can currently see: the energy system's source list can be
+            // empty right after an attack or while the room is being re-surveyed.
+            const visibleSource = controller.pos.findClosestByRange(FIND_SOURCES);
+            sourcePos = visibleSource?.pos;
+        }
+
+        if (!sourcePos) {
+            // No known energy source for this colony yet. Skip upgraders this pass rather than
+            // throwing, which would abort the whole colony run.
+            Logger.warning(`[Upgrader] no known energy source for ${room.name}, skipping upgrader profiles`);
+            return {};
+        }
 
         const distToSource = EnergyCalculator.calculateTravelTime(controller.pos, sourcePos);
 

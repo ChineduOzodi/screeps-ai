@@ -1,62 +1,81 @@
 /* eslint-disable max-classes-per-file */
-import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
+
+import { CombatBody } from "utils/combat-body";
+import { CombatCreep } from "./combat-creep";
+import { CombatIntel } from "utils/combat-intel";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
-import { ThreatAssessment } from "utils/threat-assessment";
-
-const BASE_RANGED_DEFENDER: BodyPartConstant[] = [RANGED_ATTACK, MOVE];
 
 /**
- * Kiting defender: keeps at range 3 from melee attackers while shooting,
- * so slow boosted melee creeps can never land a hit.
+ * Kiting defender: shoots the squad focus target while holding range 3 from anything
+ * that can hit back in melee, so slow boosted attackers never land a swing.
  */
-export class RangedDefenderCreep extends CreepRunner {
+export class RangedDefenderCreep extends CombatCreep {
     public constructor(creep: Creep) {
         super(creep);
     }
 
     public override onRun(): void {
         const { creep } = this;
-        const targetRoomName = creep.memory.homeRoomName;
 
-        if (targetRoomName && creep.room.name !== targetRoomName) {
-            this.moveToWithReservation({ pos: new RoomPosition(25, 25, targetRoomName) }, 0, 20);
-            return;
-        }
+        if (this.travelToHomeRoom()) return;
 
         // Grab a ranged boost first if a lab has one ready
         if (this.tryBoost(RANGED_ATTACK)) return;
 
-        const threat = ThreatAssessment.assess(creep.room);
+        const squad = this.getSquad();
 
-        // Target priority: healers, then the weakest hostile
-        const healers = threat.hostiles.filter(h => h.getActiveBodyparts(HEAL) > 0);
-        const target: Creep | null = healers.length > 0 ? creep.pos.findClosestByRange(healers) : threat.weakestHostile;
-
-        if (!target) {
-            const hostileStructure = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
-                filter: s => s.structureType !== STRUCTURE_CONTROLLER,
-            });
-            if (hostileStructure) {
-                if (creep.rangedAttack(hostileStructure) === ERR_NOT_IN_RANGE) {
-                    this.moveToWithReservation(hostileStructure, creep.memory.workDuration, 3);
-                }
-            } else if (targetRoomName && this.colony && this.colony.colonyInfo.rooms[targetRoomName]) {
-                this.colony.colonyInfo.rooms[targetRoomName].alertLevel = 0;
-            }
+        if (squad.hostiles.length === 0) {
+            this.handleNoHostiles();
             return;
         }
 
-        // Shoot: mass attack when swarmed, otherwise focus the target
-        const inCloseRange = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
-        if (inCloseRange.length >= 2) {
-            creep.rangedMassAttack();
-        } else if (creep.pos.inRangeTo(target, 3)) {
-            creep.rangedAttack(target);
+        this.applyHealSupport(squad.members);
+
+        // Shoot first, then move: the shot is free either way.
+        const target = squad.focus ?? creep.pos.findClosestByRange(squad.hostiles);
+        this.shoot(target, squad.hostiles);
+
+        if (!squad.engaged) {
+            creep.say("hold");
+            this.fallBackTo(squad.rally, 3, squad.hostiles);
+            return;
         }
 
-        // Movement: a rampart in firing range beats kiting — nothing can hit us there.
+        if (!target) return;
+        this.holdFiringPosition(target, squad.hostiles);
+    }
+
+    /** Fires at the focus target, switching to mass attack when the enemy is packed in close. */
+    private shoot(target: Creep | null, hostiles: Creep[]): void {
+        const { creep } = this;
+
+        if (CombatIntel.shouldMassAttack(creep, hostiles)) {
+            creep.rangedMassAttack();
+            return;
+        }
+
+        if (target && creep.pos.inRangeTo(target, 3)) {
+            creep.rangedAttack(target);
+            return;
+        }
+
+        // Focus target is out of reach; do not waste the tick if something else is in range.
+        const inRange = hostiles.filter(h => creep.pos.inRangeTo(h, 3));
+        if (inRange.length > 0) {
+            const fallback = CombatIntel.selectTarget(creep.pos, inRange, { hostiles, engageRange: 3 });
+            if (fallback) {
+                creep.rangedAttack(fallback);
+            }
+        }
+    }
+
+    /** Keeps the target at firing range while staying out of reach of melee. */
+    private holdFiringPosition(target: Creep, hostiles: Creep[]): void {
+        const { creep } = this;
+
+        // A rampart in firing range beats kiting: nothing can hit us there.
         const rampart = this.findCombatRampart(target, 3);
         if (rampart) {
             if (!creep.pos.isEqualTo(rampart.pos)) {
@@ -65,27 +84,38 @@ export class RangedDefenderCreep extends CreepRunner {
             return;
         }
 
-        // Otherwise kite away from anything that can melee us, else close to range 3
         if (this.isOnOwnRampart()) return; // Safe where we stand
 
-        const dangerClose = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 2, {
-            filter: h => h.getActiveBodyparts(ATTACK) > 0,
-        });
+        // Step to whichever nearby tile takes the least fire while still holding the
+        // target in range. This backs off melee without ever losing the shot.
+        const inDanger = CombatIntel.incomingDamageAt(creep.pos, hostiles) > 0;
+        if (inDanger && this.repositionSafely(hostiles, { anchor: target.pos, anchorRange: 3, minHostileRange: 3 })) {
+            return;
+        }
 
-        if (dangerClose.length > 0) {
-            this.fleeFrom(dangerClose[0]);
-        } else if (!creep.pos.inRangeTo(target, 3)) {
+        if (!creep.pos.inRangeTo(target, 3)) {
             this.moveToWithReservation(target, creep.memory.workDuration, 3);
         }
     }
 
-    private fleeFrom(hostile: Creep): void {
+    /** No hostile creeps left: clean up invader cores and stand down. */
+    private handleNoHostiles(): void {
         const { creep } = this;
-        const dir = creep.pos.getDirectionTo(hostile);
-        // Opposite of dir (directions are 1..8 clockwise)
-        const away = (((dir - 1 + 4) % 8) + 1) as DirectionConstant;
-        creep.move(away);
-        delete creep.memory.movementSystem?.path;
+        const structure = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
+            filter: s => s.structureType !== STRUCTURE_CONTROLLER,
+        });
+
+        if (structure) {
+            if (creep.rangedAttack(structure) === ERR_NOT_IN_RANGE) {
+                this.moveToWithReservation(structure, creep.memory.workDuration, 3);
+            }
+            return;
+        }
+
+        this.clearAlert();
+        if (creep.hits < creep.hitsMax) {
+            this.applyHealSupport([]);
+        }
     }
 }
 
@@ -117,10 +147,7 @@ export class RangedDefenderCreepSpawner extends CreepSpawnerImpl {
         }
         const targetEnergy = Math.min(energy, 2000);
 
-        const unitCost = CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_RANGED_DEFENDER);
-        const units = Math.max(1, Math.floor(targetEnergy / unitCost));
-        const body = CreepSpawnerImpl.multiplyBody(BASE_RANGED_DEFENDER, units);
-
+        const body = CombatBody.build(RANGED_ATTACK, targetEnergy, CombatBody.RANGED_RATIO);
         const cost = EnergyCalculator.calculateBodyCost(body);
 
         return {
