@@ -3,6 +3,14 @@ import { EnergyCalculator } from "utils/energy-calculator";
 import { ThreatAssessment } from "utils/threat-assessment";
 
 export class RoomUtils {
+    /**
+     * Hostile structures the defense should actually fight. FIND_HOSTILE_STRUCTURES also
+     * returns power banks, keeper lairs and controllers, none of which are threats.
+     */
+    public static isDefenseTarget(structure: Structure): boolean {
+        return structure.structureType === STRUCTURE_INVADER_CORE;
+    }
+
     public static updateRoomData(colony: ColonyManager, room: Room): void {
         const roomData = colony.colonyInfo.rooms[room.name] || { name: room.name, alertLevel: 0 };
 
@@ -40,9 +48,10 @@ export class RoomUtils {
                 alertLevel = 1;
             }
         }
-        // Also check for hostile structures (invader cores, etc.)
-        const hostileStructures = room.find(FIND_HOSTILE_STRUCTURES);
-        if (hostileStructures.length > 0) {
+        // Invader cores are the only structures worth an armed response. Power banks and
+        // keeper lairs also report a hostile owner, but they are not a threat to us.
+        const invaderCores = room.find(FIND_HOSTILE_STRUCTURES, { filter: RoomUtils.isDefenseTarget });
+        if (invaderCores.length > 0) {
             alertLevel = Math.max(alertLevel, 2);
         }
 

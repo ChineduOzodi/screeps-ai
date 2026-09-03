@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import { assert, expect } from "chai";
 import sinon from "sinon";
 import { Game, Memory } from "../../test/utils/mock";
 import { ConstructionManager } from "./construction-manager";
@@ -124,5 +124,57 @@ describe("Construction Manager", () => {
         ((global as any).Memory.rooms as any).W1N1 = { constructionProjects: {} };
         loop();
         assert.isUndefined((((global as any).Memory.rooms as any).W1N1 as any).constructionProjects);
+    });
+
+    describe("planPerimeter", () => {
+        it("should re-plan on a planner version change, drop stale rampart sites, and place walls and gates", () => {
+            const removed: any[] = [];
+            const sites = [
+                // Old all-rampart plan tile, nothing under it: stale.
+                {
+                    structureType: STRUCTURE_RAMPART,
+                    pos: new MockRoomPosition(5, 5, "W1N1"),
+                    remove: () => removed.push("5,5"),
+                },
+                // Rampart over our spawn comes from planRamparts and must survive.
+                {
+                    structureType: STRUCTURE_RAMPART,
+                    pos: new MockRoomPosition(25, 25, "W1N1"),
+                    remove: () => removed.push("25,25"),
+                },
+            ];
+            const spawn = { structureType: STRUCTURE_SPAWN, my: true, pos: new MockRoomPosition(25, 25, "W1N1") };
+            (sites[1].pos as any).lookFor = (look: string) => (look === LOOK_STRUCTURES ? [spawn] : []);
+
+            roomMock.controller = { my: true, level: 4, pos: new MockRoomPosition(20, 20, "W1N1") };
+            roomMock.getTerrain = () => ({ get: () => 0 });
+            roomMock.find = sinon.stub().callsFake((type: number, opts?: any) => {
+                if (type === FIND_MY_STRUCTURES) return opts?.filter ? [spawn].filter(opts.filter) : [spawn];
+                if (type === FIND_STRUCTURES) return [spawn];
+                if (type === FIND_CONSTRUCTION_SITES || type === FIND_MY_CONSTRUCTION_SITES) return sites;
+                return [];
+            });
+            colonyMock.colonyInfo = {
+                defenseManagement: {
+                    nextUpdate: 0,
+                    perimeter: [{ x: 5, y: 5 }],
+                    lastPerimeterRcl: 4,
+                },
+            };
+
+            (constructionManager as any).planPerimeter();
+
+            expect(removed).to.deep.equal(["5,5"]);
+            const perimeter = colonyMock.colonyInfo.defenseManagement.perimeter;
+            expect(perimeter.length).to.be.greaterThan(0);
+            expect(perimeter.some((t: any) => t.structureType === STRUCTURE_WALL)).to.equal(true);
+            expect(perimeter.some((t: any) => t.structureType === STRUCTURE_RAMPART)).to.equal(true);
+            expect(colonyMock.colonyInfo.defenseManagement.perimeterVersion).to.be.a("number");
+
+            // Gates are placed first, five sites per pass.
+            const placedTypes = roomMock.createConstructionSite.args.map((a: any[]) => a[1]);
+            expect(placedTypes.length).to.equal(5);
+            expect(placedTypes[0]).to.equal(STRUCTURE_RAMPART);
+        });
     });
 });

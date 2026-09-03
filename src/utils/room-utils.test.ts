@@ -85,4 +85,40 @@ describe("RoomUtils", () => {
             expect(best).to.equal("W2N1");
         });
     });
+
+    describe("updateRoomData", () => {
+        function roomWith(hostileStructures: any[]): any {
+            return {
+                name: "W2N1",
+                controller: undefined,
+                find: (type: number, opts?: { filter?: (s: any) => boolean }) => {
+                    if (type === FIND_HOSTILE_STRUCTURES) {
+                        return opts?.filter ? hostileStructures.filter(opts.filter) : hostileStructures;
+                    }
+                    return [];
+                },
+            };
+        }
+        const colony: any = {
+            colonyInfo: { rooms: {} },
+            getMainSpawn: () => undefined,
+        };
+
+        beforeEach(() => {
+            colony.colonyInfo.rooms = {};
+        });
+
+        it("should not raise the alert for a power bank or keeper lair", () => {
+            RoomUtils.updateRoomData(
+                colony,
+                roomWith([{ structureType: STRUCTURE_POWER_BANK }, { structureType: STRUCTURE_KEEPER_LAIR }]),
+            );
+            expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(0);
+        });
+
+        it("should raise the alert for an invader core", () => {
+            RoomUtils.updateRoomData(colony, roomWith([{ structureType: STRUCTURE_INVADER_CORE }]));
+            expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(2);
+        });
+    });
 });

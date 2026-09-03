@@ -123,6 +123,7 @@ global.STRUCTURE_INVADER_CORE = "invaderCore";
 global.STRUCTURE_PORTAL = "portal";
 global.STRUCTURE_CONTROLLER = "controller";
 global.STRUCTURE_KEEPER_LAIR = "keeperLair";
+global.STRUCTURE_POWER_BANK = "powerBank";
 
 global.OBSTACLE_OBJECT_TYPES = [
     "spawn",

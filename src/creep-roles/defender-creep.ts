@@ -6,6 +6,7 @@ import { CombatCreep } from "./combat-creep";
 import { CombatIntel } from "utils/combat-intel";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
+import { RoomUtils } from "utils/room-utils";
 
 export class DefenderCreep extends CombatCreep {
     public override onRun(): void {
@@ -107,7 +108,7 @@ export class DefenderCreep extends CombatCreep {
     private handleNoHostiles(): void {
         const { creep } = this;
         const structure = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
-            filter: s => s.structureType !== STRUCTURE_CONTROLLER,
+            filter: RoomUtils.isDefenseTarget,
         });
 
         if (structure) {

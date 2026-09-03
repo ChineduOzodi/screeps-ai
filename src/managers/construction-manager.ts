@@ -2,7 +2,7 @@ import { ColonyManager } from "../prototypes/types";
 import { ConstructionUtils } from "../utils/construction-utils";
 import { CorePlan, CorePlanner } from "../utils/core-planner";
 import { ExtensionPlan, ExtensionPlanner } from "../utils/extension-planner";
-import { MinCut } from "../utils/min-cut";
+import { PerimeterPlanner, PerimeterStructure, PerimeterTile } from "../utils/perimeter-planner";
 import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from "../constants/repair-constants";
 import { RepairUtils } from "../utils/repair-utils";
 import { RoomSurvey, surveyRoom } from "../utils/room-survey";
@@ -23,6 +23,12 @@ const REPLAN_INTERVAL = 500;
 const EXTENSION_ROADS_PER_PASS = 5;
 /** Extensions that must border a walkway before it is worth paving. */
 const EXTENSION_ROAD_ADJACENCY = 2;
+/** Bump when the perimeter algorithm changes so rooms with a cached plan re-plan. */
+const PERIMETER_PLAN_VERSION = 2;
+
+function isPerimeterStructure(type: StructureConstant): boolean {
+    return type === STRUCTURE_WALL || type === STRUCTURE_RAMPART;
+}
 
 export interface ProjectStructure {
     x: number;
@@ -81,8 +87,9 @@ export class ConstructionManager {
     }
 
     /**
-     * Plans a min-cut rampart perimeter that seals the base off from all exits.
-     * Computed once per RCL (structures shift as the base grows) and built gradually.
+     * Plans a min-cut perimeter that seals the base off from all exits: walls along the
+     * line, short rampart gates where traffic crosses, existing walls reused. Computed
+     * once per RCL (structures shift as the base grows) and built gradually.
      */
     private planPerimeter(): void {
         const room = this.colony.getMainRoom();
@@ -93,11 +100,21 @@ export class ConstructionManager {
         if (!defense) return;
 
         const rcl = room.controller.level;
-        if (!defense.perimeter || defense.lastPerimeterRcl !== rcl) {
+        if (
+            !defense.perimeter ||
+            defense.lastPerimeterRcl !== rcl ||
+            defense.perimeterVersion !== PERIMETER_PLAN_VERSION
+        ) {
             defense.perimeter = this.computePerimeter(room);
             defense.lastPerimeterRcl = rcl;
+            defense.perimeterVersion = PERIMETER_PLAN_VERSION;
+            this.removeStalePerimeterSites(room, defense.perimeter);
             if (defense.perimeter.length > 0) {
-                Logger.info(`[Perimeter] ${room.name}: planned ${defense.perimeter.length} rampart positions`);
+                const ramparts = defense.perimeter.filter(t => t.structureType === STRUCTURE_RAMPART).length;
+                Logger.info(
+                    `[Perimeter] ${room.name}: planned ${defense.perimeter.length} tiles ` +
+                        `(${ramparts} ramparts, ${defense.perimeter.length - ramparts} walls)`,
+                );
             }
         }
 
@@ -108,17 +125,17 @@ export class ConstructionManager {
             if (Object.keys(Game.constructionSites).length >= 100) break;
 
             const pos = new RoomPosition(tile.x, tile.y, room.name);
-            const hasRampart = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_RAMPART);
-            const hasSite = pos.lookFor(LOOK_CONSTRUCTION_SITES).some(s => s.structureType === STRUCTURE_RAMPART);
-            if (hasRampart || hasSite) continue;
+            const sealed = pos.lookFor(LOOK_STRUCTURES).some(s => isPerimeterStructure(s.structureType));
+            const hasSite = pos.lookFor(LOOK_CONSTRUCTION_SITES).some(s => isPerimeterStructure(s.structureType));
+            if (sealed || hasSite) continue;
 
-            if (room.createConstructionSite(pos, STRUCTURE_RAMPART) === OK) {
+            if (room.createConstructionSite(pos, tile.structureType) === OK) {
                 placed++;
             }
         }
     }
 
-    private computePerimeter(room: Room): { x: number; y: number }[] {
+    private computePerimeter(room: Room): PerimeterTile[] {
         const protectedTypes: StructureConstant[] = [
             STRUCTURE_SPAWN,
             STRUCTURE_EXTENSION,
@@ -134,18 +151,48 @@ export class ConstructionManager {
 
         if (positions.length === 0) return [];
 
-        // Try to protect the controller too; fall back to just the core if that
-        // pushes the protected area into an exit zone.
-        const withController = room.controller
-            ? [...positions, { x: room.controller.pos.x, y: room.controller.pos.y }]
-            : positions;
+        // Walls (whoever built them) and our ramparts already hold the line. Anything else
+        // standing on a tile rules out a wall there, so the plan ramparts it instead.
+        const blockers: Tile[] = [];
+        const passable: Tile[] = [];
+        for (const s of room.find(FIND_STRUCTURES)) {
+            const tile = { x: s.pos.x, y: s.pos.y };
+            if (s.structureType === STRUCTURE_WALL) blockers.push(tile);
+            else if (s.structureType === STRUCTURE_RAMPART) {
+                if ((s as StructureRampart).my) blockers.push(tile);
+            } else passable.push(tile);
+        }
+        for (const site of room.find(FIND_CONSTRUCTION_SITES)) {
+            if (!isPerimeterStructure(site.structureType)) passable.push({ x: site.pos.x, y: site.pos.y });
+        }
 
         const terrain = room.getTerrain();
-        let cut = MinCut.computeCut(terrain, MinCut.getProtectedRects(withController, 3), TERRAIN_MASK_WALL);
-        if (cut.length === 0 && withController.length !== positions.length) {
-            cut = MinCut.computeCut(terrain, MinCut.getProtectedRects(positions, 3), TERRAIN_MASK_WALL);
+        const plan = (protect: Tile[]) => PerimeterPlanner.plan({ terrain, protect, blockers, passable });
+
+        // Try to protect the controller too; fall back to just the core if that
+        // pushes the protected area into an exit zone.
+        if (room.controller) {
+            const withController = plan([...positions, { x: room.controller.pos.x, y: room.controller.pos.y }]);
+            if (withController.length > 0) return withController;
         }
-        return cut;
+        return plan(positions);
+    }
+
+    /** Drops unbuilt wall/rampart sites that a fresh plan no longer wants. */
+    private removeStalePerimeterSites(room: Room, perimeter: PerimeterTile[]): void {
+        const planned = new Map<string, PerimeterStructure>();
+        for (const t of perimeter) planned.set(`${t.x},${t.y}`, t.structureType);
+
+        for (const site of room.find(FIND_MY_CONSTRUCTION_SITES)) {
+            if (!isPerimeterStructure(site.structureType)) continue;
+            if (planned.get(`${site.pos.x},${site.pos.y}`) === site.structureType) continue;
+            // Ramparts over our own buildings come from planRamparts, not the perimeter.
+            const covers = site.pos
+                .lookFor(LOOK_STRUCTURES)
+                .some(s => (s as OwnedStructure).my && !isPerimeterStructure(s.structureType));
+            if (site.structureType === STRUCTURE_RAMPART && covers) continue;
+            site.remove();
+        }
     }
 
     /** Places ramparts over critical structures so they survive sieges. */

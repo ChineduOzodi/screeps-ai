@@ -31,10 +31,12 @@ interface BaseSystemInfo {
 }
 
 interface ColonyDefenseManagement extends BaseSystemInfo {
-    /** Min-cut rampart perimeter positions for the main room. */
-    perimeter?: { x: number; y: number }[];
+    /** Min-cut perimeter for the main room: walls along the line, rampart gates where traffic crosses. */
+    perimeter?: { x: number; y: number; structureType: "constructedWall" | "rampart" }[];
     /** RCL at which the perimeter was last computed (recompute as the base grows). */
     lastPerimeterRcl?: number;
+    /** Planner version the cached perimeter came from; a newer planner re-plans. */
+    perimeterVersion?: number;
 }
 
 interface ColonyBuilderManagement extends BaseSystemInfo {
