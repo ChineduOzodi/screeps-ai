@@ -90,6 +90,12 @@ describe("CpuBudget", () => {
         });
 
         it("should record stats with phase costs and a running average", () => {
+            // The first tick after a reset (compile cost) never enters the average.
+            CpuBudget.startTick();
+            used = 90;
+            CpuBudget.endTick();
+            expect((global as any).Memory.stats.cpu.average).to.equal(0);
+
             CpuBudget.startTick();
             CpuBudget.measure("creeps", () => {
                 used += 4;

@@ -53,6 +53,8 @@ export class CpuBudget {
     private static plan: CpuPlan = { mode: "normal", target: 20, optional: true, intervalScale: 1 };
     private static deferredCreeps = 0;
     private static phases: { [name: string]: number } = {};
+    /** False until the first tick after a global reset has passed; that tick's compile cost is not typical. */
+    private static warmedUp = false;
 
     /** Pure planning step so tests can pin the mode boundaries. */
     public static planFor(cpu: CpuLimits): CpuPlan {
@@ -141,8 +143,16 @@ export class CpuBudget {
 
         if (!Memory.stats) Memory.stats = {};
         const previous = Memory.stats.cpu;
-        const average =
-            previous && previous.average > 0 ? previous.average + (used - previous.average) / AVERAGE_WINDOW : used;
+        let average: number;
+        if (!CpuBudget.warmedUp) {
+            // A global reset tick includes compiling the whole script; keep it out of the average.
+            CpuBudget.warmedUp = true;
+            average = previous ? previous.average : 0;
+        } else if (previous && previous.average > 0) {
+            average = previous.average + (used - previous.average) / AVERAGE_WINDOW;
+        } else {
+            average = used;
+        }
 
         Memory.stats.cpu = {
             used: Math.round(used * 100) / 100,
