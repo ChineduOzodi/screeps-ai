@@ -77,6 +77,14 @@ export class CpuBudget {
         return { mode: "critical", target: limit * 0.5, optional: false, intervalScale: 5 };
     }
 
+    /** Forgets everything held on the heap, as a global reset would. Tests use it between cases. */
+    public static reset(): void {
+        CpuBudget.plan = { mode: "normal", target: 20, optional: true, intervalScale: 1 };
+        CpuBudget.deferredCreeps = 0;
+        CpuBudget.phases = {};
+        CpuBudget.warmedUp = false;
+    }
+
     /** Call first thing in the loop. */
     public static startTick(): void {
         CpuBudget.plan = CpuBudget.planFor(CpuBudget.readLimits());

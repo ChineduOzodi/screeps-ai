@@ -6,6 +6,7 @@ describe("CpuBudget", () => {
 
     beforeEach(() => {
         used = 0;
+        CpuBudget.reset();
         (global as any).Game = {
             time: 1000,
             cpu: { limit: 20, bucket: 10000, tickLimit: 500, getUsed: () => used },
