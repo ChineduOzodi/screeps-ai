@@ -6,6 +6,8 @@ export abstract class BaseSystemImpl implements BaseSystem {
     public abstract get energyUsageTracking(): EnergyUsageTracking;
 
     protected colony: ColonyManager;
+    private profilesTick = -1;
+    private profilesCache: CreepSpawnerProfileInfo[] = [];
 
     public constructor(colony: ColonyManager) {
         this.colony = colony;
@@ -32,6 +34,10 @@ export abstract class BaseSystemImpl implements BaseSystem {
     }
 
     public getSpawnerProfilesList(): CreepSpawnerProfileInfo[] {
+        // Spawning and the energy accounting both ask for this every tick; the spawners
+        // scan rooms to answer, so answer once.
+        if (this.profilesTick === Game.time) return this.profilesCache;
+
         const creepSpawners = this.getCreepSpawners();
         const profiles: CreepSpawnerProfileInfo[] = [];
 
@@ -45,6 +51,8 @@ export abstract class BaseSystemImpl implements BaseSystem {
                 this.pruneSpawnQueue(profile);
             }
         }
+        this.profilesTick = Game.time;
+        this.profilesCache = profiles;
         return profiles;
     }
 

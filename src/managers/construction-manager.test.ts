@@ -122,6 +122,8 @@ describe("Construction Manager", () => {
 
     it("main loop should cleanup constructionProjects memory", () => {
         ((global as any).Memory.rooms as any).W1N1 = { constructionProjects: {} };
+        // Room memory housekeeping runs on a 100-tick cadence now.
+        global.Game.time = 100;
         loop();
         assert.isUndefined((((global as any).Memory.rooms as any).W1N1 as any).constructionProjects);
     });

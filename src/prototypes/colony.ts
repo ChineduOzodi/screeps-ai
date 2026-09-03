@@ -14,6 +14,7 @@ import { InfrastructureSystem } from "../systems/infrastructure-system";
 import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
+import { CpuBudget } from "utils/cpu-budget";
 import { Logger } from "utils/logger";
 
 function getSystems(colony: ColonyManager): Systems {
@@ -109,7 +110,9 @@ export class ColonyManagerImpl implements ColonyManager {
         this.observerManager.run();
 
         this.creepManager();
-        this.visualizeStats();
+        if (CpuBudget.optionalAllowed()) {
+            this.visualizeStats();
+        }
     }
 
     public getSystemsList(): BaseSystem[] {

@@ -5,6 +5,7 @@ export interface FakeGame {
     constructionSites: { [siteId: string]: ConstructionSite };
     time: number;
     getObjectById?: (id: string) => any;
+    cpu?: any;
 }
 
 export const Game: FakeGame = {
@@ -14,6 +15,7 @@ export const Game: FakeGame = {
     constructionSites: {},
     time: 12345,
     getObjectById: () => null,
+    cpu: { limit: 20, bucket: 10000, tickLimit: 500, getUsed: () => 0 },
 };
 
 export const Memory: Memory = {

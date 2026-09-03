@@ -21,18 +21,11 @@ export class PathfindingUtils {
             effectiveRange = 0;
         }
 
-        const moveTimePath = PathfindingCache.findPath(creep.pos, target, {
-            range: effectiveRange,
-        });
-        const moveTime = moveTimePath.length;
-
-        if (!creep.ticksToLive || (moveTime >= creep.ticksToLive && !workDuration)) {
-            workDuration = 1;
-        } else if (!workDuration) {
-            workDuration = creep.ticksToLive - moveTime;
-        }
-        const startTime = Game.time + moveTime;
-        const endTime = Game.time + moveTime + workDuration;
+        // A cheap travel estimate sizes the reservation window for the search; the real
+        // path length replaces it afterwards. Searching twice just to learn the length
+        // doubled the cost of every path request.
+        const estimate = PathfindingUtils.estimateTravelTicks(creep.pos, targetPos);
+        let { startTime, endTime } = PathfindingUtils.reservationWindow(creep, estimate, workDuration);
 
         const path = PathfindingCache.findPath(creep.pos, target, {
             range: effectiveRange,
@@ -69,7 +62,34 @@ export class PathfindingUtils {
             },
         } as any);
 
+        if (path.length > 0) {
+            ({ startTime, endTime } = PathfindingUtils.reservationWindow(creep, path.length, workDuration));
+        }
         return { path, startTime, endTime };
+    }
+
+    /** Ticks to reach a position without pathing: range in-room, room hops across rooms. */
+    public static estimateTravelTicks(from: RoomPosition, to: RoomPosition): number {
+        if (from.roomName === to.roomName) return from.getRangeTo(to);
+        const rooms =
+            typeof Game.map?.getRoomLinearDistance === "function"
+                ? Game.map.getRoomLinearDistance(from.roomName, to.roomName)
+                : 1;
+        return rooms * 50 + 25;
+    }
+
+    private static reservationWindow(
+        creep: Creep,
+        moveTime: number,
+        workDuration: number,
+    ): { startTime: number; endTime: number } {
+        let duration = workDuration;
+        if (!creep.ticksToLive || (moveTime >= creep.ticksToLive && !duration)) {
+            duration = 1;
+        } else if (!duration) {
+            duration = creep.ticksToLive - moveTime;
+        }
+        return { startTime: Game.time + moveTime, endTime: Game.time + moveTime + duration };
     }
 
     public static checkReservationAvailable(

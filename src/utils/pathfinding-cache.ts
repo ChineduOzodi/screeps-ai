@@ -12,6 +12,14 @@ export interface CachedPath {
 export class PathfindingCache {
     private static readonly TTL = 1000;
     private static readonly CLEANUP_INTERVAL = 100;
+    /**
+     * Heap-resident cache. Paths used to live in Memory, which meant every tick paid
+     * to parse and re-serialise hundreds of kilobytes of coordinates. The heap survives
+     * between ticks until a global reset, and a cold cache just costs a few searches.
+     */
+    private static store: { [key: string]: CachedPath } = {};
+    private static matrixTick = -1;
+    private static matrices: { [roomName: string]: CostMatrix } = {};
 
     /**
      * Get a path from the cache.
@@ -23,14 +31,14 @@ export class PathfindingCache {
         options?: any,
         ttl: number = this.TTL,
     ): RoomPosition[] | undefined {
-        if (!Memory.pathfindingCache) return undefined;
+        if (!PathfindingCache.store) return undefined;
 
         const key = this.getCacheKey(from, to, range, options);
-        const cached = Memory.pathfindingCache[key];
+        const cached = PathfindingCache.store[key];
         if (cached && Game.time - cached.timestamp < ttl) {
             // Safety check for stale data (old PathStep format)
             if (cached.path.length > 0 && typeof cached.path[0].roomName === "undefined") {
-                delete Memory.pathfindingCache[key];
+                delete PathfindingCache.store[key];
                 return undefined;
             }
             return cached.path.map(p => new RoomPosition(p.x, p.y, p.roomName));
@@ -42,11 +50,11 @@ export class PathfindingCache {
             (!options || (!options.roomCallback && !options.costCallback && options.ignoreCreeps !== false))
         ) {
             const reverseKey = this.getCacheKey(to, from, 0, options);
-            const reverseCached = Memory.pathfindingCache[reverseKey];
+            const reverseCached = PathfindingCache.store[reverseKey];
             if (reverseCached && Game.time - reverseCached.timestamp < ttl) {
                 // Safety check for stale data
                 if (reverseCached.path.length > 0 && typeof reverseCached.path[0].roomName === "undefined") {
-                    delete Memory.pathfindingCache[reverseKey];
+                    delete PathfindingCache.store[reverseKey];
                     return undefined;
                 }
                 return this.reversePath(reverseCached.path, to);
@@ -66,12 +74,12 @@ export class PathfindingCache {
         path: RoomPosition[],
         options?: any,
     ): void {
-        if (!Memory.pathfindingCache) {
-            Memory.pathfindingCache = {};
+        if (!PathfindingCache.store) {
+            PathfindingCache.store = {};
         }
 
         const key = this.getCacheKey(from, to, range, options);
-        Memory.pathfindingCache[key] = {
+        PathfindingCache.store[key] = {
             path: path.map(p => ({ x: p.x, y: p.y, roomName: p.roomName })),
             timestamp: Game.time,
         };
@@ -85,6 +93,15 @@ export class PathfindingCache {
     public static getStandardCostMatrix(roomName: string): CostMatrix {
         const room = Game.rooms[roomName];
         if (!room) return new PathFinder.CostMatrix();
+
+        // Structures don't change mid-tick, so one scan per room per tick serves every
+        // path request. Callers get a clone because they layer their own costs on top.
+        if (PathfindingCache.matrixTick !== Game.time) {
+            PathfindingCache.matrixTick = Game.time;
+            PathfindingCache.matrices = {};
+        }
+        const cached = PathfindingCache.matrices[roomName];
+        if (cached) return cached.clone();
 
         const costs = new PathFinder.CostMatrix();
 
@@ -113,7 +130,8 @@ export class PathfindingCache {
             }
         });
 
-        return costs;
+        PathfindingCache.matrices[roomName] = costs;
+        return costs.clone();
     }
 
     /**
@@ -162,19 +180,21 @@ export class PathfindingCache {
      * Clear the cache.
      */
     public static clear(): void {
-        Memory.pathfindingCache = {};
+        PathfindingCache.store = {};
+        PathfindingCache.matrixTick = -1;
+        PathfindingCache.matrices = {};
     }
 
     /**
      * Remove expired entries from the cache.
      */
     public static cleanup(): void {
-        if (!Memory.pathfindingCache) return;
-        const keys = Object.keys(Memory.pathfindingCache);
+        if (!PathfindingCache.store) return;
+        const keys = Object.keys(PathfindingCache.store);
         for (const key of keys) {
             // Remove anything older than TTL ticks to save memory
-            if (Game.time - Memory.pathfindingCache[key].timestamp > this.TTL) {
-                delete Memory.pathfindingCache[key];
+            if (Game.time - PathfindingCache.store[key].timestamp > this.TTL) {
+                delete PathfindingCache.store[key];
             }
         }
     }

@@ -1,3 +1,4 @@
+import { CpuStats } from "utils/cpu-budget";
 import { SerializableRoomPosition } from "utils/pathfinding-cache";
 
 declare global {
@@ -6,6 +7,15 @@ declare global {
         colonies: {
             [colonyId: string]: Colony | undefined;
         };
+        /** Written every tick by the CPU budget; read it from the console or the API. */
+        stats?: { cpu?: CpuStats };
+        settings?: {
+            /** Set false to drop all RoomVisual output regardless of CPU. */
+            visuals?: boolean;
+            /** Spend a full bucket on a pixel (official server only). Off by default. */
+            generatePixels?: boolean;
+        };
+        /** Legacy on-disk path cache; the cache now lives on the heap and this is deleted on sight. */
         pathfindingCache?: {
             [key: string]: {
                 path: SerializableRoomPosition[];

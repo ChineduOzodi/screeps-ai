@@ -1,4 +1,5 @@
 import { ColonyManager, CreepRole } from "prototypes/types";
+import { CpuBudget } from "utils/cpu-budget";
 import { Logger } from "utils/logger";
 
 export class Spawning {
@@ -9,16 +10,21 @@ export class Spawning {
     }
 
     public run(): void {
-        const allProfiles: CreepSpawnerProfileInfo[] = [];
-        for (const system of this.colony.getSystemsList()) {
-            const profiles = system.getSpawnerProfilesList();
-            allProfiles.push(...profiles);
-            for (const profile of profiles) {
-                this.manageSpawnProfile(profile);
+        // Working out what to spawn means every spawner scanning its rooms. Under CPU
+        // pressure that refresh happens every few ticks; the queue still drains every
+        // tick so a free spawn never waits on it.
+        if (CpuBudget.every(1)) {
+            const allProfiles: CreepSpawnerProfileInfo[] = [];
+            for (const system of this.colony.getSystemsList()) {
+                const profiles = system.getSpawnerProfilesList();
+                allProfiles.push(...profiles);
+                for (const profile of profiles) {
+                    this.manageSpawnProfile(profile);
+                }
             }
+            this.pruneSpawnQueue(allProfiles);
         }
 
-        this.pruneSpawnQueue(allProfiles);
         this.processSpawnQueue();
     }
 

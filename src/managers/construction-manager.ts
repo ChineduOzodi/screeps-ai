@@ -7,6 +7,7 @@ import { REPAIR_THRESHOLD_DECAY_PREVENTION, REPAIR_THRESHOLD_EMERGENCY } from ".
 import { RepairUtils } from "../utils/repair-utils";
 import { RoomSurvey, surveyRoom } from "../utils/room-survey";
 import { Tile } from "../utils/room-grid";
+import { CpuBudget } from "../utils/cpu-budget";
 import { Logger } from "../utils/logger";
 
 declare global {
@@ -70,7 +71,7 @@ export class ConstructionManager {
         if (!room) return;
 
         // Rebuild ruins we "own" (or are in our controlled/reserved rooms), except roads.
-        if (Game.time % 10 === 0) {
+        if (CpuBudget.every(10)) {
             this.rebuildRuins();
             this.planExtensions();
             this.planStorage();

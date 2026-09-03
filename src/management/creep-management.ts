@@ -1,6 +1,6 @@
 import { CreepRole } from "prototypes/types";
 import { CreepRunner } from "prototypes/creep";
-import { ColonyManagerImpl } from "prototypes/colony";
+import { ColonyRegistry } from "prototypes/colony-registry";
 import { BuilderCreep } from "creep-roles/builder-creep";
 import { DefenderCreep } from "creep-roles/defender-creep";
 import { HealerCreep } from "creep-roles/healer-creep";
@@ -37,9 +37,8 @@ export class CreepManagement {
             colonyId = creep.room.name;
         }
 
-        const colonyData = Memory.colonies[colonyId];
-        if (colonyData) {
-            const colony = new ColonyManagerImpl(colonyData);
+        const colony = ColonyRegistry.get(colonyId);
+        if (colony) {
             creepRunner.setColony(colony);
 
             const colonyCreepData = colony.getCreepData(creep.name);

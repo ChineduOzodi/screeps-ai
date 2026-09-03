@@ -1,3 +1,4 @@
+import { CpuBudget } from "../utils/cpu-budget";
 import { PathfindingUtils } from "../utils/pathfinding-utils";
 import { SafeModeGuard } from "../utils/safe-mode";
 import { ThreatAssessment } from "../utils/threat-assessment";
@@ -10,7 +11,9 @@ export class RoomExtras {
     }
 
     public run(): void {
-        this.visualizeReservations();
+        if (CpuBudget.optionalAllowed()) {
+            this.visualizeReservations();
+        }
         const threat = ThreatAssessment.assess(this.room);
         const towers = this.room.find<StructureTower>(FIND_MY_STRUCTURES, {
             filter: { structureType: STRUCTURE_TOWER },
