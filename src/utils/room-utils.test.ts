@@ -261,5 +261,38 @@ describe("RoomUtils", () => {
             RoomUtils.updateRoomData(colony, roomWith([{ structureType: STRUCTURE_INVADER_CORE }]));
             expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(2);
         });
+
+        function hostileWith(parts: { [part: string]: number }): any {
+            return {
+                hits: 100,
+                getActiveBodyparts: (part: string) => parts[part] || 0,
+                pos: { isNearTo: () => false },
+            };
+        }
+
+        function roomWithCreeps(hostiles: any[]): any {
+            return {
+                name: "W2N1",
+                controller: undefined,
+                find: (type: number) => (type === FIND_HOSTILE_CREEPS ? hostiles : []),
+            };
+        }
+
+        it("does not raise the alert for a bare scout", () => {
+            RoomUtils.updateRoomData(colony, roomWithCreeps([hostileWith({ [MOVE]: 1 })]));
+            expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(0);
+        });
+
+        it("raises a watch alert for unarmed creeps that can reserve, dismantle or haul", () => {
+            RoomUtils.updateRoomData(colony, roomWithCreeps([hostileWith({ [CLAIM]: 1, [MOVE]: 1 })]));
+            expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(1);
+            RoomUtils.updateRoomData(colony, roomWithCreeps([hostileWith({ [WORK]: 2, [MOVE]: 1 })]));
+            expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(1);
+        });
+
+        it("raises a threat alert for armed creeps", () => {
+            RoomUtils.updateRoomData(colony, roomWithCreeps([hostileWith({ [ATTACK]: 2, [MOVE]: 2 })]));
+            expect(colony.colonyInfo.rooms.W2N1.alertLevel).to.equal(2);
+        });
     });
 });

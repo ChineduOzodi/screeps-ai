@@ -118,7 +118,7 @@ describe("room-intel", () => {
             expect(intel.headline).to.equal("waiting: RCL 2");
         });
 
-        it("marks a threatened room as avoided and sizes the response", () => {
+        it("marks a threatened room as avoided", () => {
             const c = colony({
                 rooms: { W1N1: { name: "W1N1", isMain: true, alertLevel: 0 }, W2N1: remote("W2N1", { alertLevel: 3 }) },
             });
@@ -127,7 +127,27 @@ describe("room-intel", () => {
             expect(intel.color).to.equal("#f44336");
             expect(intel.lines).to.include("mining paused until the alert clears");
             expect(intel.lines).to.include("expansion blocked by threat");
-            expect(intel.lines).to.include("response: 3 defender(s), 1 ranged");
+        });
+
+        it("sizes the response for a threatened room the colony mines", () => {
+            const c = colony({
+                rooms: { W1N1: { name: "W1N1", isMain: true, alertLevel: 0 }, W2N1: remote("W2N1", { alertLevel: 3 }) },
+                energyManagement: {
+                    sources: [
+                        { sourceId: "s" as Id<Source>, position: { roomName: "W2N1" } as RoomPosition, accessCount: 1 },
+                    ],
+                } as any,
+            });
+            expect(describeRoom(c, "W2N1", undefined, ME).lines).to.include("response: 3 defender(s), 1 ranged");
+        });
+
+        it("sends no response to a room the colony does not use", () => {
+            const c = colony({
+                rooms: { W1N1: { name: "W1N1", isMain: true, alertLevel: 0 }, W2N1: remote("W2N1", { alertLevel: 1 }) },
+            });
+            const intel = describeRoom(c, "W2N1", undefined, ME);
+            expect(intel.lines).to.include("no response: room not in use");
+            expect(intel.lines.some(l => l.startsWith("response:"))).to.equal(false);
         });
 
         it("adds live hostile numbers and squad state when we have vision", () => {

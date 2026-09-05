@@ -55,9 +55,11 @@ export class RoomUtils {
                 // Scale alert with the size of the incursion so the defender
                 // response (which is derived from alertLevel) scales too.
                 alertLevel = 2 + Math.min(3, Math.floor((threat.attackPower + threat.healPower) / 200));
-            } else {
+            } else if (threat.hostiles.some(RoomUtils.canInterfere)) {
+                // Unarmed but able to reserve, dismantle or steal: worth a look.
                 alertLevel = 1;
             }
+            // Anything else (a bare scout) is watched, not answered.
         }
         // Invader cores are the only structures worth an armed response. Power banks and
         // keeper lairs also report a hostile owner, but they are not a threat to us.
@@ -68,6 +70,15 @@ export class RoomUtils {
 
         roomData.alertLevel = alertLevel;
         colony.colonyInfo.rooms[room.name] = roomData;
+    }
+
+    /** An unarmed hostile that can still do harm: claim or reserve, dismantle, or carry off resources. */
+    public static canInterfere(hostile: Creep): boolean {
+        return (
+            hostile.getActiveBodyparts(CLAIM) > 0 ||
+            hostile.getActiveBodyparts(WORK) > 0 ||
+            hostile.getActiveBodyparts(CARRY) > 0
+        );
     }
 
     /**

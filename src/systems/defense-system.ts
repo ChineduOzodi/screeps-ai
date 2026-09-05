@@ -5,6 +5,7 @@ import { DefenderCreepSpawner } from "creep-roles/defender-creep";
 import { HealerCreepSpawner } from "creep-roles/healer-creep";
 import { RangedDefenderCreepSpawner } from "creep-roles/ranged-defender-creep";
 import { RoomUtils } from "utils/room-utils";
+import { alertedDefendedRooms } from "utils/defense-scope";
 
 export class DefenseSystem extends BaseSystemImpl {
     public override get systemInfo(): BaseSystemInfo {
@@ -36,18 +37,18 @@ export class DefenseSystem extends BaseSystemImpl {
 
     public override run(): void {
         super.run();
-        let threatLevel = 0;
         const rooms = this.colony.colonyInfo.rooms;
         for (const roomName in rooms) {
             // Actively update room data if we have vision of the room
             if (Game.rooms[roomName]) {
                 RoomUtils.updateRoomData(this.colony, Game.rooms[roomName]);
             }
+        }
 
-            const roomInfo = rooms[roomName];
-            if (roomInfo.alertLevel > 0) {
-                threatLevel += roomInfo.alertLevel;
-            }
+        // Only alerts in rooms the colony uses cost energy; the rest is intel.
+        let threatLevel = 0;
+        for (const roomInfo of alertedDefendedRooms(this.colony.colonyInfo)) {
+            threatLevel += roomInfo.alertLevel;
         }
 
         if (threatLevel > 0) {
@@ -66,12 +67,6 @@ export class DefenseSystem extends BaseSystemImpl {
     }
 
     public override getStatus(): string | null {
-        const rooms = this.colony.colonyInfo.rooms;
-        for (const roomName in rooms) {
-            if (rooms[roomName].alertLevel > 0) {
-                return "Defending Colony Area";
-            }
-        }
-        return null;
+        return alertedDefendedRooms(this.colony.colonyInfo).length > 0 ? "Defending Colony Area" : null;
     }
 }

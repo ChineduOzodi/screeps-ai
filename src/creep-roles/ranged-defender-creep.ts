@@ -5,6 +5,7 @@ import { CombatBody } from "utils/combat-body";
 import { CombatCreep } from "./combat-creep";
 import { CombatIntel } from "utils/combat-intel";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
+import { isDefendedRoom } from "utils/defense-scope";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { RoomUtils } from "utils/room-utils";
 
@@ -128,6 +129,7 @@ export class RangedDefenderCreepSpawner extends CreepSpawnerImpl {
         for (const roomName in rooms) {
             const roomInfo = rooms[roomName];
             if (roomInfo.alertLevel <= 0) continue;
+            if (!isDefendedRoom(colony.colonyInfo, roomInfo.name)) continue;
 
             // Melee defenders handle small incursions; ranged join for bigger ones.
             const desiredAmount = Math.floor(roomInfo.alertLevel / 2);

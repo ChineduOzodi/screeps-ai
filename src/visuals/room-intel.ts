@@ -8,6 +8,7 @@ import { ThreatAssessment } from "../utils/threat-assessment";
 import { RoomUtils } from "../utils/room-utils";
 import { rankRemoteRooms } from "../utils/remote-rooms";
 import { MAX_EXPANSION_DISTANCE } from "../constants/expansion-constants";
+import { isDefendedRoom } from "../utils/defense-scope";
 
 /** Mirrors the defender spawners: alert 1 means harmless hostiles, 2+ means armed ones. */
 export const ALERT_COLORS: { [level: number]: string } = {
@@ -187,7 +188,9 @@ export function describeRoom(colony: Colony, roomName: string, room?: Room, myUs
     const mineral = data.otherResources?.length ? `  mineral: ${data.otherResources.join(",")}` : "";
     lines.push(`sources: ${data.sourceCount ?? "?"}  dist: ${data.distance ?? "?"}${mineral}`);
 
-    if (alertLevel > 0) {
+    if (alertLevel > 0 && !isDefendedRoom(colony, roomName)) {
+        lines.push("no response: room not in use");
+    } else if (alertLevel > 0) {
         const towers =
             room && typeof room.find === "function"
                 ? room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_TOWER }).length

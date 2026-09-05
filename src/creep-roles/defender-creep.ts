@@ -7,6 +7,7 @@ import { CombatIntel } from "utils/combat-intel";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { RoomUtils } from "utils/room-utils";
+import { isDefendedRoom } from "utils/defense-scope";
 
 export class DefenderCreep extends CombatCreep {
     public override onRun(): void {
@@ -134,7 +135,9 @@ export class DefenderCreepSpawner extends CreepSpawnerImpl {
 
             const profileName = `${CreepRole.DEFENDER}-${roomInfo.name}`;
 
-            if (roomInfo.alertLevel > 0) {
+            // Only rooms the colony uses get a response; a hostile in a scouted-but-idle
+            // room (or one walled off by a zone boundary) is noted, not fought.
+            if (roomInfo.alertLevel > 0 && isDefendedRoom(colony.colonyInfo, roomInfo.name)) {
                 const room = Game.rooms[roomInfo.name];
                 let towersCount = 0;
                 if (room) {

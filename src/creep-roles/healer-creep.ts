@@ -5,6 +5,7 @@ import { CombatBody } from "utils/combat-body";
 import { CombatCreep } from "./combat-creep";
 import { CombatIntel } from "utils/combat-intel";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
+import { isDefendedRoom } from "utils/defense-scope";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { SquadCoordinator } from "utils/squad-coordinator";
 
@@ -146,6 +147,7 @@ export class HealerCreepSpawner extends CreepSpawnerImpl {
         for (const roomName in rooms) {
             const roomInfo = rooms[roomName];
             if (roomInfo.alertLevel <= 0 || fighterCount < 1) continue;
+            if (!isDefendedRoom(colony.colonyInfo, roomInfo.name)) continue;
 
             // One healer keeps a fighter in the fight far longer than a second fighter does,
             // so pair them up as soon as there is a line to support.
