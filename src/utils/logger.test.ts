@@ -1,5 +1,6 @@
+import { expect } from "chai";
 import * as sinon from "sinon";
-import { Logger, LogLevel } from "./logger";
+import { Logger } from "./logger";
 import "../prototypes/creep.extensions";
 import "../prototypes/colony.extensions";
 import "../prototypes/memory.extensions";
@@ -8,8 +9,8 @@ describe("Logger", () => {
     let consoleLogStub: sinon.SinonStub;
 
     beforeEach(() => {
-        // Mock global Memory
-        (global as any).Memory = {};
+        // Mock global Memory with debug logging switched on so the format tests see debug output
+        (global as any).Memory = { settings: { debug: true } };
 
         // Stub console.log
         consoleLogStub = sinon.stub(console, "log");
@@ -68,18 +69,51 @@ describe("Logger", () => {
     });
 
     describe("Global Memory Configuration", () => {
-        it("should log debug if Memory.debug is true", () => {
-            (global as any).Memory.debug = true;
+        it("should not log debug by default", () => {
+            (global as any).Memory = {};
+            Logger.debug("Debug should not print");
+            sinon.assert.notCalled(consoleLogStub);
+            expect(Logger.debugEnabled()).to.equal(false);
+        });
+
+        it("should not log debug when Memory.settings.debug is false", () => {
+            (global as any).Memory = { settings: { debug: false } };
+            Logger.debug("Debug should not print");
+            sinon.assert.notCalled(consoleLogStub);
+        });
+
+        it("should log debug when Memory.settings.debug is true", () => {
+            (global as any).Memory = { settings: { debug: true } };
             Logger.debug("Debug should print");
             sinon.assert.calledWith(consoleLogStub, "[DEBUG] Debug should print");
         });
 
-        // Since LOG_LEVEL is statically LogLevel.DEBUG, it will always print.
-        // Testing that error logs print regardless of other conditions.
-        it("should print errors regardless", () => {
-            (global as any).Memory.debug = false;
-            Logger.error("Error should always print");
-            sinon.assert.calledWith(consoleLogStub, "[ERROR] Error should always print");
+        it("should honour the legacy Memory.debug flag", () => {
+            (global as any).Memory = { debug: true };
+            Logger.debug("Debug should print");
+            sinon.assert.calledWith(consoleLogStub, "[DEBUG] Debug should print");
+        });
+
+        it("should let Memory.settings.debug override the legacy flag", () => {
+            (global as any).Memory = { debug: true, settings: { debug: false } };
+            Logger.debug("Debug should not print");
+            sinon.assert.notCalled(consoleLogStub);
+        });
+
+        it("should still log info, warning and error when debug is off", () => {
+            (global as any).Memory = { settings: { debug: false } };
+            Logger.info("Info should print");
+            Logger.warning("Warning should print");
+            Logger.error("Error should print");
+            sinon.assert.calledWith(consoleLogStub, "[INFO] Info should print");
+            sinon.assert.calledWith(consoleLogStub, "[WARNING] Warning should print");
+            sinon.assert.calledWith(consoleLogStub, "[ERROR] Error should print");
+        });
+
+        it("should not log debug when Memory is undefined", () => {
+            delete (global as any).Memory;
+            Logger.debug("Debug should not print");
+            sinon.assert.notCalled(consoleLogStub);
         });
     });
 

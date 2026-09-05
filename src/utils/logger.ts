@@ -17,7 +17,8 @@ export interface LogOptions {
  * Logger.error always bypasses isolation.
  */
 const ISOLATION_MODE = false;
-const LOG_LEVEL = LogLevel.DEBUG;
+/** Level used when Memory does not ask for debug output. Debug lines are opt-in via Memory.settings.debug. */
+const DEFAULT_LOG_LEVEL = LogLevel.INFO;
 
 const USE_MASTER_LOG_FILTER = false;
 const MASTER_LOG_FILTER = (msg: string) => {
@@ -25,8 +26,20 @@ const MASTER_LOG_FILTER = (msg: string) => {
 };
 
 export class Logger {
+    /**
+     * Debug logs print only while `Memory.settings.debug` is true. Toggle it from the console:
+     *   Memory.settings = Memory.settings || {}; Memory.settings.debug = true;
+     * The older top-level `Memory.debug` flag is still honoured when `settings.debug` is unset.
+     */
+    public static debugEnabled(): boolean {
+        if (typeof Memory === "undefined") return false;
+        const setting = Memory.settings?.debug;
+        if (setting !== undefined) return setting === true;
+        return Memory.debug === true;
+    }
+
     private static getLogLevel(): LogLevel {
-        return typeof Memory !== "undefined" && Memory.debug ? LogLevel.DEBUG : LOG_LEVEL;
+        return this.debugEnabled() ? LogLevel.DEBUG : DEFAULT_LOG_LEVEL;
     }
 
     private static shouldPrint(options?: LogOptions, msg?: string): boolean {

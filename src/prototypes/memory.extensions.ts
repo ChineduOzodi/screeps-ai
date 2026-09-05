@@ -3,6 +3,7 @@ import { SerializableRoomPosition } from "utils/pathfinding-cache";
 
 declare global {
     interface Memory {
+        /** Legacy alias for `settings.debug`; ignored once `settings.debug` is set. */
         debug?: boolean;
         colonies: {
             [colonyId: string]: Colony | undefined;
@@ -10,6 +11,8 @@ declare global {
         /** Written every tick by the CPU budget; read it from the console or the API. */
         stats?: { cpu?: CpuStats };
         settings?: {
+            /** Set true to print Logger.debug output. Off by default to keep the console readable. */
+            debug?: boolean;
             /** Set false to drop all RoomVisual output regardless of CPU. */
             visuals?: boolean;
             /** Spend a full bucket on a pixel (official server only). Off by default. */
