@@ -2,6 +2,7 @@ import { CpuBudget } from "../utils/cpu-budget";
 import { PathfindingUtils } from "../utils/pathfinding-utils";
 import { SafeModeGuard } from "../utils/safe-mode";
 import { ThreatAssessment } from "../utils/threat-assessment";
+import { RoomOverlay } from "../visuals/room-overlay";
 
 export class RoomExtras {
     public room: Room;
@@ -13,6 +14,7 @@ export class RoomExtras {
     public run(): void {
         if (CpuBudget.optionalAllowed()) {
             this.visualizeReservations();
+            RoomOverlay.drawRoom(this.room);
         }
         const threat = ThreatAssessment.assess(this.room);
         const towers = this.room.find<StructureTower>(FIND_MY_STRUCTURES, {

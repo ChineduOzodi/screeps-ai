@@ -11,6 +11,7 @@ import { CreepRole } from "prototypes/types";
 import { Movement } from "infrastructure/movement";
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomExtras } from "./prototypes/room";
+import { RoomOverlay } from "./visuals/room-overlay";
 import { SpawnExtras } from "prototypes/spawn";
 import { SquadCoordinator } from "utils/squad-coordinator";
 import Profiler from "screeps-profiler";
@@ -84,6 +85,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
             for (const name in Game.rooms) {
                 const room = new RoomExtras(Game.rooms[name]);
                 room.run();
+            }
+            // What the AI thinks about every remembered room, on the world map.
+            if (CpuBudget.optionalAllowed()) {
+                RoomOverlay.drawMap();
             }
         });
 
