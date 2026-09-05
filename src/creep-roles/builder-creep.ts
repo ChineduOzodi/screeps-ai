@@ -1,9 +1,11 @@
+/* eslint-disable max-classes-per-file */
 import { EnergyCalculator } from "utils/energy-calculator";
 
 import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { Logger } from "utils/logger";
+import { RAMPART_TOPUP_HITS } from "constants/repair-constants";
 
 const BASE_BUILDER_BODY: BodyPartConstant[] = [WORK, CARRY, CARRY, MOVE, MOVE];
 const BASE_BUILDER_COST: number = CreepSpawnerImpl.getSpawnBodyEnergyCost(BASE_BUILDER_BODY);
@@ -33,6 +35,11 @@ export class BuilderCreep extends CreepRunner {
             creep.say("building");
         }
         if (creep.memory.working) {
+            // A rampart this creep just finished has 1 hit; top it up before moving on.
+            if (this.topUpFinishedRampart()) {
+                return;
+            }
+
             let target: ConstructionSite | null = null;
             if (creep.memory.targetId) {
                 target = Game.getObjectById<ConstructionSite>(creep.memory.targetId);
@@ -56,6 +63,9 @@ export class BuilderCreep extends CreepRunner {
             }
 
             if (target) {
+                if (target.structureType === STRUCTURE_RAMPART) {
+                    creep.memory.rampartTopUp = { x: target.pos.x, y: target.pos.y, roomName: target.pos.roomName };
+                }
                 if (this.build(target) === ERR_NOT_IN_RANGE) {
                     this.moveToWithReservation(target, creep.memory.workDuration, 3);
                 }
@@ -64,6 +74,33 @@ export class BuilderCreep extends CreepRunner {
             // Find energy
             this.getEnergy();
         }
+    }
+
+    /**
+     * Repairs the rampart remembered in memory until it holds RAMPART_TOPUP_HITS. Returns
+     * true while that is still the creep's job this tick.
+     */
+    private topUpFinishedRampart(): boolean {
+        const { creep } = this;
+        const spot = creep.memory.rampartTopUp;
+        if (!spot) return false;
+
+        // Still a construction site: nothing to top up yet.
+        if (creep.memory.targetId && Game.getObjectById(creep.memory.targetId)) return false;
+
+        const room = Game.rooms[spot.roomName];
+        const rampart = room
+            ?.lookForAt(LOOK_STRUCTURES, spot.x, spot.y)
+            .find(s => s.structureType === STRUCTURE_RAMPART) as StructureRampart | undefined;
+        if (!rampart || rampart.hits >= RAMPART_TOPUP_HITS) {
+            delete creep.memory.rampartTopUp;
+            return false;
+        }
+
+        if (this.repair(rampart) === ERR_NOT_IN_RANGE) {
+            this.moveToWithReservation(rampart, creep.memory.workDuration, 3);
+        }
+        return true;
     }
 }
 

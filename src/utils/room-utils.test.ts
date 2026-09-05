@@ -66,6 +66,147 @@ describe("RoomUtils", () => {
         });
     });
 
+    describe("scouting depth and reachability", () => {
+        function exitsFrom(map: { [room: string]: string[] }) {
+            (global as any).Game.map.describeExits = (name: string) => {
+                const result: Record<string, string> = {};
+                (map[name] || []).forEach((exit, i) => (result[String(i)] = exit));
+                return result;
+            };
+        }
+
+        it("scouts two exit hops out so neighbours of neighbours are known", () => {
+            exitsFrom({ W1N1: ["W1N2"], W1N2: ["W1N1", "W1N3"], W1N3: ["W1N2", "W1N4"] });
+            const mockColony = {
+                getMainRoom: () => ({ name: "W1N1" }),
+                colonyInfo: { rooms: { W1N1: { name: "W1N1", isMain: true } } },
+            } as any;
+
+            const needing = RoomUtils.getRoomsNeedingScout(mockColony);
+            expect(needing).to.have.members(["W1N2", "W1N3"]);
+        });
+
+        it("leaves out rooms behind zone walls and closed rooms", () => {
+            exitsFrom({ W1N1: ["W1N2", "W2N1", "W0N1"] });
+            const statuses: { [name: string]: string } = {
+                W1N1: "respawn",
+                W1N2: "respawn",
+                W2N1: "normal",
+                W0N1: "closed",
+            };
+            (global as any).Game.map.getRoomStatus = (name: string) => ({ status: statuses[name] });
+            const mockColony = {
+                getMainRoom: () => ({ name: "W1N1" }),
+                colonyInfo: { rooms: {} },
+            } as any;
+
+            expect(RoomUtils.getRoomsNeedingScout(mockColony)).to.deep.equal(["W1N2"]);
+            expect(RoomUtils.isRoomReachable("W1N1", "W2N1")).to.equal(false);
+            expect(RoomUtils.isRoomReachable("W1N1", "W1N2")).to.equal(true);
+        });
+
+        it("treats every room as reachable on servers without room status", () => {
+            expect(RoomUtils.getRoomStatus("W1N1")).to.equal("normal");
+            expect(RoomUtils.isRoomReachable("W1N1", "W9N9")).to.equal(true);
+        });
+
+        it("waits longer before re-scouting a defended enemy room and honours failed attempts", () => {
+            exitsFrom({ W1N1: ["ENEMY", "STUCK"] });
+            const mockColony = {
+                getMainRoom: () => ({ name: "W1N1" }),
+                colonyInfo: {
+                    rooms: {
+                        ENEMY: { name: "ENEMY", owner: "Rival", towerCount: 2, lastScouted: 100 },
+                        STUCK: { name: "STUCK", lastScoutAttempt: 1000 },
+                    },
+                },
+            } as any;
+
+            (global as any).Game.time = 1200;
+            expect(RoomUtils.getRoomsNeedingScout(mockColony)).to.deep.equal([]);
+            (global as any).Game.time = 2500;
+            expect(RoomUtils.getRoomsNeedingScout(mockColony)).to.deep.equal(["STUCK"]);
+            (global as any).Game.time = 5200;
+            expect(RoomUtils.getRoomsNeedingScout(mockColony)).to.have.members(["ENEMY", "STUCK"]);
+        });
+    });
+
+    describe("owner intel", () => {
+        function colonyWithRooms() {
+            return {
+                getMainSpawn: () => undefined,
+                colonyInfo: { rooms: {} as { [name: string]: RoomData } },
+            } as any;
+        }
+
+        function ownedRoom(structures: any[], controller: any) {
+            return {
+                name: "ENEMY",
+                controller,
+                find: (type: number) => {
+                    if (type === FIND_HOSTILE_STRUCTURES) return structures;
+                    return [];
+                },
+            };
+        }
+
+        it("records the owner's controller level, towers, spawns and safe mode", () => {
+            const room = ownedRoom(
+                [
+                    { structureType: STRUCTURE_TOWER },
+                    { structureType: STRUCTURE_TOWER },
+                    { structureType: STRUCTURE_SPAWN },
+                    { structureType: STRUCTURE_EXTENSION },
+                ],
+                { owner: { username: "Rival" }, level: 5, safeMode: 500, my: false },
+            );
+            const colony = colonyWithRooms();
+            (global as any).Game.time = 1000;
+
+            RoomUtils.updateRoomData(colony, room as any);
+
+            const data = colony.colonyInfo.rooms.ENEMY;
+            expect(data.owner).to.equal("Rival");
+            expect(data.controllerLevel).to.equal(5);
+            expect(data.towerCount).to.equal(2);
+            expect(data.spawnCount).to.equal(1);
+            expect(data.safeModeUntil).to.equal(1500);
+        });
+
+        it("clears the intel once the room is no longer owned by someone else", () => {
+            const colony = colonyWithRooms();
+            colony.colonyInfo.rooms.ENEMY = {
+                name: "ENEMY",
+                alertLevel: 0,
+                owner: "Rival",
+                controllerLevel: 5,
+                towerCount: 2,
+                spawnCount: 1,
+            };
+            const abandoned = ownedRoom([], { owner: undefined, level: 0 });
+
+            RoomUtils.updateRoomData(colony, abandoned as any);
+
+            const data = colony.colonyInfo.rooms.ENEMY;
+            expect(data.owner).to.equal(undefined);
+            expect(data.controllerLevel).to.equal(undefined);
+            expect(data.towerCount).to.equal(undefined);
+            expect(data.spawnCount).to.equal(undefined);
+        });
+
+        it("counts hostile-owned exit neighbours from what any colony remembers", () => {
+            (global as any).Game.map.describeExits = () => ({ "1": "ENEMY", "3": "FRIEND", "5": "UNKNOWN" });
+            (global as any).Memory = {
+                colonies: {
+                    A: { rooms: { ENEMY: { name: "ENEMY", alertLevel: 0, owner: "Rival" } } },
+                    B: { rooms: { FRIEND: { name: "FRIEND", alertLevel: 0, owner: "me" } } },
+                },
+            };
+            expect(RoomUtils.countHostileNeighbours("X", "me")).to.equal(1);
+            expect(RoomUtils.countHostileNeighbours("X", "someone-else")).to.equal(2);
+        });
+    });
+
     describe("findBestRoomToScout", () => {
         it("should return the room with the oldest lastScouted time", () => {
             const mockColony = {

@@ -1,3 +1,4 @@
+import { RAMPART_TOPUP_HITS, TOWER_REPAIR_MIN_ENERGY_FRACTION } from "../constants/repair-constants";
 import { CpuBudget } from "../utils/cpu-budget";
 import { PathfindingUtils } from "../utils/pathfinding-utils";
 import { SafeModeGuard } from "../utils/safe-mode";
@@ -68,13 +69,37 @@ export class RoomExtras {
                 }
             }
         } else {
-            // Peace time tower logic - ONLY healing.
-            // Repairing moved to Repairer creeps to conserve tower energy.
+            // Peace time: heal, then keep ramparts from decaying away. Everything else is
+            // left to the repairer creeps to conserve tower energy.
             const creepToHeal = this.findCreepToHeal();
             if (creepToHeal) {
                 towers.forEach(t => t.heal(creepToHeal));
+                return;
             }
+            this.topUpRamparts(towers);
         }
+    }
+
+    /**
+     * Has each tower with energy to spare repair the weakest rampart below RAMPART_TOPUP_HITS.
+     * A fresh rampart starts at 1 hit and decays 300 every 100 ticks; the repairer is one
+     * small creep that also looks after every road, so without this ramparts die and get
+     * rebuilt in a loop.
+     */
+    public topUpRamparts(towers: StructureTower[]): void {
+        if (towers.length === 0) return;
+        const weak = this.room
+            .find<StructureRampart>(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_RAMPART && s.hits < RAMPART_TOPUP_HITS,
+            })
+            .sort((a, b) => a.hits - b.hits);
+        if (weak.length === 0) return;
+
+        towers.forEach((tower, index) => {
+            const capacity = tower.store.getCapacity(RESOURCE_ENERGY) || 0;
+            if (tower.store[RESOURCE_ENERGY] < capacity * TOWER_REPAIR_MIN_ENERGY_FRACTION) return;
+            tower.repair(weak[index % weak.length]);
+        });
     }
 
     private findRampartUnderAttack(tower: StructureTower): StructureRampart | null {

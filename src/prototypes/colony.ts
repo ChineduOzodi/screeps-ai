@@ -15,6 +15,8 @@ import { Movement } from "infrastructure/movement";
 import { Spawning } from "infrastructure/spawning";
 import { UpgradeSystem } from "./../systems/upgrade-system";
 import { CpuBudget } from "utils/cpu-budget";
+import { computeEnergyBudget } from "utils/energy-budget";
+import { RepairUtils } from "utils/repair-utils";
 import { Logger } from "utils/logger";
 
 function getSystems(colony: ColonyManager): Systems {
@@ -153,6 +155,18 @@ export class ColonyManagerImpl implements ColonyManager {
             7,
             textStyle,
         );
+        const {
+            storedEnergy = 0,
+            energyReserve = 0,
+            energySurplus = 0,
+            spendableEnergyRate = 0,
+        } = this.systems.energy.systemInfo;
+        room.visual.text(
+            `Spendable: ${spendableEnergyRate.toFixed(1)}/t    Stored: ${Math.round(storedEnergy)} (reserve ${energyReserve}, surplus ${Math.round(energySurplus)})`,
+            3,
+            8,
+            textStyle,
+        );
 
         const visualizeSystems = this.getEnergyTrackingSystems();
         this.visualizeSystems(visualizeSystems);
@@ -184,7 +198,7 @@ export class ColonyManagerImpl implements ColonyManager {
     private visualizeSystems(options: EnergyTrackingSystem[]): void {
         const room = this.getMainRoom();
         const textStyle: TextStyle = { color: "white", font: 0.5, align: "left" };
-        let offset = 8; // Adjusted offset since we added a line
+        let offset = 9; // Below the colony energy summary lines
 
         let totalRequestedWeight = 0;
         options.forEach(o => (totalRequestedWeight += o.energyTracking.requestedEnergyUsageWeight));
@@ -291,17 +305,25 @@ export class ColonyManagerImpl implements ColonyManager {
         (this.systems.energy.systemInfo as any).grossProduction = gross;
         (this.systems.energy.systemInfo as any).upkeep = upkeep;
 
+        // Budget from income plus a drawdown of whatever is banked above the RCL reserve, so a
+        // full storage is spent on growth instead of sitting idle.
         const storedEnergyPercent = this.getStoredEnergyPercent();
-        if (storedEnergyPercent > 0.9) {
-            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.5;
-        } else if (storedEnergyPercent > 0.8) {
-            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.1;
-        } else if (storedEnergyPercent > 0.5) {
-            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 1.0;
-        } else {
-            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed = 0.8;
-        }
-        this.systems.energy.systemInfo.storedEnergyPercent = storedEnergyPercent;
+        const storedEnergy = this.getStoredEnergy();
+        const rcl = this.getMainRoom()?.controller?.level || 0;
+        const reserve = RepairUtils.getStorageTarget(rcl);
+        const budget = computeEnergyBudget({
+            productionRate,
+            storedEnergy,
+            storedEnergyPercent,
+            reserve,
+        });
+        const energyInfo = this.systems.energy.systemInfo;
+        energyInfo.totalEnergyUsagePercentageAllowed = budget.baseMultiplier;
+        energyInfo.storedEnergyPercent = storedEnergyPercent;
+        energyInfo.storedEnergy = storedEnergy;
+        energyInfo.energyReserve = reserve;
+        energyInfo.energySurplus = budget.surplus;
+        energyInfo.spendableEnergyRate = budget.spendableRate;
 
         const systems = this.getSystemsList().filter(s => s !== this.systems.energy);
 
@@ -345,14 +367,24 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public getStoredEnergyPercent(): number {
+        const { energy, capacity } = this.getStoredEnergyState();
+        return capacity > 0 ? energy / capacity : 0;
+    }
+
+    /** Energy in the primary store (and the room storage, when the primary store is a container). */
+    public getStoredEnergy(): number {
+        return this.getStoredEnergyState().energy;
+    }
+
+    private getStoredEnergyState(): { energy: number; capacity: number } {
         const room = this.getMainRoom();
         if (!room || typeof room.find !== "function") {
-            return 0;
+            return { energy: 0, capacity: 0 };
         }
 
         const primaryStorage = this.getPrimaryStorage();
         if (!primaryStorage) {
-            return 0;
+            return { energy: 0, capacity: 0 };
         }
 
         let energy = primaryStorage.store[RESOURCE_ENERGY] || 0;
@@ -363,7 +395,7 @@ export class ColonyManagerImpl implements ColonyManager {
             capacity += room.storage.store.getCapacity(RESOURCE_ENERGY) || 0;
         }
 
-        return energy / capacity;
+        return { energy, capacity };
     }
 
     public manageEnergySystem(system: BaseSystem): void {
@@ -379,10 +411,17 @@ export class ColonyManagerImpl implements ColonyManager {
                 x => (energyTracking.estimatedEnergyWorkRate += (x.spawnCostPerTick || 0) * (x.desiredAmount || 0)),
             );
 
+        const energyInfo = this.systems.energy.systemInfo;
         energyTracking.actualEnergyUsagePercentage =
-            energyTracking.requestedEnergyUsageWeight * this.systems.energy.systemInfo.energyUsageModifier;
+            energyTracking.requestedEnergyUsageWeight * energyInfo.energyUsageModifier;
+
+        // Each system gets its weighted share of the spendable rate. Older memory (and tests)
+        // may predate the spendable rate, in which case the income share is all there is.
+        const spendable =
+            energyInfo.spendableEnergyRate ??
+            energyInfo.estimatedEnergyProductionRate * energyInfo.totalEnergyUsagePercentageAllowed;
         energyTracking.allowedEnergyWorkRate =
-            this.systems.energy.systemInfo.estimatedEnergyProductionRate * energyTracking.actualEnergyUsagePercentage;
+            (spendable * energyTracking.requestedEnergyUsageWeight) / this.getTotalRequestedEnergyWeight();
     }
 
     public getTotalEstimatedEnergyFlowRate(role: string): number {
@@ -403,15 +442,18 @@ export class ColonyManagerImpl implements ColonyManager {
     }
 
     public setEnergyUsageMod(): void {
-        const systems = this.getEnergyTrackingSystems();
-        let totalPercentEnergyRequested = 0;
-        systems.forEach(x => {
-            totalPercentEnergyRequested += x.energyTracking.requestedEnergyUsageWeight;
-        });
-        totalPercentEnergyRequested = totalPercentEnergyRequested === 0 ? 1 : totalPercentEnergyRequested;
-
-        const mod = this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed / totalPercentEnergyRequested;
+        const mod =
+            this.systems.energy.systemInfo.totalEnergyUsagePercentageAllowed / this.getTotalRequestedEnergyWeight();
         this.systems.energy.systemInfo.energyUsageModifier = mod;
+    }
+
+    /** Sum of every system's requested weight; 1 when nothing asks, so shares never divide by zero. */
+    private getTotalRequestedEnergyWeight(): number {
+        let total = 0;
+        this.getEnergyTrackingSystems().forEach(x => {
+            total += x.energyTracking.requestedEnergyUsageWeight;
+        });
+        return total === 0 ? 1 : total;
     }
 
     public getCreeps(): Creep[] {

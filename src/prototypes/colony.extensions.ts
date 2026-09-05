@@ -51,6 +51,14 @@ interface ColonyEnergyManagement extends BaseSystemInfo {
     totalEnergyUsagePercentageAllowed: number;
     energyUsageModifier: number;
     storedEnergyPercent: number;
+    /** Energy in the primary store. */
+    storedEnergy?: number;
+    /** Energy kept back for towers, spawning and emergencies (grows with RCL). */
+    energyReserve?: number;
+    /** Stored energy above the reserve; drives the spending drawdown and the expansion gate. */
+    energySurplus?: number;
+    /** Total per-tick allowance the systems split this tick: income share plus surplus drawdown. */
+    spendableEnergyRate?: number;
 }
 
 interface ColonyInfrastructureManagement extends BaseSystemInfo {
@@ -130,10 +138,18 @@ interface RoomData {
     alertLevel: number;
     sourceCount?: number;
     lastScouted?: number;
+    /** Last tick a scout gave up trying to reach the room, so it is not retried every pass. */
+    lastScoutAttempt?: number;
     distance?: number;
     owner?: string;
     reservation?: string;
     otherResources?: ResourceConstant[];
+    /** Intel on a room another player owns: their controller level and defenses. */
+    controllerLevel?: number;
+    towerCount?: number;
+    spawnCount?: number;
+    /** Tick the owner's safe mode ends, when one was active at the last scout. */
+    safeModeUntil?: number;
 }
 
 interface SourceData {

@@ -19,6 +19,10 @@ declare global {
         workDuration: number;
         /** Set once a combat creep has tried to boost (whether or not a lab was available). */
         boostAttempted?: boolean;
+        /** Rampart a builder just finished; it is topped up before the next site so decay cannot kill it. */
+        rampartTopUp?: { x: number; y: number; roomName: string };
+        /** Tick a scout picked its current target room, for giving up on unreachable rooms. */
+        scoutTargetSince?: number;
     }
 
     type TargetType = (_HasId & _HasRoomPosition) | null;

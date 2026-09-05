@@ -42,6 +42,25 @@ describe("ColonyManager", () => {
         colonyManager = new ColonyManagerImpl(colonyData);
     });
 
+    describe("getStoredEnergy", () => {
+        it("reports the absolute energy in the primary store alongside the percentage", () => {
+            // @ts-ignore
+            Game.rooms.E1S1.storage = {
+                id: "storage1",
+                isActive: () => true,
+                store: { energy: 388609, getCapacity: () => 1000000, getFreeCapacity: () => 611391 },
+            } as any;
+
+            assert.equal(colonyManager.getStoredEnergy(), 388609);
+            assert.closeTo(colonyManager.getStoredEnergyPercent(), 0.3886, 0.001);
+        });
+
+        it("is zero without a store", () => {
+            assert.equal(colonyManager.getStoredEnergy(), 0);
+            assert.equal(colonyManager.getStoredEnergyPercent(), 0);
+        });
+    });
+
     describe("getPrimaryStorage", () => {
         it("should return undefined when no storage or container exists", () => {
             // @ts-ignore

@@ -5,11 +5,15 @@ import { ClaimerCreepSpawner } from "creep-roles/claimer-creep";
 import { PioneerCreepSpawner } from "creep-roles/pioneer-creep";
 import { ConstructionUtils } from "utils/construction-utils";
 import { Logger } from "utils/logger";
+import { RoomUtils } from "utils/room-utils";
+import { EXPANSION_MIN_SURPLUS, MAX_EXPANSION_DISTANCE, MIN_EXPANSION_RCL } from "constants/expansion-constants";
 
-/** Minimum RCL before a colony considers founding a new one. */
-const MIN_EXPANSION_RCL = 4;
-/** Don't expand into rooms further than this (approximate travel ticks). */
-const MAX_EXPANSION_DISTANCE = 200;
+export interface ExpansionCandidate {
+    name: string;
+    sourceCount: number;
+    distance: number;
+    hostileNeighbours: number;
+}
 
 /**
  * Founds new colonies: picks the best scouted room, claims it, places the
@@ -69,8 +73,7 @@ export class ExpansionSystem extends BaseSystemImpl {
 
         // Need enough capacity for a claimer and a healthy economy before expanding
         if (room.energyCapacityAvailable < 650) return;
-        const energyInfo = this.colony.colonyInfo.energyManagement;
-        if (!energyInfo || energyInfo.storedEnergyPercent < 0.4) return;
+        if (!ExpansionSystem.hasEnergyToExpand(this.colony.colonyInfo.energyManagement)) return;
 
         const candidate = this.findBestExpansionCandidate();
         if (candidate) {
@@ -80,10 +83,33 @@ export class ExpansionSystem extends BaseSystemImpl {
         }
     }
 
+    /**
+     * Founding a colony is paid from the surplus above the reserve, not from a share of a
+     * store that may never fill. A colony without a surplus figure has no storage yet.
+     */
+    public static hasEnergyToExpand(energyInfo: ColonyEnergyManagement | undefined): boolean {
+        return (energyInfo?.energySurplus || 0) >= EXPANSION_MIN_SURPLUS;
+    }
+
     private findBestExpansionCandidate(): string | undefined {
-        const rooms = this.colony.colonyInfo.rooms;
-        const candidates: { name: string; sourceCount: number; distance: number }[] = [];
         const myUsername = this.colony.getMainSpawn()?.owner?.username;
+        return ExpansionSystem.rankExpansionCandidates(
+            this.colony.colonyInfo.rooms,
+            this.colony.colonyInfo.id,
+            myUsername,
+        )[0]?.name;
+    }
+
+    /**
+     * Rooms this colony could found a colony in, best first: most sources, then fewest
+     * hostile-owned neighbours, then closest. Rooms behind zone walls are skipped.
+     */
+    public static rankExpansionCandidates(
+        rooms: { [roomName: string]: RoomData },
+        mainRoomName: string,
+        myUsername: string | undefined,
+    ): ExpansionCandidate[] {
+        const candidates: ExpansionCandidate[] = [];
 
         for (const roomName in rooms) {
             const data = rooms[roomName];
@@ -94,13 +120,21 @@ export class ExpansionSystem extends BaseSystemImpl {
             if (data.alertLevel > 0) continue;
             if ((data.sourceCount || 0) < 2) continue;
             if (!data.distance || data.distance > MAX_EXPANSION_DISTANCE) continue;
+            if (!RoomUtils.isRoomReachable(mainRoomName, roomName)) continue;
 
-            candidates.push({ name: roomName, sourceCount: data.sourceCount || 0, distance: data.distance });
+            candidates.push({
+                name: roomName,
+                sourceCount: data.sourceCount || 0,
+                distance: data.distance,
+                hostileNeighbours: RoomUtils.countHostileNeighbours(roomName, myUsername),
+            });
         }
 
-        // Most sources first, then closest
-        candidates.sort((a, b) => b.sourceCount - a.sourceCount || a.distance - b.distance);
-        return candidates[0]?.name;
+        candidates.sort(
+            (a, b) =>
+                b.sourceCount - a.sourceCount || a.hostileNeighbours - b.hostileNeighbours || a.distance - b.distance,
+        );
+        return candidates;
     }
 
     private manageExpansion(target: string): void {

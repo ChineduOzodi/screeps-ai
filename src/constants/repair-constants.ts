@@ -33,3 +33,12 @@ export const STORAGE_TARGETS: { [rcl: number]: number } = {
 
 export const REPAIR_THRESHOLD_EMERGENCY = 0.2;
 export const REPAIR_THRESHOLD_DECAY_PREVENTION = 1000;
+
+/**
+ * Hits a rampart is kept above outside of combat: towers top up any rampart below this and
+ * builders top up a rampart they just finished. A new rampart has 1 hit and loses 300 every
+ * 100 ticks, so without this it is destroyed long before the repairer gets to it.
+ */
+export const RAMPART_TOPUP_HITS = 5000;
+/** Towers only spend energy on peace-time rampart upkeep while they keep this share for defense. */
+export const TOWER_REPAIR_MIN_ENERGY_FRACTION = 0.5;

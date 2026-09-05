@@ -5,6 +5,9 @@
  * room, so the overlay that draws it stays thin and this stays unit-testable.
  */
 import { ThreatAssessment } from "../utils/threat-assessment";
+import { RoomUtils } from "../utils/room-utils";
+import { rankRemoteRooms } from "../utils/remote-rooms";
+import { MAX_EXPANSION_DISTANCE } from "../constants/expansion-constants";
 
 /** Mirrors the defender spawners: alert 1 means harmless hostiles, 2+ means armed ones. */
 export const ALERT_COLORS: { [level: number]: string } = {
@@ -31,9 +34,6 @@ export interface RoomIntel {
     /** Detail lines for the in-room panel. Each explains one decision. */
     lines: string[];
 }
-
-/** Same cap the expansion system uses when picking a candidate. */
-const MAX_EXPANSION_DISTANCE = 300;
 
 export function alertLabel(level: number): string {
     if (level <= 0) return "clear";
@@ -64,16 +64,13 @@ function minedSourceCount(colony: Colony, roomName: string): number {
     return sources.filter(s => s.position && s.position.roomName === roomName).length;
 }
 
-/** Rooms the energy system will mine: closest safe, scouted rooms up to floor(RCL/2). */
-function remoteMiningRank(colony: Colony, roomName: string): { rank: number; cap: number } {
-    const rooms = colony.rooms;
-    const ranked = Object.keys(rooms)
-        .filter(name => !rooms[name].isMain && rooms[name].alertLevel <= 1 && !!rooms[name].distance)
-        .sort((a, b) => (rooms[a].distance || 0) - (rooms[b].distance || 0));
+/** Rooms the energy system will mine: closest safe, sourced, unheld rooms up to floor(RCL/2). */
+function remoteMiningRank(colony: Colony, roomName: string, myUsername?: string): { rank: number; cap: number } {
+    const ranked = rankRemoteRooms(colony.rooms, myUsername);
     return { rank: ranked.indexOf(roomName), cap: Math.floor((colony.level || 0) / 2) };
 }
 
-function describeExpansionEligibility(data: RoomData, myUsername?: string): string {
+function describeExpansionEligibility(colony: Colony, data: RoomData, myUsername?: string): string {
     if (Memory.colonies[data.name]) return "already a colony";
     if (data.owner) return `owned by ${data.owner}: no expansion`;
     if (data.reservation && data.reservation !== myUsername) return `reserved by ${data.reservation}: no expansion`;
@@ -81,7 +78,9 @@ function describeExpansionEligibility(data: RoomData, myUsername?: string): stri
     if ((data.sourceCount || 0) < 2) return `expansion needs 2 sources, has ${data.sourceCount || 0}`;
     if (!data.distance) return "expansion: not scouted";
     if (data.distance > MAX_EXPANSION_DISTANCE) return `expansion: too far (${data.distance})`;
-    return "expansion candidate";
+    if (!RoomUtils.isRoomReachable(colony.id, data.name)) return "expansion: outside our zone";
+    const hostiles = RoomUtils.countHostileNeighbours(data.name, myUsername);
+    return hostiles > 0 ? `expansion candidate (${hostiles} hostile neighbour(s))` : "expansion candidate";
 }
 
 function ageText(lastScouted: number | undefined): string {
@@ -117,6 +116,11 @@ export function describeRoom(colony: Colony, roomName: string, room?: Room, myUs
         lines.push(`owner: ${controller.owner.username}`);
     } else if (data.owner) {
         lines.push(`owner: ${data.owner}`);
+    }
+    if (data.owner && data.owner !== myUsername && data.controllerLevel !== undefined) {
+        lines.push(
+            `their RCL ${data.controllerLevel}, ${data.towerCount ?? 0} tower(s), ${data.spawnCount ?? 0} spawn(s)`,
+        );
     }
     const reservation = controller?.reservation;
     if (reservation) {
@@ -154,7 +158,7 @@ export function describeRoom(colony: Colony, roomName: string, room?: Room, myUs
         headline = `held by ${data.owner || data.reservation}`;
         lines.push("not ours to mine");
     } else {
-        const { rank, cap } = remoteMiningRank(colony, roomName);
+        const { rank, cap } = remoteMiningRank(colony, roomName, myUsername);
         if (rank >= 0 && rank < cap) {
             plan = "mining";
             headline = "mining: pending";
@@ -175,7 +179,7 @@ export function describeRoom(colony: Colony, roomName: string, room?: Room, myUs
     }
 
     if (plan !== "expanding") {
-        lines.push(describeExpansionEligibility(data, myUsername));
+        lines.push(describeExpansionEligibility(colony, data, myUsername));
     }
 
     const scoutStale = !data.lastScouted || Game.time - data.lastScouted > 1000;

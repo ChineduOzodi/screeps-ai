@@ -51,14 +51,19 @@ A colony is one owned room plus the remote rooms it mines. `ColonyManagerImpl` i
 - **Systems** (`src/systems/`) each request creeps and compete for a share of the colony's energy
   income: energy (harvesting, mining, hauling), upgrade, builder, defense, infrastructure and
   expansion. The colony estimates gross production and upkeep, then hands each system an allowed
-  work rate based on its requested weight and how much energy is stored.
+  work rate based on its requested weight. The budget is the net income (all of it once the RCL
+  storage reserve is met, 80% before) plus a drawdown of any energy banked above that reserve, so a
+  full storage is spent on upgrading rather than left idle.
 - **Managers** (`src/managers/`) drive structures: construction, roads, links, terminal (energy
   sharing and market-bought reagents), labs (reactions and boosts) and observers (scouting).
 - **Spawning** (`src/infrastructure/spawning.ts`) turns system spawner profiles into a spawn queue
   and validates every request against what the room can actually afford.
 
-Expansion kicks in at RCL 4: the colony picks the best scouted room, sends a claimer and pioneers,
-and the new spawn registers itself as a fresh colony.
+Expansion kicks in at RCL 4 once the colony has banked a surplus over its reserve: it picks the best
+scouted room (most sources, fewest neighbours owned by other players, closest; rooms behind
+novice or respawn zone walls are skipped), sends a claimer and pioneers, and the new spawn registers
+itself as a fresh colony. Scouts cover rooms two exits out and record the controller level, towers
+and spawns of any room another player owns.
 
 ### Creeps
 

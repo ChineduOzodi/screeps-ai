@@ -5,6 +5,11 @@ import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { Logger } from "utils/logger";
 
+/** Upgraders a colony runs while it is still building its reserve. */
+export const MAX_UPGRADERS = 3;
+/** Upgraders a colony may run while it has energy banked above the reserve. */
+export const MAX_UPGRADERS_WITH_SURPLUS = 8;
+
 export class UpgraderCreep extends CreepRunner {
     public override onRun(): void {
         this.runUpgraderCreep();
@@ -111,9 +116,10 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
             desiredAmount = 1;
         }
 
-        // Hard cap for controller slots? Usually 1-2 heavy upgraders is enough, or swarm for early RCL.
-        // Limit to reasonable number to avoid CPU spam
-        desiredAmount = Math.min(desiredAmount, 3); // Cap at 3 for now
+        // Cap the count to keep CPU sane. The cap lifts while there is energy banked above the
+        // reserve, since that surplus is only ever spent through upgraders.
+        const surplus = colony.colonyInfo.energyManagement?.energySurplus || 0;
+        desiredAmount = Math.min(desiredAmount, UpgraderCreepSpawner.maxUpgraders(surplus));
 
         const memory: AddCreepToQueueOptions = {
             workTargetId: controller.id,
@@ -134,6 +140,11 @@ export class UpgraderCreepSpawner extends CreepSpawnerImpl {
         const profiles: CreepProfiles = {};
         profiles[CreepRole.UPGRADER] = creepSpawnManagement;
         return profiles;
+    }
+
+    /** How many upgraders a colony may run: the base cap, or the surplus cap while energy is banked. */
+    public static maxUpgraders(energySurplus: number): number {
+        return energySurplus > 0 ? MAX_UPGRADERS_WITH_SURPLUS : MAX_UPGRADERS;
     }
 
     private createUpgraderBody(energyCap: number, distance: number): BodyPartConstant[] {

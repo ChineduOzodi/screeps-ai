@@ -2,7 +2,11 @@
 import { CreepRunner } from "prototypes/creep";
 import { ColonyManager, CreepProfiles, CreepRole } from "prototypes/types";
 import { CreepSpawnerImpl } from "prototypes/CreepSpawner";
+import { Logger } from "utils/logger";
 import { RoomUtils } from "utils/room-utils";
+
+/** Ticks a scout keeps trying to enter a room before it is written off as unreachable. */
+export const SCOUT_GIVE_UP_TICKS = 300;
 
 export class ScoutCreep extends CreepRunner {
     public constructor(creep: Creep) {
@@ -18,15 +22,30 @@ export class ScoutCreep extends CreepRunner {
 
         // If no target or target is recently scouted, pick a new one
         const data = targetRoomName ? colony.colonyInfo.rooms[targetRoomName] : undefined;
-        const needsNewTarget = !targetRoomName || (data && Game.time - (data.lastScouted || 0) < 500);
+        let needsNewTarget = !targetRoomName || (data && Game.time - (data.lastScouted || 0) < 500);
+
+        // A room behind zone walls or a sealed perimeter is never reached. Give up on it for a
+        // while rather than pacing at the border for the rest of the creep's life.
+        if (targetRoomName && !needsNewTarget && creep.room.name !== targetRoomName) {
+            const since = memory.scoutTargetSince ?? Game.time;
+            if (Game.time - since > SCOUT_GIVE_UP_TICKS) {
+                const stale = colony.colonyInfo.rooms[targetRoomName] || { name: targetRoomName, alertLevel: 0 };
+                stale.lastScoutAttempt = Game.time;
+                colony.colonyInfo.rooms[targetRoomName] = stale;
+                Logger.info(`[Scout] ${creep.name} could not reach ${targetRoomName}, skipping it for now`);
+                needsNewTarget = true;
+            }
+        }
 
         if (needsNewTarget) {
             const newTarget = RoomUtils.findBestRoomToScout(colony);
             if (newTarget) {
                 targetRoomName = newTarget;
                 memory.workTargetId = newTarget;
+                memory.scoutTargetSince = Game.time;
             } else {
                 delete memory.workTargetId;
+                delete memory.scoutTargetSince;
                 creep.say("No targets");
                 return;
             }
