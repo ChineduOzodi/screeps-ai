@@ -156,9 +156,14 @@ export class PathfindingUtils {
     }
 
     public static checkRoomReservationSetup(roomName: string, pos?: RoomPosition | PathStep): void {
+        if (!Memory.rooms) {
+            Memory.rooms = {};
+        }
         if (!Memory.rooms[roomName]) {
-            // We can't setup if room memory doesn't exist, but usually it should if we are here
-            return;
+            // The engine only creates room memory for rooms we can see. A creep heading into an
+            // unseen room (a scout, a claimer) still reserves its destination there, so create
+            // the entry ourselves. cleanupRoomMemory drops it again once the creep is done.
+            Memory.rooms[roomName] = { positionReservations: {} } as RoomMemory;
         }
         if (!Memory.rooms[roomName].positionReservations) {
             Memory.rooms[roomName].positionReservations = {};
