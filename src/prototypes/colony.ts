@@ -97,9 +97,9 @@ export class ColonyManagerImpl implements ColonyManager {
             systems.forEach(x => x.onStart());
         }
 
-        if (!this.colonyInfo.level) {
-            this.colonyInfo.level = this.getMainRoom().controller?.level || 0;
-        }
+        // Keep the stored level current: other colonies read it from Memory to size
+        // their remote-room claims, and the intel overlay reads it for the slot cap.
+        this.colonyInfo.level = this.getMainRoom().controller?.level || this.colonyInfo.level || 0;
 
         this.manageEnergyProductionConsumption();
 
