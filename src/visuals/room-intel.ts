@@ -6,7 +6,7 @@
  */
 import { ThreatAssessment } from "../utils/threat-assessment";
 import { RoomUtils } from "../utils/room-utils";
-import { rankRemoteRooms } from "../utils/remote-rooms";
+import { assignRemoteRooms, rankRemoteRooms, remoteClaimantsFromMemory, remoteRoomOwner } from "../utils/remote-rooms";
 import { MAX_EXPANSION_DISTANCE } from "../constants/expansion-constants";
 import { isDefendedRoom } from "../utils/defense-scope";
 
@@ -65,10 +65,20 @@ function minedSourceCount(colony: Colony, roomName: string): number {
     return sources.filter(s => s.position && s.position.roomName === roomName).length;
 }
 
-/** Rooms the energy system will mine: closest safe, sourced, unheld rooms up to floor(RCL/2). */
-function remoteMiningRank(colony: Colony, roomName: string, myUsername?: string): { rank: number; cap: number } {
+/**
+ * Rooms the energy system will mine: closest safe, sourced, unheld rooms up to
+ * floor(RCL/2), claimed across all colonies. `claimedBy` is whichever colony the
+ * global assignment gave the room to, if any.
+ */
+function remoteMiningRank(
+    colony: Colony,
+    roomName: string,
+    myUsername?: string,
+): { rank: number; cap: number; claimedBy?: string } {
     const ranked = rankRemoteRooms(colony.rooms, myUsername);
-    return { rank: ranked.indexOf(roomName), cap: Math.floor((colony.level || 0) / 2) };
+    const claimants = remoteClaimantsFromMemory({ [colony.id]: { rooms: colony.rooms, rcl: colony.level || 0 } });
+    const claimedBy = remoteRoomOwner(roomName, assignRemoteRooms(claimants, myUsername));
+    return { rank: ranked.indexOf(roomName), cap: Math.floor((colony.level || 0) / 2), claimedBy };
 }
 
 function describeExpansionEligibility(colony: Colony, data: RoomData, myUsername?: string): string {
@@ -159,11 +169,15 @@ export function describeRoom(colony: Colony, roomName: string, room?: Room, myUs
         headline = `held by ${data.owner || data.reservation}`;
         lines.push("not ours to mine");
     } else {
-        const { rank, cap } = remoteMiningRank(colony, roomName, myUsername);
-        if (rank >= 0 && rank < cap) {
+        const { rank, cap, claimedBy } = remoteMiningRank(colony, roomName, myUsername);
+        if (claimedBy === colony.id) {
             plan = "mining";
             headline = "mining: pending";
             lines.push("selected for remote mining, needs vision to place miners");
+        } else if (claimedBy) {
+            plan = "candidate";
+            headline = `mined by ${claimedBy}`;
+            lines.push(`claimed by closer colony ${claimedBy}`);
         } else if (cap === 0) {
             plan = "candidate";
             headline = "waiting: RCL 2";

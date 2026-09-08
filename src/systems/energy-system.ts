@@ -10,7 +10,7 @@ import { ScoutCreepSpawner } from "creep-roles/scout-creep";
 import { MineralMinerCreepSpawner } from "creep-roles/mineral-miner-creep";
 
 import { Action, Goal, WorldState } from "goap/types";
-import { selectRemoteRooms } from "utils/remote-rooms";
+import { remoteClaimantsFromMemory, selectRemoteRooms } from "utils/remote-rooms";
 import { EnergyCalculator } from "utils/energy-calculator";
 import { ProjectStructure } from "managers/construction-manager";
 import { RoomUtils } from "utils/room-utils";
@@ -76,8 +76,11 @@ export class EnergySystem extends BaseSystemImpl {
         const spawn = this.colony.getMainSpawn();
         const rcl = this.colony.getMainRoom()?.controller?.level || 0;
 
-        // Closest rooms that actually have sources and are not held by someone else.
-        const validRemoteRooms = selectRemoteRooms(rooms, rcl, spawn?.owner?.username);
+        // Closest rooms that actually have sources and are not held by someone else,
+        // claimed across all colonies so no two colonies mine the same room.
+        const colonyId = this.colony.colonyInfo.id;
+        const claimants = remoteClaimantsFromMemory({ [colonyId]: { rooms, rcl } });
+        const validRemoteRooms = selectRemoteRooms(colonyId, claimants, spawn?.owner?.username);
 
         const roomsToMine = [this.colony.getMainRoom().name, ...validRemoteRooms];
 

@@ -109,6 +109,30 @@ describe("room-intel", () => {
             expect(far.lines).to.include("1 closer room(s) fill the 1 remote slot(s)");
         });
 
+        it("shows a safe remote as claimed when a closer colony holds it", () => {
+            const near = colony({
+                id: "A",
+                level: 4,
+                rooms: { A: { name: "A", isMain: true, alertLevel: 0 }, X: remote("X", { distance: 20 }) },
+            });
+            const far = colony({
+                id: "B",
+                level: 4,
+                rooms: { B: { name: "B", isMain: true, alertLevel: 0 }, X: remote("X", { distance: 70 }) },
+            });
+            Memory.colonies = { A: near, B: far };
+
+            const seenFromNear = describeRoom(near, "X", undefined, ME);
+            expect(seenFromNear.plan).to.equal("mining");
+            expect(seenFromNear.headline).to.equal("mining: pending");
+
+            const seenFromFar = describeRoom(far, "X", undefined, ME);
+            expect(seenFromFar.plan).to.equal("candidate");
+            expect(seenFromFar.headline).to.equal("mined by A");
+            expect(seenFromFar.lines).to.include("claimed by closer colony A");
+            Memory.colonies = {};
+        });
+
         it("says remote mining is locked before RCL 2", () => {
             const c = colony({
                 level: 1,
